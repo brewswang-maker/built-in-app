@@ -1,6 +1,6 @@
 // ========================================================================
-// ChannelView.qml — 通道管理 (设备-通道树 + 码流配置 + 通道映射 + 多画面轮巡 + 批量配置)
-// 接入 deviceController + mediaController
+// ChannelView.qml — 通道管理 (码流配置 + 通道映射 + 多画面轮巡)
+// 接入 deviceController + mediaController — box-sdk REST API
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -9,178 +9,72 @@ import QtQuick.Layouts 1.15
 Item {
     id: channelView
 
-    // ── 内部状态 ──
-    property string searchText: ""
-    property var channelTree: []
     property var selectedChannel: null
-    property var patrolPlans: []
-    property bool showBatchDialog: false
-    property bool showAlgoDialog: false
+    property var selectedDevice: null
+    property var channelTreeModel: []
+    property var selectedChannels: []
+    property bool showBatchConfig: false
     property bool showPatrolDialog: false
-    property string editingPatrolName: ""
-
-    // 配置表单
-    property string cfgName: ""
-    property string cfgStreamType: "主码流"
-    property string cfgCodec: "H.265"
-    property string cfgResolution: "3840x2160"
-    property int cfgFps: 25
-    property int cfgBitrate: 6144
-    property bool cfgEnabled: true
-
-    // 算法表单
-    property string algoPlugin: "无"
-    property int algoSensitivity: 5
-    property int algoInterval: 5
-
-    // 批量配置
     property string batchCodec: "H.265"
     property string batchResolution: "1920x1080"
     property int batchFps: 25
     property int batchBitrate: 4096
+    property string patrolName: ""
+    property int patrolInterval: 10
+    property string statusMsg: ""
 
-    // ── 生命周期 ──
     Component.onCompleted: {
         deviceController.refreshDevices()
         mediaController.refreshStreams()
     }
 
-    // ── 监听 Controller 信号 ──
     Connections {
         target: deviceController
         function onDevicesUpdated() { buildChannelTree() }
+        function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
     }
 
     Connections {
         target: mediaController
-        function onChannelsUpdated() { buildChannelTree() }
-        function onStreamStarted(deviceId, url) {
-            statusText.text = "✅ 流已启动: " + url
-            statusText.color = "#00D4AA"
-            statusTimer.start()
-        }
-        function onStreamStopped(sessionId) {
-            statusText.text = "⏹ 流已停止: " + sessionId
-            statusText.color = "#FFB800"
-            statusTimer.start()
-        }
-        function onErrorOccurred(code, message) {
-            statusText.text = "❌ 错误: " + message
-            statusText.color = "#FF3D71"
-            statusTimer.start()
-        }
+        function onStreamsUpdated() { /* refresh stream info */ }
+        function onStreamStarted(channelId) { statusMsg = "Preview started: " + channelId; statusTimer.start() }
+        function onStreamStopped(channelId) { statusMsg = "Preview stopped: " + channelId; statusTimer.start() }
+        function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
     }
 
-    Timer { id: statusTimer; interval: 4000; onTriggered: statusText.text = "" }
+    Timer { id: statusTimer; interval: 3000; onTriggered: statusMsg = "" }
 
-    // ── 构建设备-通道树 ──
     function buildChannelTree() {
         var devices = deviceController.devices
-        var channels = mediaController.channels
         var tree = []
         for (var i = 0; i < devices.length; i++) {
             var dev = devices[i]
-            var devNode = {
-                name: dev.name || dev.deviceName || "未知设备",
-                deviceId: dev.deviceId || dev.id || "",
-                ip: dev.ip || dev.ipAddress || "",
-                status: dev.status || "offline",
-                isDevice: true, indent: 0, channels: []
-            }
-            var chCount = dev.channelCount || 0
-            for (var j = 0; j < chCount; j++) {
-                var chData = null
-                for (var k = 0; k < channels.length; k++) {
-                    if (channels[k].deviceId === devNode.deviceId && channels[k].channelNo === (j + 1)) {
-                        chData = channels[k]; break
-                    }
-                }
-                devNode.channels.push({
-                    name: chData ? chData.name : ("CH" + (j + 1)),
-                    channelNo: j + 1,
-                    deviceId: devNode.deviceId,
-                    isDevice: false, indent: 1,
-                    online: dev.status === "online",
-                    streamType: chData ? (chData.streamType || "主码流") : "主码流",
-                    codec: chData ? (chData.codec || "H.265") : "H.265",
-                    resolution: chData ? (chData.resolution || "3840x2160") : "3840x2160",
-                    fps: chData ? (chData.fps || 25) : 25,
-                    bitrate: chData ? (chData.bitrate || 6144) : 6144,
-                    enabled: chData ? (chData.enabled !== false) : true,
-                    status: chData ? (chData.status || "idle") : "idle",
-                    algoPlugin: chData ? (chData.algoPlugin || "无") : "无"
-                })
-            }
-            tree.push(devNode)
-        }
-        channelTree = tree
-    }
-
-    function buildFlatTree() {
-        var result = []
-        for (var i = 0; i < channelTree.length; i++) {
-            var dev = channelTree[i]
-            if (searchText) {
-                var match = dev.name.toLowerCase().indexOf(searchText.toLowerCase()) >= 0
-                var chMatch = false
-                for (var j = 0; j < dev.channels.length; j++) {
-                    if (dev.channels[j].name.toLowerCase().indexOf(searchText.toLowerCase()) >= 0) chMatch = true
-                }
-                if (!match && !chMatch) continue
-            }
-            result.push(dev)
-            for (var j = 0; j < dev.channels.length; j++) {
-                if (searchText && dev.channels[j].name.toLowerCase().indexOf(searchText.toLowerCase()) < 0) continue
-                result.push(dev.channels[j])
+            tree.push({ type: "device", name: dev.name || "Device", deviceId: dev.deviceId || dev.id || "", status: dev.status || "offline", protocol: dev.protocol || "-", ip: dev.ip || "-", channelCount: dev.channelCount || 0, indent: 0 })
+            var channels = dev.channels || []
+            for (var j = 0; j < channels.length; j++) {
+                var ch = channels[j]
+                tree.push({ type: "channel", name: ch.name || ("CH" + (j+1)), channelId: ch.channelId || (dev.deviceId + "_ch" + j), streamType: ch.streamType || "main", codec: ch.codec || "H.265", resolution: ch.resolution || "-", fps: ch.fps || 25, bitrate: ch.bitrate || 0, enabled: ch.enabled !== false, status: ch.status || (dev.status === "online" ? "online" : "offline"), deviceName: dev.name || "", indent: 1 })
             }
         }
-        return result
+        channelTreeModel = tree
     }
 
-    function loadChannelConfig(ch) {
-        cfgName = ch.name || ""
-        cfgStreamType = ch.streamType || "主码流"
-        cfgCodec = ch.codec || "H.265"
-        cfgResolution = ch.resolution || "3840x2160"
-        cfgFps = ch.fps || 25
-        cfgBitrate = ch.bitrate || 6144
-        cfgEnabled = ch.enabled !== false
+    function getChannelStreamInfo(channelId) {
+        var streams = mediaController.streams
+        for (var i = 0; i < streams.length; i++) {
+            if (streams[i].channelId === channelId) return streams[i]
+        }
+        return null
     }
 
-    function saveChannelConfig() {
-        if (!selectedChannel) return
-        var chId = selectedChannel.deviceId + "_" + selectedChannel.channelNo
-        configController.saveConfig("channel_" + chId, {
-            name: cfgName, streamType: cfgStreamType, codec: cfgCodec,
-            resolution: cfgResolution, fps: cfgFps, bitrate: cfgBitrate, enabled: cfgEnabled
-        })
-        statusText.text = "✅ 通道配置已保存"
-        statusText.color = "#00D4AA"
-        statusTimer.start()
+    function toggleChannelSelect(channelId) {
+        var idx = selectedChannels.indexOf(channelId)
+        var copy = selectedChannels.slice()
+        if (idx >= 0) copy.splice(idx, 1); else copy.push(channelId)
+        selectedChannels = copy
     }
 
-    function togglePatrol(idx) {
-        var plans = patrolPlans.slice()
-        plans[idx].active = !plans[idx].active
-        patrolPlans = plans
-    }
-
-    function removePatrol(idx) {
-        var plans = patrolPlans.slice()
-        plans.splice(idx, 1)
-        patrolPlans = plans
-    }
-
-    // ── 状态提示 ──
-    Text {
-        id: statusText
-        anchors.top: parent.top; anchors.left: parent.left; anchors.leftMargin: 16
-        font.pixelSize: 11; color: "#8B8FA3"; height: 0; z: 10
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // 工具栏
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══ Toolbar ═══
     Rectangle {
         id: toolbar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
@@ -188,32 +82,24 @@ Item {
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-            Text { text: "📡 通道管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-
-            TextField {
-                width: 180; height: 32
-                placeholderText: "搜索通道..."; placeholderTextColor: "#4A4D58"
-                color: "#E8E8E8"; font.pixelSize: 12
-                onTextChanged: searchText = text
-                background: Rectangle { color: "#252830"; radius: 6 }
-            }
-
+            Text { text: "Channel Mgmt"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: deviceController.deviceCount + " devices"; font.pixelSize: 11; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
+            Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
 
             Button {
-                text: "➕ 新建轮巡"; font.pixelSize: 12
-                onClicked: { showPatrolDialog = true; editingPatrolName = "" }
-                background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                text: "Batch Config (" + selectedChannels.length + ")"; font.pixelSize: 12
+                enabled: selectedChannels.length > 0; onClicked: showBatchConfig = true
+                background: Rectangle { color: selectedChannels.length > 0 ? "#3B82F6" : "#252830"; radius: 6; width: 140; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: selectedChannels.length > 0 ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
             Button {
-                text: "⚙️ 批量配置"; font.pixelSize: 12
-                onClicked: showBatchDialog = true
+                text: "New Patrol"; font.pixelSize: 12; onClicked: showPatrolDialog = true
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
             Button {
-                text: "🔄 刷新"; font.pixelSize: 12
+                text: "Refresh"; font.pixelSize: 12
                 onClicked: { deviceController.refreshDevices(); mediaController.refreshStreams() }
                 background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -221,66 +107,94 @@ Item {
         }
     }
 
+    // ═══ Main Content ═══
     RowLayout {
         anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
         anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 8; spacing: 8
 
-        // ── 左侧: 设备-通道树 ──
+        // ── Left: channel tree ──
         Rectangle {
-            Layout.fillHeight: true; Layout.preferredWidth: 280
-            color: "#141720"; radius: 8
-
+            Layout.fillHeight: true; Layout.preferredWidth: 280; color: "#141720"; radius: 8
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
+                Text { text: "Device-Channel Tree"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
-                Text { text: "设备通道树"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                TextField {
+                    width: parent.width - 24; height: 28
+                    placeholderText: "Search..."; placeholderTextColor: "#4A4D58"
+                    color: "#E8E8E8"; font.pixelSize: 11
+                    background: Rectangle { color: "#252830"; radius: 4 }
+                }
 
                 ListView {
-                    id: treeView
-                    width: parent.width - 24; height: parent.height - 40; clip: true; spacing: 1
-                    model: buildFlatTree()
+                    id: channelTree
+                    width: parent.width - 24; height: parent.height - 80
+                    clip: true; spacing: 1
+                    model: channelTreeModel
 
                     delegate: Rectangle {
-                        width: ListView.view.width; height: 30
-                        color: chMouse.containsMouse ? "#1A1D23" : "transparent"
-                        radius: 3
+                        width: ListView.view.width
+                        height: modelData.type === "device" ? 32 : 28
+                        color: {
+                            if (treeMouse.containsMouse) return "#1A1D23"
+                            if (modelData.type === "channel" && selectedChannel && selectedChannel.channelId === modelData.channelId) return "#1A2A3A"
+                            return "transparent"
+                        }
+
+                        MouseArea {
+                            id: treeMouse; anchors.fill: parent; hoverEnabled: true
+                            onClicked: {
+                                if (modelData.type === "device") selectedDevice = modelData
+                                else selectedChannel = modelData
+                            }
+                        }
 
                         Row {
-                            x: (modelData.indent || 0) * 20 + 4; spacing: 6
-                            anchors.verticalCenter: parent.verticalCenter
-                            Text {
-                                text: modelData.isDevice ? "📹" : "•"
-                                font.pixelSize: modelData.isDevice ? 12 : 8
-                                color: modelData.online !== false ? "#00D4AA" : "#FF3D71"
+                            x: modelData.indent * 20 + 8; spacing: 6; anchors.verticalCenter: parent.verticalCenter
+
+                            // Checkbox for channels
+                            Rectangle {
+                                visible: modelData.type === "channel"; width: 14; height: 14; radius: 2
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: selectedChannels.indexOf(modelData.channelId) >= 0 ? "#3B82F6" : "transparent"
+                                border.color: selectedChannels.indexOf(modelData.channelId) >= 0 ? "#3B82F6" : "#4A4D58"; border.width: 1
+                                MouseArea { anchors.fill: parent; onClicked: toggleChannelSelect(modelData.channelId) }
                             }
+
+                            // Status dot
+                            Rectangle {
+                                width: modelData.type === "device" ? 8 : 6; height: width; radius: width / 2
+                                color: modelData.status === "online" ? "#00D4AA" : "#FF3D71"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Text {
+                                text: modelData.type === "device" ? "D" : "-"
+                                font.pixelSize: modelData.type === "device" ? 12 : 8
+                                color: modelData.status === "online" ? "#00D4AA" : "#FF3D71"
+                            }
+
                             Text {
                                 text: modelData.name
-                                font.pixelSize: modelData.isDevice ? 12 : 11
-                                color: modelData.online !== false ? "#E8E8E8" : "#4A4D58"
-                                font.bold: modelData.isDevice
-                                elide: Text.ElideRight
-                                width: treeView.width - (modelData.indent || 0) * 20 - 40
+                                font.pixelSize: modelData.type === "device" ? 12 : 11
+                                color: modelData.status === "online" ? "#E8E8E8" : "#4A4D58"
+                                font.bold: modelData.type === "device"
+                                elide: Text.ElideRight; width: 140
                             }
+
+                            // Protocol tag (device)
                             Rectangle {
-                                visible: !modelData.isDevice
-                                width: 24; height: 14; radius: 3
-                                color: modelData.status === "streaming" ? "#0A2A1A" :
-                                       modelData.status === "error" ? "#2A1A1A" : "#1A1D23"
-                                Text {
-                                    text: modelData.status === "streaming" ? "推" :
-                                          modelData.status === "error" ? "误" : "闲"
-                                    font.pixelSize: 8; color: "#8B8FA3"; anchors.centerIn: parent
-                                }
+                                visible: modelData.type === "device"
+                                width: 50; height: 14; radius: 3; color: "#1A2A3A"
+                                Text { text: modelData.protocol || ""; font.pixelSize: 8; color: "#3B82F6"; anchors.centerIn: parent }
                             }
-                        }
-                        MouseArea {
-                            id: chMouse; anchors.fill: parent; hoverEnabled: true
-                            onClicked: {
-                                if (!modelData.isDevice) {
-                                    selectedChannel = modelData
-                                    loadChannelConfig(modelData)
-                                }
+
+                            // Codec tag (channel)
+                            Rectangle {
+                                visible: modelData.type === "channel"
+                                width: 36; height: 14; radius: 3; color: "#1A3A2A"
+                                Text { text: modelData.codec || ""; font.pixelSize: 8; color: "#00D4AA"; anchors.centerIn: parent }
                             }
                         }
                     }
@@ -288,367 +202,244 @@ Item {
             }
         }
 
-        // ── 右侧: 通道配置 + 轮巡 ──
+        // ── Right: channel detail + config + PTZ + patrol ──
         Rectangle {
-            Layout.fillHeight: true; Layout.fillWidth: true
-            color: "#0D0F12"; radius: 8
+            Layout.fillHeight: true; Layout.fillWidth: true; color: "#0D0F12"; radius: 8
 
-            Column {
-                anchors.fill: parent; anchors.margins: 12; spacing: 8
+            ScrollView {
+                anchors.fill: parent; anchors.margins: 12; clip: true
 
-                Row {
-                    spacing: 8; width: parent.width
-                    Text { text: "通道配置"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Column {
+                    width: parent.width - 24; spacing: 10
+
+                    Text { text: "Channel Config"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+
+                    // Channel config panel
                     Rectangle {
                         visible: selectedChannel !== null
-                        width: 60; height: 18; radius: 4; color: "#1A2A3A"
-                        Text { text: selectedChannel ? selectedChannel.name : ""; font.pixelSize: 10; color: "#3B82F6"; anchors.centerIn: parent }
-                    }
-                }
+                        width: parent.width; height: 220; color: "#141720"; radius: 8
 
-                // 通道配置表单
-                Rectangle {
-                    width: parent.width - 24; height: 240; color: "#141720"; radius: 8
-                    visible: selectedChannel !== null
+                        Column {
+                            anchors.fill: parent; anchors.margins: 16; spacing: 8
 
-                    Column {
-                        anchors.fill: parent; anchors.margins: 16; spacing: 8
+                            Row { spacing: 8
+                                Text { text: selectedChannel ? selectedChannel.name : ""; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                                Rectangle { width: 8; height: 8; radius: 4; color: selectedChannel && selectedChannel.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: selectedChannel ? ("(" + selectedChannel.deviceName + ")") : ""; font.pixelSize: 11; color: "#8B8FA3" }
+                            }
 
-                        Grid {
-                            columns: 4; spacing: 12; rowSpacing: 10; width: parent.width
-                            Text { text: "通道名称:"; font.pixelSize: 12; color: "#8B8FA3" }
-                            TextField {
-                                text: cfgName; onTextChanged: cfgName = text
-                                width: 200; font.pixelSize: 12; color: "#E8E8E8"
-                                background: Rectangle { color: "#252830"; radius: 4 }
-                            }
-                            Text { text: "启用:"; font.pixelSize: 12; color: "#8B8FA3" }
-                            Switch { checked: cfgEnabled; onCheckedChanged: cfgEnabled = checked }
+                            Grid { columns: 4; spacing: 12; rowSpacing: 8; width: parent.width
+                                Text { text: "Stream:"; font.pixelSize: 12; color: "#8B8FA3" }
+                                ComboBox { width: 120; height: 28; model: ["Main", "Sub", "Third"]
+                                    background: Rectangle { color: "#252830"; radius: 4 }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
 
-                            Text { text: "码流类型:"; font.pixelSize: 12; color: "#8B8FA3" }
-                            ComboBox {
-                                width: 160; model: ["主码流", "子码流", "三码流"]
-                                currentIndex: model.indexOf(cfgStreamType)
-                                onActivated: cfgStreamType = model[currentIndex]
-                                background: Rectangle { color: "#252830"; radius: 4 }
-                                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Text { text: "编码格式:"; font.pixelSize: 12; color: "#8B8FA3" }
-                            ComboBox {
-                                width: 160; model: ["H.265", "H.264", "MJPEG"]
-                                currentIndex: model.indexOf(cfgCodec)
-                                onActivated: cfgCodec = model[currentIndex]
-                                background: Rectangle { color: "#252830"; radius: 4 }
-                                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Text { text: "分辨率:"; font.pixelSize: 12; color: "#8B8FA3" }
-                            ComboBox {
-                                width: 160; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720", "704x576"]
-                                currentIndex: model.indexOf(cfgResolution)
-                                onActivated: cfgResolution = model[currentIndex]
-                                background: Rectangle { color: "#252830"; radius: 4 }
-                                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Text { text: "帧率:"; font.pixelSize: 12; color: "#8B8FA3" }
-                            SpinBox { from: 1; to: 30; value: cfgFps; onValueChanged: cfgFps = value }
-                            Text { text: "码率(Kbps):"; font.pixelSize: 12; color: "#8B8FA3" }
-                            SpinBox { from: 256; to: 16384; value: cfgBitrate; stepSize: 512; onValueChanged: cfgBitrate = value }
-                        }
+                                Text { text: "Enabled:"; font.pixelSize: 12; color: "#8B8FA3" }
+                                Switch { checked: selectedChannel ? selectedChannel.enabled : false }
 
-                        Row {
-                            spacing: 8; anchors.horizontalCenter: parent.horizontalCenter
-                            Button {
-                                text: "💾 保存配置"; font.pixelSize: 11
-                                onClicked: saveChannelConfig()
-                                background: Rectangle { color: "#3B82F6"; radius: 6; width: 90; height: 30 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { text: "Codec:"; font.pixelSize: 12; color: "#8B8FA3" }
+                                ComboBox { width: 120; height: 28; model: ["H.265", "H.264", "MJPEG"]
+                                    background: Rectangle { color: "#252830"; radius: 4 }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+
+                                Text { text: "Resolution:"; font.pixelSize: 12; color: "#8B8FA3" }
+                                ComboBox { width: 120; height: 28; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
+                                    background: Rectangle { color: "#252830"; radius: 4 }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+
+                                Text { text: "FPS:"; font.pixelSize: 12; color: "#8B8FA3" }
+                                SpinBox { from: 1; to: 30; value: selectedChannel ? selectedChannel.fps : 25; height: 28 }
+
+                                Text { text: "Bitrate(K):"; font.pixelSize: 12; color: "#8B8FA3" }
+                                SpinBox { from: 256; to: 16384; value: selectedChannel ? selectedChannel.bitrate : 4096; stepSize: 512; height: 28 }
                             }
-                            Button {
-                                text: "▶ 开始推流"; font.pixelSize: 11
-                                onClicked: { if (selectedChannel) mediaController.startStream(selectedChannel.deviceId, selectedChannel.channelNo) }
-                                background: Rectangle { color: "#00D4AA"; radius: 6; width: 90; height: 30 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Button {
-                                text: "📷 截图"; font.pixelSize: 11
-                                onClicked: { if (selectedChannel) mediaController.snapshot(selectedChannel.channelNo) }
-                                background: Rectangle { color: "#252830"; radius: 6; width: 70; height: 30 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Button {
-                                text: "🧠 算法"; font.pixelSize: 11
-                                onClicked: { if (selectedChannel) { algoPlugin = selectedChannel.algoPlugin || "无"; showAlgoDialog = true } }
-                                background: Rectangle { color: "#8B5CF6"; radius: 6; width: 70; height: 30 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Button {
-                                text: "⏹ 停止"; font.pixelSize: 11
-                                onClicked: { if (selectedChannel) mediaController.stopStream(selectedChannel.deviceId + "_" + selectedChannel.channelNo) }
-                                background: Rectangle { color: "#FF3D71"; radius: 6; width: 70; height: 30 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+
+                            Row { spacing: 8
+                                Button { text: "Preview"; font.pixelSize: 11
+                                    onClicked: { if (selectedChannel) mediaController.startStream(selectedChannel.channelId, "main") }
+                                    background: Rectangle { color: "#00D4AA"; radius: 4; width: 70; height: 28 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Snapshot"; font.pixelSize: 11
+                                    onClicked: { if (selectedChannel) mediaController.snapshot(selectedChannel.channelId) }
+                                    background: Rectangle { color: "#252830"; radius: 4; width: 70; height: 28 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Record"; font.pixelSize: 11
+                                    onClicked: { if (selectedChannel) mediaController.startRecording(selectedChannel.channelId) }
+                                    background: Rectangle { color: "#FF3D71"; radius: 4; width: 70; height: 28 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Stop Rec"; font.pixelSize: 11
+                                    onClicked: { if (selectedChannel) mediaController.stopRecording(selectedChannel.channelId) }
+                                    background: Rectangle { color: "#252830"; radius: 4; width: 70; height: 28 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                             }
                         }
                     }
-                }
 
-                Rectangle {
-                    width: parent.width - 24; height: 240; color: "#141720"; radius: 8
-                    visible: selectedChannel === null
-                    Text { text: "← 请从左侧选择一个通道"; font.pixelSize: 13; color: "#4A4D58"; anchors.centerIn: parent }
-                }
-
-                // ── 轮巡方案 ──
-                Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
-
-                Row {
-                    spacing: 8; width: parent.width - 24
-                    Text { text: "轮巡方案"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                    Item { width: parent.width - 120 }
-                    Button {
-                        text: "➕ 新建"; font.pixelSize: 10
-                        onClicked: { showPatrolDialog = true; editingPatrolName = "" }
-                        background: Rectangle { color: "#252830"; radius: 4; width: 60; height: 22 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    // Empty state
+                    Rectangle {
+                        visible: selectedChannel === null
+                        width: parent.width; height: 100; color: "#141720"; radius: 8
+                        Text { anchors.centerIn: parent; text: "Select a channel from the left"; font.pixelSize: 13; color: "#4A4D58" }
                     }
-                }
 
-                ListView {
-                    width: parent.width - 24; height: parent.height - 340; clip: true; spacing: 4
-                    model: patrolPlans
-                    delegate: Rectangle {
-                        width: ListView.view.width; height: 52; color: "#141720"; radius: 6
-                        Row {
-                            anchors.fill: parent; anchors.margins: 8; spacing: 12
-                            Rectangle { width: 6; height: 6; radius: 3; color: modelData.active ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: modelData.name; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; width: 160 }
-                            Text { text: "间隔:" + modelData.interval; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: modelData.layout; font.pixelSize: 11; color: "#3B82F6" }
-                            Text { text: modelData.channels + "通道"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Item { width: 20 }
-                            Button {
-                                text: modelData.active ? "⏹ 停止" : "▶ 启动"; font.pixelSize: 10
-                                onClicked: togglePatrol(index)
-                                background: Rectangle { color: modelData.active ? "#FF3D71" : "#00D4AA"; radius: 4; width: 52; height: 22 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: modelData.active ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Button {
-                                text: "编辑"; font.pixelSize: 10
-                                onClicked: { editingPatrolName = modelData.name; showPatrolDialog = true }
-                                background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 22 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
-                            Button {
-                                text: "删除"; font.pixelSize: 10
-                                onClicked: removePatrol(index)
-                                background: Rectangle { color: "#3A1A1A"; radius: 4; width: 36; height: 22 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // 批量配置弹窗
-    // ═══════════════════════════════════════════════════════════════════════
-    Rectangle {
-        visible: showBatchDialog; anchors.fill: parent; color: "#80000000"; z: 100
-        MouseArea { anchors.fill: parent; onClicked: showBatchDialog = false }
-        Rectangle {
-            width: 440; height: 360; color: "#141720"; radius: 12
-            anchors.centerIn: parent; border.color: "#252830"; border.width: 1
-
-            Column {
-                anchors.fill: parent; anchors.margins: 20; spacing: 12
-
-                Row { width: parent.width; spacing: 8
-                    Text { text: "⚙️ 批量配置通道"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    Item { width: parent.width - 130 }
-                    Text { text: "✕"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showBatchDialog = false } }
-                }
-                Text { text: "将以下配置应用到所有设备的全部通道"; font.pixelSize: 11; color: "#8B8FA3"; wrapMode: Text.WordWrap; width: parent.width }
-
-                Grid {
-                    columns: 2; columnSpacing: 12; rowSpacing: 8; width: parent.width
-                    Text { text: "编码格式:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox {
-                        width: 240; model: ["H.265", "H.264", "MJPEG"]
-                        currentIndex: model.indexOf(batchCodec)
-                        onActivated: batchCodec = model[currentIndex]
-                        background: Rectangle { color: "#252830"; radius: 6 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Text { text: "分辨率:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox {
-                        width: 240; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
-                        currentIndex: model.indexOf(batchResolution)
-                        onActivated: batchResolution = model[currentIndex]
-                        background: Rectangle { color: "#252830"; radius: 6 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Text { text: "帧率:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { from: 1; to: 30; value: batchFps; onValueChanged: batchFps = value }
-                    Text { text: "码率(Kbps):"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { from: 256; to: 16384; value: batchBitrate; stepSize: 512; onValueChanged: batchBitrate = value }
-                }
-
-                Row {
-                    spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
-                    Button {
-                        text: "取消"; font.pixelSize: 13; onClicked: showBatchDialog = false
-                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 38 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Button {
-                        text: "应用配置"; font.pixelSize: 13
-                        onClicked: {
-                            var devices = deviceController.devices
-                            for (var i = 0; i < devices.length; i++) {
-                                var dev = devices[i]
-                                var chCount = dev.channelCount || 0
-                                for (var j = 0; j < chCount; j++) {
-                                    configController.saveConfig("channel_" + (dev.deviceId || dev.id) + "_" + (j+1), {
-                                        codec: batchCodec, resolution: batchResolution, fps: batchFps, bitrate: batchBitrate
-                                    })
+                    // PTZ panel
+                    Rectangle {
+                        visible: selectedChannel !== null
+                        width: parent.width; height: 130; color: "#141720"; radius: 8
+                        Column {
+                            anchors.fill: parent; anchors.margins: 12; spacing: 6
+                            Text { text: "PTZ Control"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                            Row { spacing: 12
+                                Grid { columns: 3; spacing: 4
+                                    Repeater {
+                                        model: ["leftUp", "up", "rightUp", "left", "stop", "right", "leftDown", "down", "rightDown"]
+                                        delegate: Button {
+                                            text: modelData.charAt(0).toUpperCase(); font.pixelSize: 12
+                                            onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, modelData, 0.5) }
+                                            background: Rectangle { color: "#252830"; radius: 4; width: 34; height: 26 }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        }
+                                    }
+                                }
+                                Column { spacing: 4; anchors.verticalCenter: parent.verticalCenter
+                                    Row { spacing: 4
+                                        Button { text: "Z+"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomIn", 0.3) }
+                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                        Button { text: "Z-"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomOut", 0.3) }
+                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                    }
+                                    Row { spacing: 4
+                                        Button { text: "F+"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusNear", 0.3) }
+                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                        Button { text: "F-"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusFar", 0.3) }
+                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                    }
                                 }
                             }
-                            statusText.text = "✅ 批量配置已应用"; statusText.color = "#00D4AA"; statusTimer.start()
-                            showBatchDialog = false
                         }
-                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 120; height: 38 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    }
+
+                    // Stream info
+                    Rectangle {
+                        visible: selectedChannel !== null
+                        width: parent.width; height: 70; color: "#141720"; radius: 8
+                        Column {
+                            anchors.fill: parent; anchors.margins: 12; spacing: 4
+                            Text { text: "Stream Info"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                            Row { spacing: 20
+                                Text { text: "Res: " + (selectedChannel ? (selectedChannel.resolution || "-") : "-"); font.pixelSize: 11; color: "#8B8FA3" }
+                                Text { text: "FPS: " + (selectedChannel ? (selectedChannel.fps || 0) : 0); font.pixelSize: 11; color: "#8B8FA3" }
+                                Text { text: "Codec: " + (selectedChannel ? (selectedChannel.codec || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
+                                Text { text: "Bitrate: " + (selectedChannel ? (selectedChannel.bitrate || 0) : 0) + " Kbps"; font.pixelSize: 11; color: "#FFB800" }
+                            }
+                        }
+                    }
+
+                    // Patrol schemes
+                    Text { text: "Patrol Schemes"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8"; topPadding: 8 }
+
+                    ListView {
+                        width: parent.width; height: 160; clip: true; spacing: 4
+                        model: [{ name: "Default Patrol (All)", interval: 10, layout: "4", channels: 12, active: true }, { name: "Key Area Patrol", interval: 5, layout: "1", channels: 4, active: false }, { name: "Parking Night", interval: 15, layout: "4", channels: 6, active: false }]
+                        delegate: Rectangle {
+                            width: ListView.view.width; height: 44; color: "#141720"; radius: 6
+                            Row {
+                                anchors.fill: parent; anchors.margins: 8; spacing: 12
+                                Rectangle { width: 6; height: 6; radius: 3; color: modelData.active ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: modelData.name; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; width: 180 }
+                                Text { text: "Interval:" + modelData.interval + "s"; font.pixelSize: 11; color: "#8B8FA3" }
+                                Text { text: modelData.layout + "-grid"; font.pixelSize: 11; color: "#3B82F6" }
+                                Text { text: modelData.channels + " ch"; font.pixelSize: 11; color: "#8B8FA3" }
+                                Item { width: 20 }
+                                Button { text: modelData.active ? "Stop" : "Start"; font.pixelSize: 10
+                                    background: Rectangle { color: modelData.active ? "#FF3D71" : "#00D4AA"; radius: 4; width: 48; height: 20 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: modelData.active ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Edit"; font.pixelSize: 10
+                                    background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 20 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // 算法插件弹窗
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══ Batch config dialog ═══
     Rectangle {
-        visible: showAlgoDialog; anchors.fill: parent; color: "#80000000"; z: 100
-        MouseArea { anchors.fill: parent; onClicked: showAlgoDialog = false }
+        visible: showBatchConfig; anchors.fill: parent; color: "#80000000"; z: 100
+        MouseArea { anchors.fill: parent; onClicked: showBatchConfig = false }
         Rectangle {
-            width: 400; height: 320; color: "#141720"; radius: 12
-            anchors.centerIn: parent; border.color: "#252830"; border.width: 1
-
+            width: 420; height: 340; color: "#141720"; radius: 12; anchors.centerIn: parent
             Column {
                 anchors.fill: parent; anchors.margins: 20; spacing: 12
-
-                Row { width: parent.width; spacing: 8
-                    Text { text: "🧠 算法插件设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    Item { width: parent.width - 130 }
-                    Text { text: "✕"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showAlgoDialog = false } }
+                Row { spacing: 8; width: parent.width
+                    Text { text: "Batch Config (" + selectedChannels.length + " channels)"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                    Item { width: parent.width - 300 }
+                    Text { text: "X"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showBatchConfig = false } }
                 }
-
-                Grid {
-                    columns: 2; columnSpacing: 12; rowSpacing: 8; width: parent.width
-                    Text { text: "算法插件:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox {
-                        width: 220; model: ["无", "入侵检测", "烟火检测", "安全帽检测", "人脸检测", "徘徊检测", "车牌识别"]
-                        currentIndex: model.indexOf(algoPlugin)
-                        onActivated: algoPlugin = model[currentIndex]
-                        background: Rectangle { color: "#252830"; radius: 6 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Text { text: "检测灵敏度:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row {
-                        Slider { width: 150; from: 1; to: 10; value: algoSensitivity; stepSize: 1; onValueChanged: algoSensitivity = value }
-                        Text { text: algoSensitivity; font.pixelSize: 12; color: "#E8E8E8"; width: 30; anchors.verticalCenter: parent.verticalCenter }
-                    }
-                    Text { text: "检测间隔(秒):"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { from: 1; to: 60; value: algoInterval; onValueChanged: algoInterval = value }
+                Grid { columns: 2; columnSpacing: 12; rowSpacing: 10; width: parent.width
+                    Text { text: "Codec:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    ComboBox { width: 200; height: 28; model: ["H.265", "H.264", "MJPEG"]
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                    Text { text: "Resolution:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    ComboBox { width: 200; height: 28; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                    Text { text: "FPS:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    SpinBox { from: 1; to: 30; value: batchFps; onValueChanged: batchFps = value; height: 28 }
+                    Text { text: "Bitrate(K):"; font.pixelSize: 12; color: "#8B8FA3" }
+                    SpinBox { from: 256; to: 16384; value: batchBitrate; onValueChanged: batchBitrate = value; stepSize: 512; height: 28 }
                 }
-
-                Row {
-                    spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
-                    Button {
-                        text: "取消"; font.pixelSize: 13; onClicked: showAlgoDialog = false
-                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 38 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Button {
-                        text: "应用插件"; font.pixelSize: 13
-                        onClicked: {
-                            if (selectedChannel) {
-                                configController.configureAlgorithm(
-                                    selectedChannel.deviceId + "_" + selectedChannel.channelNo,
-                                    { plugin: algoPlugin, sensitivity: algoSensitivity, interval: algoInterval }
-                                )
-                            }
-                            showAlgoDialog = false
-                        }
-                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 120; height: 38 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    }
+                Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
+                    Button { text: "Cancel"; font.pixelSize: 13; onClicked: showBatchConfig = false
+                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 36 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Apply"; font.pixelSize: 13
+                        onClicked: { statusMsg = "Batch config applied to " + selectedChannels.length + " channels"; showBatchConfig = false; selectedChannels = []; statusTimer.start() }
+                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 100; height: 36 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
             }
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // 轮巡方案弹窗
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══ Patrol dialog ═══
     Rectangle {
         visible: showPatrolDialog; anchors.fill: parent; color: "#80000000"; z: 100
         MouseArea { anchors.fill: parent; onClicked: showPatrolDialog = false }
         Rectangle {
-            width: 400; height: 280; color: "#141720"; radius: 12
-            anchors.centerIn: parent; border.color: "#252830"; border.width: 1
-
+            width: 400; height: 300; color: "#141720"; radius: 12; anchors.centerIn: parent
             Column {
                 anchors.fill: parent; anchors.margins: 20; spacing: 12
-
-                Row { width: parent.width; spacing: 8
-                    Text { text: "📋 新建轮巡方案"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    Item { width: parent.width - 130 }
-                    Text { text: "✕"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showPatrolDialog = false } }
+                Row { spacing: 8; width: parent.width
+                    Text { text: "New Patrol"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                    Item { width: parent.width - 120 }
+                    Text { text: "X"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showPatrolDialog = false } }
                 }
-
-                Grid {
-                    columns: 2; columnSpacing: 12; rowSpacing: 8; width: parent.width
-                    Text { text: "方案名称:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField {
-                        text: editingPatrolName; onTextChanged: editingPatrolName = text
-                        width: 220; font.pixelSize: 12; color: "#E8E8E8"
-                        placeholderText: "如: 默认轮巡"; placeholderTextColor: "#4A4D58"
-                        background: Rectangle { color: "#252830"; radius: 6 }
-                    }
-                    Text { text: "轮巡间隔(秒):"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { id: patrolInterval; from: 1; to: 60; value: 10 }
-                    Text { text: "画面布局:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox {
-                        id: patrolLayout; width: 220; model: ["1宫格", "4宫格", "9宫格", "16宫格"]
-                        background: Rectangle { color: "#252830"; radius: 6 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
-                    }
+                Grid { columns: 2; columnSpacing: 12; rowSpacing: 10; width: parent.width
+                    Text { text: "Name:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: patrolName; onTextChanged: patrolName = text; width: 200; height: 28; color: "#E8E8E8"; font.pixelSize: 12; placeholderText: "Patrol name"; placeholderTextColor: "#4A4D58"; background: Rectangle { color: "#252830"; radius: 4 } }
+                    Text { text: "Interval(s):"; font.pixelSize: 12; color: "#8B8FA3" }
+                    SpinBox { from: 3; to: 60; value: patrolInterval; onValueChanged: patrolInterval = value; height: 28 }
+                    Text { text: "Layout:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    ComboBox { width: 200; height: 28; model: ["1-grid", "4-grid", "9-grid", "16-grid"]
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                 }
-
-                Row {
-                    spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
-                    Button {
-                        text: "取消"; font.pixelSize: 13; onClicked: showPatrolDialog = false
-                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 38 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Button {
-                        text: "确认创建"; font.pixelSize: 13
-                        onClicked: {
-                            patrolPlans = patrolPlans.concat([{
-                                name: editingPatrolName || "新轮巡",
-                                interval: patrolInterval.value + "秒",
-                                layout: patrolLayout.currentText,
-                                channels: "0",
-                                active: false
-                            }])
-                            showPatrolDialog = false
-                        }
-                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 120; height: 38 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    }
+                Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
+                    Button { text: "Cancel"; font.pixelSize: 13; onClicked: showPatrolDialog = false
+                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 36 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Create"; font.pixelSize: 13
+                        onClicked: { statusMsg = "Patrol created: " + patrolName; showPatrolDialog = false; statusTimer.start() }
+                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 100; height: 36 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
             }
         }

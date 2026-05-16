@@ -1,361 +1,398 @@
 // ========================================================================
-// SettingsView.qml — 系统设置 (基本/网络/告警策略/AI模型 4Tab)
-// Controller: configController
+// SettingsView.qml — 系统设置 (4 Tab)
+// 接入 configController — box-sdk REST API
+// 功能: 基本/网络/告警策略/AI模型 Tab + 导入导出配置
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    id: settingsView
+    id: settingsPage
 
-    property int currentTab: 0
+    property string statusMsg: ""
+    property real alertSensitivity: 0.5
+    property int alertSilencePeriod: 5
+    property bool alertAutoConfirm: false
+    property bool alertScreenshot: true
+    property bool alertPreRecord: true
+    property bool alertSoundLight: true
+    property bool alertCloudPush: true
+    property bool alertAppPush: true
+    property bool alertRelay: false
+    property bool alertTTS: false
+
+    // Form fields bound to configController.config
+    property string cfgDeviceName: ""
+    property string cfgTimezone: "Asia/Shanghai"
+    property string cfgLanguage: "zh-CN"
+    property string cfgNtpServer: "ntp.aliyun.com"
+    property string cfgIp: ""
+    property string cfgSubnet: ""
+    property string cfgGateway: ""
+    property string cfgDns: ""
+    property string cfgVlan: ""
 
     Component.onCompleted: {
         configController.loadConfig()
         configController.getNetworkConfig()
-        configController.getAlgorithmList()
     }
 
     Connections {
         target: configController
         function onConfigUpdated() {
-            // 配置已更新 — UI绑定自动刷新
+            var c = configController.config
+            cfgDeviceName = c.deviceName || ""
+            cfgTimezone = c.timezone || "Asia/Shanghai"
+            cfgLanguage = c.language || "zh-CN"
+            cfgNtpServer = c.ntpServer || "ntp.aliyun.com"
+            alertSensitivity = c.alertSensitivity || 0.5
+            alertSilencePeriod = c.alertSilencePeriod || 5
+            alertAutoConfirm = c.alertAutoConfirm || false
         }
         function onNetworkConfigUpdated() {
-            ipField.text = configController.networkConfig.ip || ""
-            subnetField.text = configController.networkConfig.subnet || ""
-            gatewayField.text = configController.networkConfig.gateway || ""
-            dnsField.text = configController.networkConfig.dns || ""
+            var nc = configController.networkConfig
+            cfgIp = nc.ip || ""
+            cfgSubnet = nc.subnet || ""
+            cfgGateway = nc.gateway || ""
+            cfgDns = nc.dns || ""
+            cfgVlan = nc.vlan || ""
         }
-        function onAlgorithmListUpdated() {
-            aiModelList.model = configController.algorithmList
-        }
+        function onConfigSaved() { statusMsg = "Config saved"; statusTimer.start() }
+        function onConfigExported() { statusMsg = "Config exported"; statusTimer.start() }
+        function onConfigImported() { statusMsg = "Config imported"; statusTimer.start() }
+        function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
     }
 
+    Timer { id: statusTimer; interval: 3000; onTriggered: statusMsg = "" }
+
+    // ═══ Header ═══
     Rectangle {
         id: toolbar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 52; color: "#141720"
+        height: 48; color: "#141720"; radius: 8
 
         RowLayout {
-            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-
-            Text { text: "⚙️ 系统设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            anchors.fill: parent; anchors.margins: 12; spacing: 12
+            Text { text: "Settings"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
+            Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
 
-            // Tab切换
-            Row {
-                spacing: 2
-                Repeater {
-                    model: ["基本", "网络", "告警策略", "AI模型"]
-                    delegate: Button {
-                        text: modelData; font.pixelSize: 11
-                        background: Rectangle { color: settingsView.currentTab === index ? "#3B82F6" : "#252830"; radius: 6; width: 70; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: settingsView.currentTab === index ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        onClicked: settingsView.currentTab = index
-                    }
-                }
-            }
+            Button { text: "Export"; font.pixelSize: 12; onClicked: configController.exportConfig()
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+            Button { text: "Import"; font.pixelSize: 12; onClicked: configController.importConfig("")
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+        }
+    }
 
-            Button {
-                text: "📥 导入"; font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: configController.importConfig("")
-            }
-            Button {
-                text: "📤 导出"; font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: configController.exportConfig()
+    // ═══ Tab Bar ═══
+    TabBar {
+        id: tabBar
+        anchors.top: toolbar.bottom; anchors.left: parent.left; anchors.right: parent.right
+        height: 40; background: Rectangle { color: "#141720" }
+
+        Repeater {
+            model: ["General", "Network", "Alert Policy", "AI Models"]
+            delegate: TabButton {
+                text: modelData; font.pixelSize: 13
+                contentItem: Text { text: parent.text; font.pixelSize: 13; color: tabBar.currentIndex === index ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: tabBar.currentIndex === index ? "#0D0F12" : "transparent"; radius: 4 }
             }
         }
     }
 
-    // ── Tab内容 ──
+    // ═══ Content ═══
     StackLayout {
-        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
+        anchors.top: tabBar.bottom; anchors.bottom: parent.bottom
         anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: 12; currentIndex: settingsView.currentTab
+        anchors.margins: 8; currentIndex: tabBar.currentIndex
 
-        // ═══ Tab 0: 基本设置 ═══
-        Rectangle {
-            color: "#0D0F12"; radius: 8
+        // ── Tab 0: General ──
+        ScrollView { clip: true
+            Column { width: settingsPage.width - 24; spacing: 8; padding: 8
 
-            ScrollView {
-                anchors.fill: parent; anchors.margins: 16; clip: true
+                Text { text: "System Info"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Grid { columns: 2; columnSpacing: 20; rowSpacing: 4; width: parent.width
+                    Text { text: "Model:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.deviceModel || "ShieldBox Pro"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "NPU:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.npuModel || "BM1684X (32TOPS)"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Memory:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.memory || "8GB DDR4"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Storage:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.storage || "128GB eMMC"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Firmware:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.firmwareVersion || "-"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Serial:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.serialNumber || "-"; font.pixelSize: 12; color: "#E8E8E8" }
+                }
 
-                Column {
-                    width: parent.width - 32; spacing: 14
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    Text { text: "基本设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                Text { text: "General Settings"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Grid { columns: 2; columnSpacing: 16; rowSpacing: 8; width: parent.width
+                    Text { text: "Device Name:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgDeviceName; onTextChanged: cfgDeviceName = text; width: 240; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
 
-                    // 设备名
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "设备名称"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField {
-                            id: deviceNameField
-                            width: parent.width; height: 36
-                            text: configController.config.deviceName || "ShieldBox-AI-01"
-                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
-                            background: Rectangle { color: "#252830"; radius: 6 }
-                        }
+                    Text { text: "Timezone:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    ComboBox { width: 240; height: 32; model: ["Asia/Shanghai", "UTC", "America/New_York", "Europe/London", "Asia/Tokyo"]; currentIndex: model.indexOf(cfgTimezone)
+                        background: Rectangle { color: "#252830"; radius: 6 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+
+                    Text { text: "Language:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    ComboBox { width: 240; height: 32; model: ["zh-CN", "en-US", "ja-JP"]; currentIndex: model.indexOf(cfgLanguage)
+                        background: Rectangle { color: "#252830"; radius: 6 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+
+                    Text { text: "NTP Server:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgNtpServer; onTextChanged: cfgNtpServer = text; width: 240; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                }
+
+                Button { text: "Save General"; font.pixelSize: 13
+                    onClicked: {
+                        configController.saveConfig("deviceName", cfgDeviceName)
+                        configController.saveConfig("timezone", cfgTimezone)
+                        configController.saveConfig("language", cfgLanguage)
+                        configController.saveConfig("ntpServer", cfgNtpServer)
                     }
+                    background: Rectangle { color: "#3B82F6"; radius: 8; width: 140; height: 38 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
 
-                    // 时区
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "时区"; font.pixelSize: 12; color: "#8B8FA3" }
-                        ComboBox {
-                            id: timezoneCombo
-                            width: parent.width; height: 36
-                            model: ["Asia/Shanghai (UTC+8)", "Asia/Tokyo (UTC+9)", "America/New_York (UTC-5)", "Europe/London (UTC+0)"]
-                            background: Rectangle { color: "#252830"; radius: 6 }
-                        }
-                    }
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    // 语言
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "语言"; font.pixelSize: 12; color: "#8B8FA3" }
-                        ComboBox {
-                            id: langCombo
-                            width: parent.width; height: 36
-                            model: ["简体中文", "English", "日本語"]
-                            background: Rectangle { color: "#252830"; radius: 6 }
-                        }
+                Text { text: "Display & Sound"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Row { spacing: 20; width: parent.width
+                    Column { spacing: 4
+                        Text { text: "Screen Brightness"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Slider { width: 200; from: 10; to: 100; value: configController.config.screenBrightness || 80; onValueChanged: configController.saveConfig("screenBrightness", value) }
                     }
+                    Column { spacing: 4
+                        Text { text: "Alert Volume"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Slider { width: 200; from: 0; to: 100; value: configController.config.alertVolume || 60; onValueChanged: configController.saveConfig("alertVolume", value) }
+                    }
+                }
+                Row { spacing: 12
+                    CheckBox { text: "Alert Popup"; checked: configController.config.alertPopup !== false; onCheckedChanged: configController.saveConfig("alertPopup", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Sound & Light"; checked: configController.config.alertSoundLight !== false; onCheckedChanged: configController.saveConfig("alertSoundLight", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Auto-dismiss (15s)"; checked: configController.config.autoDismiss === true; onCheckedChanged: configController.saveConfig("autoDismiss", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                }
 
-                    // NTP服务器
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "NTP服务器"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField {
-                            id: ntpField
-                            width: parent.width; height: 36
-                            text: configController.config.ntpServer || "ntp.aliyun.com"
-                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
-                            background: Rectangle { color: "#252830"; radius: 6 }
-                        }
-                    }
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    // 自动重启
-                    Row {
-                        spacing: 12
-                        CheckBox {
-                            id: autoReboot
-                            text: "每日自动重启"
-                            checked: configController.config.autoReboot || false
-                        }
-                        SpinBox { from: 0; to: 23; value: 3; enabled: autoReboot.checked }
-                        Text { text: "时"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-                    }
-
-                    // 日志级别
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "日志级别"; font.pixelSize: 12; color: "#8B8FA3" }
-                        ComboBox { width: parent.width; model: ["DEBUG", "INFO", "WARN", "ERROR"]; background: Rectangle { color: "#252830"; radius: 6 } }
-                    }
-
-                    // 保存按钮
-                    Button {
-                        text: "💾 保存基本设置"; font.pixelSize: 13
-                        background: Rectangle { color: "#00D4AA"; radius: 8; width: 180; height: 40 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        onClicked: {
-                            configController.saveConfig("deviceName", deviceNameField.text)
-                            configController.saveConfig("timezone", timezoneCombo.currentText)
-                            configController.saveConfig("language", langCombo.currentText)
-                            configController.saveConfig("ntpServer", ntpField.text)
-                            configController.saveConfig("autoReboot", autoReboot.checked)
-                        }
-                    }
+                Text { text: "System Maintenance"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Row { spacing: 12
+                    Button { text: "Restart Service"; font.pixelSize: 12
+                        onClicked: { configController.saveConfig("_action", "restartService"); statusMsg = "Restarting service..."; statusTimer.start() }
+                        background: Rectangle { color: "#FFB800"; radius: 6; width: 110; height: 32 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Factory Reset"; font.pixelSize: 12
+                        onClicked: { configController.saveConfig("_action", "factoryReset"); statusMsg = "Factory reset initiated"; statusTimer.start() }
+                        background: Rectangle { color: "#FF3D71"; radius: 6; width: 100; height: 32 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Reboot Device"; font.pixelSize: 12
+                        onClicked: { configController.saveConfig("_action", "reboot"); statusMsg = "Rebooting..."; statusTimer.start() }
+                        background: Rectangle { color: "#FF3D71"; radius: 6; width: 100; height: 32 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
             }
         }
 
-        // ═══ Tab 1: 网络设置 ═══
-        Rectangle {
-            color: "#0D0F12"; radius: 8
+        // ── Tab 1: Network ──
+        ScrollView { clip: true
+            Column { width: settingsPage.width - 24; spacing: 8; padding: 8
 
-            ScrollView {
-                anchors.fill: parent; anchors.margins: 16; clip: true
+                Text { text: "Network Config"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Grid { columns: 2; columnSpacing: 16; rowSpacing: 6; width: parent.width
+                    Text { text: "IP Mode:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    ComboBox { width: 200; height: 32; model: ["DHCP", "Static IP"]
+                        background: Rectangle { color: "#252830"; radius: 6 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                    Text { text: "IP Address:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgIp; onTextChanged: cfgIp = text; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    Text { text: "Subnet Mask:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgSubnet; onTextChanged: cfgSubnet = text; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    Text { text: "Gateway:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgGateway; onTextChanged: cfgGateway = text; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    Text { text: "DNS:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgDns; onTextChanged: cfgDns = text; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    Text { text: "VLAN:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: cfgVlan; onTextChanged: cfgVlan = text; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                }
 
-                Column {
-                    width: parent.width - 32; spacing: 14
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    Text { text: "网络设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                Text { text: "Cloud Connection"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Grid { columns: 2; columnSpacing: 16; rowSpacing: 6; width: parent.width
+                    Text { text: "Cloud URL:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.cloudUrl || "-"; font.pixelSize: 12; color: "#3B82F6" }
+                    Text { text: "Status:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Row { spacing: 6
+                        Rectangle { width: 8; height: 8; radius: 4; color: "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: configController.config.cloudConnected ? "Connected" : "Disconnected"; font.pixelSize: 12; color: configController.config.cloudConnected ? "#00D4AA" : "#FF3D71" }
+                    }
+                    Text { text: "MQTT:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: configController.config.mqttBroker || "-"; font.pixelSize: 12; color: "#00D4AA" }
+                }
 
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "IP地址"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField { id: ipField; width: parent.width; height: 36; text: configController.networkConfig.ip || "192.168.1.200"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    }
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "子网掩码"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField { id: subnetField; width: parent.width; height: 36; text: configController.networkConfig.subnet || "255.255.255.0"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    }
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "网关"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField { id: gatewayField; width: parent.width; height: 36; text: configController.networkConfig.gateway || "192.168.1.1"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    }
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "DNS服务器"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField { id: dnsField; width: parent.width; height: 36; text: configController.networkConfig.dns || "8.8.8.8"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    }
+                Button { text: "Save Network"; font.pixelSize: 13
+                    onClicked: configController.setNetworkConfig({ "ip": cfgIp, "subnet": cfgSubnet, "gateway": cfgGateway, "dns": cfgDns, "vlan": cfgVlan })
+                    background: Rectangle { color: "#3B82F6"; radius: 8; width: 140; height: 38 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+            }
+        }
 
-                    Row {
-                        spacing: 12
-                        Text { text: "DHCP:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-                        Switch { id: dhcpSwitch; checked: false }
-                    }
+        // ── Tab 2: Alert Policy ──
+        ScrollView { clip: true
+            Column { width: settingsPage.width - 24; spacing: 8; padding: 8
 
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "VLAN ID (可选)"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField { width: parent.width; height: 36; placeholderText: "留空表示不使用VLAN"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    }
+                Text { text: "Alert Policy"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "API端口"; font.pixelSize: 12; color: "#8B8FA3" }
-                        TextField { id: apiPortField; width: parent.width; height: 36; text: "8080"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                Grid { columns: 2; columnSpacing: 16; rowSpacing: 8; width: parent.width
+                    Text { text: "Sensitivity:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Row { spacing: 8
+                        Slider { width: 180; from: 0.3; to: 0.95; value: alertSensitivity; stepSize: 0.05; onValueChanged: alertSensitivity = value }
+                        Text { text: (alertSensitivity * 100).toFixed(0) + "%"; font.pixelSize: 12; color: "#E8E8E8"; width: 40 }
                     }
 
-                    Button {
-                        text: "💾 保存网络设置"; font.pixelSize: 13
-                        background: Rectangle { color: "#00D4AA"; radius: 8; width: 180; height: 40 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        onClicked: {
-                            configController.setNetworkConfig({
-                                ip: ipField.text, subnet: subnetField.text,
-                                gateway: gatewayField.text, dns: dnsField.text,
-                                dhcp: dhcpSwitch.checked, port: apiPortField.text
-                            })
-                        }
+                    Text { text: "Silence Period:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Row { spacing: 4
+                        SpinBox { from: 1; to: 60; value: alertSilencePeriod; onValueChanged: alertSilencePeriod = value; height: 32 }
+                        Text { text: "seconds"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                     }
+
+                    Text { text: "Auto Confirm:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Row { spacing: 4
+                        SpinBox { from: 0; to: 60; value: 0; height: 32 }
+                        Text { text: "min (0=disabled)"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                }
+
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
+
+                Text { text: "Linkage Actions"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+
+                Column { spacing: 4; width: parent.width
+                    CheckBox { text: "Auto Screenshot"; checked: alertScreenshot; onCheckedChanged: alertScreenshot = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "3s Pre-record"; checked: alertPreRecord; onCheckedChanged: alertPreRecord = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Sound & Light"; checked: alertSoundLight; onCheckedChanged: alertSoundLight = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Cloud Push"; checked: alertCloudPush; onCheckedChanged: alertCloudPush = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "App Push"; checked: alertAppPush; onCheckedChanged: alertAppPush = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Relay Output"; checked: alertRelay; onCheckedChanged: alertRelay = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "TTS Broadcast"; checked: alertTTS; onCheckedChanged: alertTTS = checked; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                }
+
+                Button { text: "Save Alert Policy"; font.pixelSize: 13
+                    onClicked: {
+                        configController.saveConfig("alertSensitivity", alertSensitivity)
+                        configController.saveConfig("alertSilencePeriod", alertSilencePeriod)
+                        configController.saveConfig("alertAutoConfirm", alertAutoConfirm)
+                        configController.saveConfig("alertScreenshot", alertScreenshot)
+                        configController.saveConfig("alertPreRecord", alertPreRecord)
+                        configController.saveConfig("alertSoundLight", alertSoundLight)
+                        configController.saveConfig("alertCloudPush", alertCloudPush)
+                        configController.saveConfig("alertAppPush", alertAppPush)
+                    }
+                    background: Rectangle { color: "#3B82F6"; radius: 8; width: 140; height: 38 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
+
+                Text { text: "Notification Channels"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Grid { columns: 2; columnSpacing: 16; rowSpacing: 8; width: parent.width
+                    Text { text: "Webhook URL:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: configController.config.webhookUrl || ""; onTextChanged: configController.saveConfig("webhookUrl", text); width: 280; height: 32; color: "#E8E8E8"; font.pixelSize: 12; placeholderText: "https://..."; placeholderTextColor: "#4A4D58"; background: Rectangle { color: "#252830"; radius: 6 } }
+                    Text { text: "Email:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: configController.config.alertEmail || ""; onTextChanged: configController.saveConfig("alertEmail", text); width: 280; height: 32; color: "#E8E8E8"; font.pixelSize: 12; placeholderText: "admin@example.com"; placeholderTextColor: "#4A4D58"; background: Rectangle { color: "#252830"; radius: 6 } }
+                    Text { text: "SMS Phone:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: configController.config.smsPhone || ""; onTextChanged: configController.saveConfig("smsPhone", text); width: 280; height: 32; color: "#E8E8E8"; font.pixelSize: 12; placeholderText: "+86..."; placeholderTextColor: "#4A4D58"; background: Rectangle { color: "#252830"; radius: 6 } }
+                }
+
+                Row { spacing: 12
+                    CheckBox { text: "Enable Webhook"; checked: configController.config.webhookEnabled === true; onCheckedChanged: configController.saveConfig("webhookEnabled", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Enable Email"; checked: configController.config.emailEnabled === true; onCheckedChanged: configController.saveConfig("emailEnabled", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Enable SMS"; checked: configController.config.smsEnabled === true; onCheckedChanged: configController.saveConfig("smsEnabled", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                }
+
+                Rectangle { height: 1; color: "#252830"; width: parent.width }
+
+                Text { text: "Schedule"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Grid { columns: 4; columnSpacing: 12; rowSpacing: 6; width: parent.width
+                    Text { text: "Active from:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: configController.config.alertActiveFrom || "00:00"; onTextChanged: configController.saveConfig("alertActiveFrom", text); width: 80; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
+                    Text { text: "Active until:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    TextField { text: configController.config.alertActiveUntil || "23:59"; onTextChanged: configController.saveConfig("alertActiveUntil", text); width: 80; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
+                }
+                Row { spacing: 12
+                    CheckBox { text: "Mon"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Tue"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Wed"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Thu"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Fri"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Sat"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
+                    CheckBox { text: "Sun"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
                 }
             }
         }
 
-        // ═══ Tab 2: 告警策略 ═══
-        Rectangle {
-            color: "#0D0F12"; radius: 8
+        // ── Tab 3: AI Models ──
+        ScrollView { clip: true
+            Column { width: settingsPage.width - 24; spacing: 8; padding: 8
 
-            ScrollView {
-                anchors.fill: parent; anchors.margins: 16; clip: true
-
-                Column {
-                    width: parent.width - 32; spacing: 14
-
-                    Text { text: "告警策略"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-
-                    // 灵敏度
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "检测灵敏度: " + sensitivitySlider.value + "%"; font.pixelSize: 12; color: "#E8E8E8" }
-                        Slider { id: sensitivitySlider; width: parent.width; from: 10; to: 100; value: configController.config.sensitivity || 70; stepSize: 5 }
-                    }
-
-                    // 静默期
-                    Column { spacing: 4; width: parent.width
-                        Text { text: "告警静默期 (秒)"; font.pixelSize: 12; color: "#8B8FA3" }
-                        SpinBox { from: 5; to: 300; value: configController.config.silencePeriod || 30; stepSize: 5 }
-                    }
-
-                    // 自动确认
-                    Row { spacing: 12
-                        CheckBox { text: "低级别告警自动确认 (30分钟后)"; checked: configController.config.autoConfirm || false }
-                    }
-                    Row { spacing: 12
-                        CheckBox { text: "AI判定误报自动静音"; checked: configController.config.autoMuteFalseAlarm || true }
-                    }
-
-                    Rectangle { height: 1; color: "#252830"; width: parent.width }
-
-                    // 通知渠道
-                    Text { text: "通知渠道"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-                    Row { spacing: 16
-                        CheckBox { text: "本地弹窗"; checked: true }
-                        CheckBox { text: "语音播报"; checked: true }
-                    }
-                    Row { spacing: 16
-                        CheckBox { text: "手机推送"; checked: false }
-                        CheckBox { text: "短信通知"; checked: false }
-                    }
-                    Row { spacing: 16
-                        CheckBox { text: "邮件通知"; checked: false }
-                        CheckBox { text: "WebHook"; checked: false }
-                    }
-
-                    // 联动动作
-                    Rectangle { height: 1; color: "#252830"; width: parent.width }
-                    Text { text: "默认联动动作"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-                    Row { spacing: 16
-                        CheckBox { text: "触发录像"; checked: true }
-                        CheckBox { text: "自动截图"; checked: true }
-                    }
-                    Row { spacing: 16
-                        CheckBox { text: "声光报警"; checked: false }
-                        CheckBox { text: "电视墙弹出"; checked: false }
-                    }
-
-                    Button {
-                        text: "💾 保存告警策略"; font.pixelSize: 13
-                        background: Rectangle { color: "#00D4AA"; radius: 8; width: 180; height: 40 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                        onClicked: {
-                            configController.saveConfig("sensitivity", sensitivitySlider.value)
-                            configController.saveConfig("silencePeriod", 30)
-                        }
-                    }
-                }
-            }
-        }
-
-        // ═══ Tab 3: AI模型 ═══
-        Rectangle {
-            color: "#0D0F12"; radius: 8
-
-            Column {
-                anchors.fill: parent; anchors.margins: 16; spacing: 8
-
-                Row {
-                    spacing: 12
-                    Text { text: "AI模型配置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    Text { text: configController.algorithmList.length + " 个已加载"; font.pixelSize: 11; color: "#8B8FA3" }
-                }
+                Text { text: "AI Model Config"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
-                    id: aiModelList
-                    width: parent.width; height: parent.height - 50; clip: true; spacing: 6
+                    width: parent.width; height: 320; spacing: 4; clip: true
                     model: configController.algorithmList
 
                     delegate: Rectangle {
-                        width: ListView.view.width; height: 56; color: "#141720"; radius: 6
-                        property var mData: modelData || model
-
-                        Row {
-                            anchors.fill: parent; anchors.margins: 10; spacing: 12
-
-                            Text { text: "🧠"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
-                            Column { spacing: 2; width: 160
-                                Text { text: mData.name || "模型"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                                Text { text: (mData.precision || "INT8") + " | " + (mData.fps || 0) + " FPS"; font.pixelSize: 10; color: "#8B8FA3" }
+                        width: ListView.view.width; height: 48; color: "#0D0F12"; radius: 4
+                        Row { anchors.fill: parent; anchors.margins: 8; spacing: 10
+                            Rectangle { width: 24; height: 24; radius: 12; color: modelData.status === "active" ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter
+                                Text { text: "S" + (modelData.slot || 0); font.pixelSize: 9; color: "#0D0F12"; font.bold: true; anchors.centerIn: parent } }
+                            Text { text: modelData.name || modelData.algoId; font.pixelSize: 11; color: "#E8E8E8"; width: 180; elide: Text.ElideRight }
+                            Text { text: modelData.precision || "INT8"; font.pixelSize: 10; color: "#6C5CE7"; width: 40 }
+                            Text { text: (modelData.size || 0) + "MB"; font.pixelSize: 10; color: "#8B8FA3"; width: 50 }
+                            Text { text: (modelData.inferenceMs || 0) + "ms"; font.pixelSize: 10; color: "#FFB800"; width: 40 }
+                            Button {
+                                text: modelData.status === "active" ? "Deactivate" : "Activate"; font.pixelSize: 10
+                                onClicked: configController.configureAlgorithm(modelData.algoId, { "action": modelData.status === "active" ? "deactivate" : "activate" })
+                                background: Rectangle { color: modelData.status === "active" ? "#2A1A1A" : "#1A2A1A"; radius: 4; width: 60; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: modelData.status === "active" ? "#FF6B35" : "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             }
-                            Column { spacing: 2
-                                Text { text: "灵敏度:"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Slider { width: 120; from: 10; to: 100; value: mData.sensitivity || 70; stepSize: 5
-                                    onMoved: configController.configureAlgorithm(mData.id, { sensitivity: value })
-                                }
-                            }
-                            Column { spacing: 2
-                                Text { text: "最小置信度:"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Slider { width: 120; from: 10; to: 100; value: mData.minConfidence || 50; stepSize: 5
-                                    onMoved: configController.configureAlgorithm(mData.id, { minConfidence: value })
-                                }
-                            }
-                            Switch {
-                                checked: mData.enabled !== false
-                                onToggled: configController.configureAlgorithm(mData.id, { enabled: checked })
+                            Button {
+                                text: "Config"; font.pixelSize: 10
+                                onClicked: configController.configureAlgorithm(modelData.algoId, { "action": "getConfig" })
+                                background: Rectangle { color: "#252830"; radius: 4; width: 44; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             }
                         }
                     }
                 }
+
+                // TPU utilization summary
+                Rectangle {
+                    width: parent.width; height: 80; color: "#141720"; radius: 8
+                    Column {
+                        anchors.fill: parent; anchors.margins: 12; spacing: 4
+                        Text { text: "TPU Utilization"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                        Row { spacing: 20
+                            Text { text: "Active models: " + configController.algorithmList.filter(function(e){ return e.status === "active" }).length; font.pixelSize: 11; color: "#00D4AA" }
+                            Text { text: "Total FPS: " + configController.algorithmList.reduce(function(a, e){ return a + (e.fps || 0) }, 0); font.pixelSize: 11; color: "#3B82F6" }
+                            Text { text: "Avg latency: " + (configController.algorithmList.length > 0 ? (configController.algorithmList.reduce(function(a, e){ return a + (e.inferenceMs || 0) }, 0) / configController.algorithmList.filter(function(e){ return e.status === "active" }).length).toFixed(1) : 0) + "ms"; font.pixelSize: 11; color: "#FFB800" }
+                        }
+                        Row { spacing: 20
+                            Text { text: "Storage used: " + configController.algorithmList.reduce(function(a, e){ return a + (e.size || 0) }, 0).toFixed(1) + " MB"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "TPU slots: " + configController.algorithmList.filter(function(e){ return e.slot > 0 }).length + "/8"; font.pixelSize: 11; color: "#8B8FA3" }
+                        }
+                    }
+                }
+
+                Button { text: "Refresh Models"; font.pixelSize: 12
+                    onClicked: configController.getAlgorithmList()
+                    background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32; border.color: "#4A4D58"; border.width: 1 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
             }
         }
     }

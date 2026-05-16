@@ -104,8 +104,65 @@ Item {
         }
 
     // ── 主体三栏 ──
+    // ── 场景预设 (产品设计文档要求) ──
+    Rectangle {
+        id: scenePresetBar
+        anchors.top: statsBar.bottom; anchors.left: parent.left; anchors.right: parent.right
+        height: 64; color: "#141720"; radius: 8
+
+        RowLayout {
+            anchors.fill: parent; anchors.margins: 8; spacing: 8
+
+            Text { text: "🎯 场景预设"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+
+            Repeater {
+                model: [
+                    { name: "🏭 厂区周界", icon: "🏭", desc: "周界入侵+绊线+人员检测",
+                      models: ["person_detect", "perimeter_guard"], confidence: 0.6, nms: 0.45, confirmFrames: 3 },
+                    { name: "🔥 仓储防火", icon: "🔥", desc: "烟火+温度异常+安全帽",
+                      models: ["fire_smoke", "ppe_detect"], confidence: 0.5, nms: 0.4, confirmFrames: 2 },
+                    { name: "🏗️ 施工安全", icon: "🏗️", desc: "安全帽+反光衣+区域入侵",
+                      models: ["ppe_detect", "person_detect", "region_detect"], confidence: 0.55, nms: 0.45, confirmFrames: 3 },
+                    { name: "🅿️ 停车管理", icon: "🅿️", desc: "车牌识别+违停检测",
+                      models: ["plate_recog", "region_detect"], confidence: 0.7, nms: 0.5, confirmFrames: 2 },
+                    { name: "👥 人流统计", icon: "👥", desc: "人群密度+计数+聚集",
+                      models: ["person_detect", "crowd_count"], confidence: 0.5, nms: 0.4, confirmFrames: 5 },
+                    { name: "🔐 门禁安防", icon: "🔐", desc: "人脸识别+陌生人告警",
+                      models: ["face_recog", "person_detect"], confidence: 0.8, nms: 0.45, confirmFrames: 1 }
+                ]
+
+                delegate: Button {
+                    property var preset: modelData
+                    width: 120; height: 44
+                    onClicked: applyScenePreset(modelData)
+                    background: Rectangle {
+                        color: activePreset === index ? "#1A3A2A" : "#0D0F12"
+                        radius: 8; border.color: activePreset === index ? "#00D4AA" : "#252830"
+                        border.width: 1
+                    }
+                    contentItem: Column {
+                        spacing: 1; anchors.centerIn: parent
+                        Text { text: modelData.icon + " " + modelData.name; font.pixelSize: 11; color: activePreset === index ? "#00D4AA" : "#E8E8E8"; font.bold: activePreset === index; horizontalAlignment: Text.AlignHCenter }
+                        Text { text: modelData.desc; font.pixelSize: 8; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; width: 110 }
+                    }
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text { text: "选择场景自动配置算法参数"; font.pixelSize: 10; color: "#4A4D58" }
+        }
+    }
+
+    property int activePreset: -1
+
+    function applyScenePreset(preset) {
+        // TODO: call algorithmController.applyPreset(preset)
+        console.log("Apply preset:", preset.name, "models:", preset.models)
+    }
+
     RowLayout {
-        anchors.top: statsBar.bottom; anchors.bottom: parent.bottom
+        anchors.top: scenePresetBar.bottom; anchors.bottom: parent.bottom
         anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 8; spacing: 8
 

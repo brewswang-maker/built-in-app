@@ -25,5 +25,8 @@
         <file alias="ModelManagementView.qml">../src/views/ModelManagementView.qml</file>
         <file alias="FederationDashboard.qml">../src/views/FederationDashboard.qml</file>
         <file alias="AuditCenterView.qml">../src/views/AuditCenterView.qml</file>
+        <file alias="SceneManageView.qml">../src/views/SceneManageView.qml</file>
+        <file alias="NotificationPopup.qml">../src/views/NotificationPopup.qml</file>
+        <file alias="NotificationBell.qml">../src/views/components/NotificationBell.qml</file>
     </qresource>
 </RCC>

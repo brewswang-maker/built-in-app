@@ -57,8 +57,17 @@ ApplicationWindow {
                 Layout.preferredHeight: 32
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: navBar.currentIndex = 1
+                    onClicked: navBar.currentIndex = 2  // Alarms
                 }
+            }
+
+            // Notification bell
+            NotificationBell {
+                id: notifBell
+                unreadCount: notificationController.unreadCount
+                Layout.preferredWidth: 40
+                Layout.preferredHeight: 32
+                onClicked: notifPopup.visible ? notifPopup.close() : notifPopup.show()
             }
 
             // Status indicator
@@ -121,6 +130,7 @@ ApplicationWindow {
                     { icon: "📦", label: "模型", tip: "Model Mgmt" },
                     { icon: "🌐", label: "联邦", tip: "Federation" },
                     { icon: "📋", label: "审计", tip: "Audit" },
+                    { icon: "🎬", label: "场景", tip: "Scene Management" },
                     { icon: "🔄", label: "升级", tip: "OTA Upgrade" },
                     { icon: "⚙️", label: "设置", tip: "Settings" }
                 ]
@@ -188,6 +198,7 @@ ApplicationWindow {
         ModelManagementView {}
         FederationDashboard {}
         AuditCenterView {}
+        SceneManageView {}
         OTAUpgradeView {}
         SettingsView {}
     }
@@ -195,6 +206,14 @@ ApplicationWindow {
     // ── Alarm Popup ──
     AlarmPopup {
         id: alarmPopup
+    }
+
+    // ── Notification Popup ──
+    NotificationPopup {
+        id: notifPopup
+        unreadCount: notificationController.unreadCount
+        onMarkAllRead: notificationController.markAllRead()
+        onClearAll: notificationController.clearAll()
     }
 
     // ── Connections ──

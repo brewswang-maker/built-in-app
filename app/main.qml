@@ -131,6 +131,7 @@ ApplicationWindow {
                     { icon: "🌐", label: "联邦", tip: "Federation" },
                     { icon: "📋", label: "审计", tip: "Audit" },
                     { icon: "🎬", label: "场景", tip: "Scene Management" },
+                    { icon: "🔗", label: "联动", tip: "Event Linkage" },
                     { icon: "🔄", label: "升级", tip: "OTA Upgrade" },
                     { icon: "⚙️", label: "设置", tip: "Settings" }
                 ]
@@ -199,13 +200,22 @@ ApplicationWindow {
         FederationDashboard {}
         AuditCenterView {}
         SceneManageView {}
+        LinkageRuleView {}
         OTAUpgradeView {}
         SettingsView {}
     }
 
-    // ── Alarm Popup ──
+    // ── Alarm Popup (联动增强版) ──
     AlarmPopup {
         id: alarmPopup
+    }
+
+    // ── Linkage Alarm Popup (海康级) ──
+    LinkageAlarmPopup {
+        id: linkageAlarmPopup
+        onConfirmed: console.log("Alarm confirmed")
+        onFalseAlarm: console.log("False alarm")
+        onSilenced: console.log("Alarm silenced")
     }
 
     // ── Notification Popup ──
@@ -221,6 +231,10 @@ ApplicationWindow {
         target: alarmController
         function onNewAlarm(alarm) {
             alarmPopup.showAlarm(alarm)
+            // 有联动规则时弹出增强版
+            if (alarm.has_linkage) {
+                linkageAlarmPopup.showAlarm(alarm, alarm.linkage_actions)
+            }
         }
     }
 

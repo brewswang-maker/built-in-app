@@ -105,23 +105,29 @@ ApplicationWindow {
             Repeater {
                 model: [
                     { icon: "🏠", label: "总览", tip: "Dashboard" },
-                    { icon: "📹", label: "预览", tip: "Video" },
-                    { icon: "🚨", label: "告警", tip: "Alarm" },
-                    { icon: "🧩", label: "算法", tip: "Algorithm" },
-                    { icon: "🔗", label: "流水线", tip: "Pipeline" },
-                    { icon: "📡", label: "GB28181", tip: "GB28181" },
-                    { icon: "🔌", label: "ONVIF", tip: "ONVIF" },
+                    { icon: "📹", label: "预览", tip: "Video Grid" },
+                    { icon: "🚨", label: "告警", tip: "Alarms" },
+                    { icon: "🧩", label: "算法", tip: "Algorithm Center" },
+                    { icon: "🔗", label: "流水线", tip: "Pipeline Editor" },
+                    { icon: "📡", label: "GB28181", tip: "GB28181 Devices" },
+                    { icon: "🔌", label: "ONVIF", tip: "ONVIF Discovery" },
                     { icon: "📼", label: "录像", tip: "Recording" },
-                    { icon: "🛡️", label: "态势", tip: "Situation" },
-                    { icon: "🤖", label: "AI", tip: "AI Chat" },
-                    { icon: "📊", label: "统计", tip: "Stats" },
-                    { icon: "🔄", label: "升级", tip: "OTA" },
+                    { icon: "🛡️", label: "态势", tip: "Situation 3D" },
+                    { icon: "🤖", label: "AI", tip: "AI Assistant" },
+                    { icon: "📊", label: "统计", tip: "Statistics" },
+                    { icon: "📹", label: "设备", tip: "Devices" },
+                    { icon: "📡", label: "通道", tip: "Channels" },
+                    { icon: "📺", label: "流管理", tip: "Streams" },
+                    { icon: "📦", label: "模型", tip: "Model Mgmt" },
+                    { icon: "🌐", label: "联邦", tip: "Federation" },
+                    { icon: "📋", label: "审计", tip: "Audit" },
+                    { icon: "🔄", label: "升级", tip: "OTA Upgrade" },
                     { icon: "⚙️", label: "设置", tip: "Settings" }
                 ]
 
                 delegate: Button {
                     width: sidebar.width - 8
-                    height: 52
+                    height: 42
                     flat: true
                     highlighted: sidebar.currentIndex === index
                     onClicked: sidebar.currentIndex = index
@@ -176,6 +182,12 @@ ApplicationWindow {
         SituationView {}
         AIChatView {}
         StatisticsView {}
+        DevicesView {}
+        ChannelView {}
+        StreamManagementView {}
+        ModelManagementView {}
+        FederationDashboard {}
+        AuditCenterView {}
         OTAUpgradeView {}
         SettingsView {}
     }

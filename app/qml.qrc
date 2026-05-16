@@ -19,5 +19,11 @@
         <file alias="ONVIFDiscoveryView.qml">../src/views/ONVIFDiscoveryView.qml</file>
         <file alias="OTAUpgradeView.qml">../src/views/OTAUpgradeView.qml</file>
         <file alias="DeviceDetailView.qml">../src/views/DeviceDetailView.qml</file>
+        <file alias="DevicesView.qml">../src/views/DevicesView.qml</file>
+        <file alias="ChannelView.qml">../src/views/ChannelView.qml</file>
+        <file alias="StreamManagementView.qml">../src/views/StreamManagementView.qml</file>
+        <file alias="ModelManagementView.qml">../src/views/ModelManagementView.qml</file>
+        <file alias="FederationDashboard.qml">../src/views/FederationDashboard.qml</file>
+        <file alias="AuditCenterView.qml">../src/views/AuditCenterView.qml</file>
     </qresource>
 </RCC>

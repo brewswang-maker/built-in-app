@@ -33,13 +33,13 @@ void FederationController::refreshRounds(int limit) {
 
 void FederationController::startRound(const QVariantMap& config) {
     m_api->post("/api/v1/federation/rounds/start", QJsonObject::fromVariantMap(config),
-        [this]() { refreshRounds(); },
+        [this](QJsonObject) { refreshRounds(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
 void FederationController::stopRound() {
     m_api->post("/api/v1/federation/rounds/stop", QJsonObject(),
-        [this]() {
+        [this](QJsonObject) {
             m_federating = false;
             emit roundUpdated();
             refreshRounds();
@@ -55,7 +55,7 @@ void FederationController::getNodeDetail(const QString& nodeId) {
 
 void FederationController::approveNode(const QString& nodeId) {
     m_api->post(QString("/api/v1/federation/nodes/%1/approve").arg(nodeId), QJsonObject(),
-        [this]() { refreshNodes(); },
+        [this](QJsonObject) { refreshNodes(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 

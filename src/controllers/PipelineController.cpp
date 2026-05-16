@@ -30,7 +30,7 @@ void PipelineController::createPipeline(const QVariantMap& pipeline) {
 
 void PipelineController::updatePipeline(const QString& id, const QVariantMap& updates) {
     m_api->put(QString("/api/v1/pipelines/%1").arg(id), QJsonObject::fromVariantMap(updates),
-        [this]() { refreshPipelines(); },
+        [this](QJsonObject) { refreshPipelines(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
@@ -42,13 +42,13 @@ void PipelineController::deletePipeline(const QString& id) {
 
 void PipelineController::startPipeline(const QString& id) {
     m_api->post(QString("/api/v1/pipelines/%1/start").arg(id), QJsonObject(),
-        [this, id]() { emit pipelineStarted(id); refreshPipelines(); },
+        [this, id](QJsonObject) { emit pipelineStarted(id); refreshPipelines(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
 void PipelineController::stopPipeline(const QString& id) {
     m_api->post(QString("/api/v1/pipelines/%1/stop").arg(id), QJsonObject(),
-        [this, id]() { emit pipelineStopped(id); refreshPipelines(); },
+        [this, id](QJsonObject) { emit pipelineStopped(id); refreshPipelines(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 

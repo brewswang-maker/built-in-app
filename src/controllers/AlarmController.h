@@ -1,7 +1,9 @@
 #pragma once
 #include <QObject>
 #include <QVariantList>
+#ifdef HAS_QT_WEBSOCKETS
 #include <QWebSocket>
+#endif
 
 class ApiClient;
 
@@ -40,5 +42,5 @@ private:
     QObject* m_alarmModel = nullptr;
     QVariantList m_alarms;
     bool m_hasUnread = false;
-    QWebSocket* m_ws = nullptr;
+    void* m_ws = nullptr;  // QWebSocket* when HAS_QT_WEBSOCKETS
 };

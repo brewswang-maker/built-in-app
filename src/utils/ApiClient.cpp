@@ -114,3 +114,7 @@ void ApiClient::setupReply(QNetworkReply* reply,
         if (onSuccess) onSuccess(doc.object());
     });
 }
+
+void ApiClient::onReplyFinished() {
+    // Slot for QNetworkReply finished signal — handled per-reply in setupReply
+}

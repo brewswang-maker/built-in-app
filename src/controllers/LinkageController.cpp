@@ -54,7 +54,7 @@ void LinkageController::toggleRule(const QString& ruleId, bool enabled) {
     QJsonObject body;
     body["enabled"] = enabled;
     m_api->put(QString("/api/v1/linkage/rules/%1").arg(ruleId), body,
-        [this]() { refreshRules(); },
+        [this](QJsonObject) { refreshRules(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 

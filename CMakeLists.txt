@@ -18,8 +18,16 @@ find_package(Qt6 REQUIRED COMPONENTS
     Quick
     QuickControls2
     Network
-    WebSockets
 )
+
+# WebSockets is optional
+find_package(Qt6 COMPONENTS WebSockets)
+if(Qt6WebSockets_FOUND)
+    add_compile_definitions(HAS_QT_WEBSOCKETS)
+    message(STATUS "Qt6WebSockets found — WebSocket support enabled")
+else()
+    message(STATUS "Qt6WebSockets NOT found — WebSocket support disabled")
+endif()
 
 # Collect sources
 file(GLOB_RECURSE CONTROLLER_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers/*.cpp)
@@ -47,8 +55,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Network
-    Qt6::WebSockets
 )
+
+if(Qt6WebSockets_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::WebSockets)
+endif()
 
 # Install
 install(TARGETS ${PROJECT_NAME}

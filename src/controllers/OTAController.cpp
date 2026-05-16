@@ -1,5 +1,6 @@
 #include "OTAController.h"
 #include "utils/ApiClient.h"
+#include <QTimer>
 
 OTAController::OTAController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {}
@@ -74,7 +75,7 @@ void OTAController::rollback(const QString& partition) {
     QJsonObject body;
     body["partition"] = partition;
     m_api->post("/api/v1/ota/rollback", body,
-        [this]() {
+        [this](QJsonObject) {
             checkUpdate();
             refreshHistory();
         },

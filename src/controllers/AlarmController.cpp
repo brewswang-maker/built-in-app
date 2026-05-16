@@ -1,17 +1,21 @@
 #include "AlarmController.h"
 #include "utils/ApiClient.h"
 #include <QJsonDocument>
+#ifdef HAS_QT_WEBSOCKETS
 #include <QSystemTrayIcon>
+#endif
 
 AlarmController::AlarmController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {
 }
 
 AlarmController::~AlarmController() {
+#ifdef HAS_QT_WEBSOCKETS
     if (m_ws) {
-        m_ws->close();
-        delete m_ws;
+        static_cast<QWebSocket*>(m_ws)->close();
+        delete static_cast<QWebSocket*>(m_ws);
     }
+#endif
 }
 
 void AlarmController::refreshAlarms(int limit) {
@@ -53,17 +57,21 @@ void AlarmController::handleAlarm(const QString& alarmId, const QString& action)
 }
 
 void AlarmController::connectWebSocket() {
+#ifdef HAS_QT_WEBSOCKETS
     if (m_ws) {
-        m_ws->close();
-        delete m_ws;
+        static_cast<QWebSocket*>(m_ws)->close();
+        delete static_cast<QWebSocket*>(m_ws);
+        m_ws = nullptr;
     }
     QString wsUrl = m_api->property("baseUrl").toString();
     wsUrl.replace("http://", "ws://").replace("https://", "wss://");
     wsUrl += "/api/v1/alarms/stream";
-    m_ws = new QWebSocket();
-    connect(m_ws, &QWebSocket::textMessageReceived,
+    auto* ws = new QWebSocket();
+    m_ws = ws;
+    connect(ws, &QWebSocket::textMessageReceived,
             this, &AlarmController::onWsTextMessage);
-    m_ws->open(QUrl(wsUrl));
+    ws->open(QUrl(wsUrl));
+#endif
 }
 
 void AlarmController::onWsTextMessage(const QString& message) {

@@ -85,82 +85,99 @@ ApplicationWindow {
         }
     }
 
-    // ── Content Area ──
-    StackLayout {
-        id: stackView
-        anchors.top: header.bottom
-        anchors.bottom: navBar.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        currentIndex: navBar.currentIndex
-
-        DashboardView {}
-        AlarmView {}
-        AlgorithmView {}
-        SettingsView {}
-        AIChatView {}
-        StatisticsView {}
-        VideoGridView {}
-    }
-
-    // ── Bottom Navigation ──
+    // ── Left Sidebar Navigation ──
     Rectangle {
-        id: navBar
+        id: sidebar
+        anchors.top: header.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
-        anchors.right: parent.right
-        height: 60
+        width: 64
         color: "#141720"
         z: 100
 
         property int currentIndex: 0
 
-        RowLayout {
+        Column {
             anchors.fill: parent
             anchors.margins: 4
-            spacing: 0
+            spacing: 2
 
             Repeater {
                 model: [
-                    { icon: "📹", label: "预览", idx: 6 },
-                    { icon: "🚨", label: "告警", idx: 1 },
-                    { icon: "🧩", label: "算法", idx: 2 },
-                    { icon: "⚙️", label: "设置", idx: 3 },
-                    { icon: "🤖", label: "AI", idx: 4 },
-                    { icon: "📊", label: "统计", idx: 5 }
+                    { icon: "🏠", label: "总览", tip: "Dashboard" },
+                    { icon: "📹", label: "预览", tip: "Video" },
+                    { icon: "🚨", label: "告警", tip: "Alarm" },
+                    { icon: "🧩", label: "算法", tip: "Algorithm" },
+                    { icon: "🔗", label: "流水线", tip: "Pipeline" },
+                    { icon: "📡", label: "GB28181", tip: "GB28181" },
+                    { icon: "🔌", label: "ONVIF", tip: "ONVIF" },
+                    { icon: "📼", label: "录像", tip: "Recording" },
+                    { icon: "🛡️", label: "态势", tip: "Situation" },
+                    { icon: "🤖", label: "AI", tip: "AI Chat" },
+                    { icon: "📊", label: "统计", tip: "Stats" },
+                    { icon: "🔄", label: "升级", tip: "OTA" },
+                    { icon: "⚙️", label: "设置", tip: "Settings" }
                 ]
 
                 delegate: Button {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    width: sidebar.width - 8
+                    height: 52
                     flat: true
-                    highlighted: navBar.currentIndex === modelData.idx
-                    onClicked: navBar.currentIndex = modelData.idx
+                    highlighted: sidebar.currentIndex === index
+                    onClicked: sidebar.currentIndex = index
 
                     background: Rectangle {
-                        color: navBar.currentIndex === modelData.idx ? "#1A1D23" : "transparent"
+                        color: sidebar.currentIndex === index ? "#1A1D23" : "transparent"
                         radius: 8
                     }
 
                     contentItem: Column {
-                        spacing: 2
+                        spacing: 1
                         Text {
                             text: modelData.icon
-                            font.pixelSize: 22
+                            font.pixelSize: 20
                             horizontalAlignment: Text.AlignHCenter
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                         Text {
                             text: modelData.label
-                            font.pixelSize: 11
-                            color: navBar.currentIndex === modelData.idx ? "#00D4AA" : "#8B8FA3"
+                            font.pixelSize: 9
+                            color: sidebar.currentIndex === index ? "#00D4AA" : "#8B8FA3"
                             horizontalAlignment: Text.AlignHCenter
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
+
+                    ToolTip.visible: pressed || hovered
+                    ToolTip.text: modelData.tip
+                    ToolTip.delay: 500
                 }
             }
         }
+    }
+
+    // ── Content Area ──
+    StackLayout {
+        id: stackView
+        anchors.top: header.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        currentIndex: sidebar.currentIndex
+
+        DashboardView {}
+        VideoGridView {}
+        AlarmView {}
+        AlgorithmView {}
+        PipelineEditorView {}
+        GB28181View {}
+        ONVIFDiscoveryView {}
+        RecordingView {}
+        SituationView {}
+        AIChatView {}
+        StatisticsView {}
+        OTAUpgradeView {}
+        SettingsView {}
     }
 
     // ── Alarm Popup ──

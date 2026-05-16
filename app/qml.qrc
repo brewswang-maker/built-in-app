@@ -12,5 +12,12 @@
         <file alias="VideoTile.qml">../src/views/components/VideoTile.qml</file>
         <file alias="StatusIndicator.qml">../src/views/components/StatusIndicator.qml</file>
         <file alias="AlarmBadge.qml">../src/views/components/AlarmBadge.qml</file>
+        <file alias="PipelineEditorView.qml">../src/views/PipelineEditorView.qml</file>
+        <file alias="SituationView.qml">../src/views/SituationView.qml</file>
+        <file alias="GB28181View.qml">../src/views/GB28181View.qml</file>
+        <file alias="RecordingView.qml">../src/views/RecordingView.qml</file>
+        <file alias="ONVIFDiscoveryView.qml">../src/views/ONVIFDiscoveryView.qml</file>
+        <file alias="OTAUpgradeView.qml">../src/views/OTAUpgradeView.qml</file>
+        <file alias="DeviceDetailView.qml">../src/views/DeviceDetailView.qml</file>
     </qresource>
 </RCC>

@@ -1,6 +1,7 @@
 // ========================================================================
 // FederationDashboard.qml — 联邦学习仪表盘
 // 超越Web端: Canvas实时训练曲线 + 节点拓扑图 + 梯度分布热力图
+// Controller: federationController
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -8,6 +9,47 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: fedDash
+
+    property var fedNodes: []
+    property var fedRounds: []
+    property var fedCurrentRound: null
+    property var accData: []
+    property var lossData: []
+
+    Component.onCompleted: {
+        federationController.refreshNodes()
+        federationController.refreshRounds(100)
+    }
+
+    Connections {
+        target: federationController
+        function onNodesUpdated() {
+            fedNodes = federationController.nodes
+            topoCanvas.requestPaint()
+            nodeContribListView.model = fedNodes
+        }
+        function onRoundsUpdated() {
+            fedRounds = federationController.rounds
+            fedCurrentRound = federationController.currentRound
+
+            // Rebuild chart data from rounds
+            accData = []
+            lossData = []
+            for (var i = 0; i < fedRounds.length; i++) {
+                if (fedRounds[i].accuracy !== undefined) accData.push(fedRounds[i].accuracy)
+                if (fedRounds[i].loss !== undefined) lossData.push(fedRounds[i].loss)
+            }
+            trainChart.requestPaint()
+        }
+        function onRoundUpdated() {
+            fedCurrentRound = federationController.currentRound
+            // Update toolbar status text
+            statusText.text = fedCurrentRound ? "训练中 — Round " + fedCurrentRound.current + "/" + fedCurrentRound.total : "空闲"
+        }
+        function onNodeDetailReceived() {
+            // Node detail fetched for specific node
+        }
+    }
 
     Rectangle {
         id: toolbar
@@ -19,12 +61,42 @@ Item {
             Text { text: "🌐 联邦学习"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
 
-            Rectangle { width: 8; height: 8; radius: 4; color: "#00D4AA" }
-            Text { text: "训练中 — Round 47/100"; font.pixelSize: 12; color: "#00D4AA" }
-            Text { text: "聚合节点: 3/5"; font.pixelSize: 12; color: "#FFB800" }
+            Rectangle { width: 8; height: 8; radius: 4; color: federationController.federating ? "#00D4AA" : "#4A4D58" }
+            Text {
+                id: statusText
+                text: federationController.federating ? "训练中" : "空闲"
+                font.pixelSize: 12
+                color: federationController.federating ? "#00D4AA" : "#8B8FA3"
+            }
 
-            Button { text: "⏸ 暂停"; font.pixelSize: 12; background: Rectangle { color: "#FFB800"; radius: 6; width: 60; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-            Button { text: "⚙️ 配置"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+            Button {
+                text: federationController.federating ? "⏹ 停止" : "▶ 开始训练"
+                font.pixelSize: 12
+                background: Rectangle {
+                    color: federationController.federating ? "#FF3D71" : "#00D4AA"
+                    radius: 6; width: 100; height: 32
+                }
+                contentItem: Text {
+                    text: parent.text; font.pixelSize: 12
+                    color: federationController.federating ? "#FFF" : "#0D0F12"
+                    font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    if (federationController.federating) {
+                        federationController.stopRound()
+                    } else {
+                        federationController.startRound({
+                            totalRounds: 100,
+                            minNodes: 3,
+                            algorithm: "FedAvg"
+                        })
+                    }
+                }
+            }
+            Button { text: "⚙️ 配置"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+            }
         }
     }
 
@@ -69,26 +141,20 @@ Item {
                         ctx.fillStyle = "#FFF"; ctx.font = "bold 9px sans-serif"
                         ctx.fillText("聚合", cx - 9, cy + 3)
 
-                        // 边缘节点
-                        var nodes = [
-                            { name: "盒子A", status: "active", data: 1200 },
-                            { name: "盒子B", status: "active", data: 980 },
-                            { name: "盒子C", status: "active", data: 1100 },
-                            { name: "盒子D", status: "syncing", data: 450 },
-                            { name: "盒子E", status: "offline", data: 0 }
-                        ]
-
-                        for (var i = 0; i < nodes.length; i++) {
-                            var a = (i / nodes.length) * 2 * Math.PI - Math.PI / 2
+                        for (var i = 0; i < fedNodes.length; i++) {
+                            var a = (i / fedNodes.length) * 2 * Math.PI - Math.PI / 2
                             var nx = cx + Math.cos(a) * 100
                             var ny = cy + Math.sin(a) * 80
 
-                            // 连线 (数据流动画)
+                            var nodeStatus = fedNodes[i].status || "offline"
+                            var nodeData = fedNodes[i].sampleCount || 0
+
+                            // 连线
                             var grad = ctx.createLinearGradient(cx, cy, nx, ny)
-                            if (nodes[i].status === "active") {
+                            if (nodeStatus === "active") {
                                 grad.addColorStop(0, "rgba(0,212,170,0.6)")
                                 grad.addColorStop(1, "rgba(0,212,170,0.1)")
-                            } else if (nodes[i].status === "syncing") {
+                            } else if (nodeStatus === "syncing") {
                                 grad.addColorStop(0, "rgba(255,184,0,0.6)")
                                 grad.addColorStop(1, "rgba(255,184,0,0.1)")
                             } else {
@@ -98,36 +164,36 @@ Item {
                             ctx.strokeStyle = grad; ctx.lineWidth = 2
                             ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny); ctx.stroke()
 
-                            // 流动粒子 (active节点)
-                            if (nodes[i].status === "active" || nodes[i].status === "syncing") {
+                            // 流动粒子
+                            if (nodeStatus === "active" || nodeStatus === "syncing") {
                                 var particleT = (angle * 0.02 + i * 0.3) % 1
                                 var px = cx + (nx - cx) * particleT
                                 var py = cy + (ny - cy) * particleT
                                 ctx.beginPath()
                                 ctx.arc(px, py, 3, 0, 2 * Math.PI)
-                                ctx.fillStyle = nodes[i].status === "active" ? "#00D4AA" : "#FFB800"
+                                ctx.fillStyle = nodeStatus === "active" ? "#00D4AA" : "#FFB800"
                                 ctx.fill()
                             }
 
                             // 节点圆
                             ctx.beginPath()
                             ctx.arc(nx, ny, 16, 0, 2 * Math.PI)
-                            ctx.fillStyle = nodes[i].status === "active" ? "#0A2A1A" :
-                                           nodes[i].status === "syncing" ? "#2A2A0A" : "#1A1D23"
+                            ctx.fillStyle = nodeStatus === "active" ? "#0A2A1A" :
+                                           nodeStatus === "syncing" ? "#2A2A0A" : "#1A1D23"
                             ctx.fill()
-                            ctx.strokeStyle = nodes[i].status === "active" ? "#00D4AA" :
-                                             nodes[i].status === "syncing" ? "#FFB800" : "#4A4D58"
+                            ctx.strokeStyle = nodeStatus === "active" ? "#00D4AA" :
+                                             nodeStatus === "syncing" ? "#FFB800" : "#4A4D58"
                             ctx.lineWidth = 2
                             ctx.stroke()
 
                             // 节点名称
                             ctx.fillStyle = "#E8E8E8"; ctx.font = "9px sans-serif"
-                            ctx.fillText(nodes[i].name, nx - 14, ny + 3)
+                            ctx.fillText(fedNodes[i].name || ("Node" + i), nx - 14, ny + 3)
 
                             // 数据量
-                            if (nodes[i].data > 0) {
+                            if (nodeData > 0) {
                                 ctx.fillStyle = "#8B8FA3"; ctx.font = "8px sans-serif"
-                                ctx.fillText(nodes[i].data + "样本", nx - 16, ny + 24)
+                                ctx.fillText(nodeData + "样本", nx - 16, ny + 24)
                             }
                         }
 
@@ -150,27 +216,19 @@ Item {
 
                     Column { spacing: 2
                         Text { text: "当前轮次"; font.pixelSize: 10; color: "#8B8FA3" }
-                        Text { text: "47 / 100"; font.pixelSize: 16; font.bold: true; color: "#3B82F6" }
+                        Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "- / -"; font.pixelSize: 16; font.bold: true; color: "#3B82F6" }
                     }
                     Column { spacing: 2
                         Text { text: "全局精度"; font.pixelSize: 10; color: "#8B8FA3" }
-                        Text { text: "92.4%"; font.pixelSize: 16; font.bold: true; color: "#00D4AA" }
+                        Text { text: fedCurrentRound && fedCurrentRound.accuracy !== undefined ? fedCurrentRound.accuracy.toFixed(1) + "%" : "-"; font.pixelSize: 16; font.bold: true; color: "#00D4AA" }
                     }
                     Column { spacing: 2
-                        Text { text: "总样本数"; font.pixelSize: 10; color: "#8B8FA3" }
-                        Text { text: "3,730"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    }
-                    Column { spacing: 2
-                        Text { text: "通信量"; font.pixelSize: 10; color: "#8B8FA3" }
-                        Text { text: "128 MB"; font.pixelSize: 16; font.bold: true; color: "#FFB800" }
+                        Text { text: "联邦节点"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: fedNodes.length + ""; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
                     }
                     Column { spacing: 2
                         Text { text: "损失值"; font.pixelSize: 10; color: "#8B8FA3" }
-                        Text { text: "0.0847"; font.pixelSize: 16; font.bold: true; color: "#EF4444" }
-                    }
-                    Column { spacing: 2
-                        Text { text: "预计剩余"; font.pixelSize: 10; color: "#8B8FA3" }
-                        Text { text: "~25分钟"; font.pixelSize: 16; font.bold: true; color: "#8B8FA3" }
+                        Text { text: fedCurrentRound && fedCurrentRound.loss !== undefined ? fedCurrentRound.loss.toFixed(4) : "-"; font.pixelSize: 16; font.bold: true; color: "#EF4444" }
                     }
                 }
 
@@ -179,10 +237,9 @@ Item {
                 // 联邦策略
                 Text { text: "⚙️ 聚合策略"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                 Column { spacing: 4; width: parent.width - 24
-                    Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "FedAvg"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true } }
-                    Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "3"; font.pixelSize: 11; color: "#E8E8E8" } }
-                    Row { spacing: 8; Text { text: "隐私预算:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "ε=8.0"; font.pixelSize: 11; color: "#00D4AA" } }
-                    Row { spacing: 8; Text { text: "差分隐私:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "已启用"; font.pixelSize: 11; color: "#00D4AA" } }
+                    Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedCurrentRound ? (fedCurrentRound.algorithm || "FedAvg") : "FedAvg"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true } }
+                    Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedCurrentRound ? (fedCurrentRound.minNodes || "3") : "3"; font.pixelSize: 11; color: "#E8E8E8" } }
+                    Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
                 }
             }
         }
@@ -202,9 +259,6 @@ Item {
                     id: trainChart
                     width: parent.width - 24; height: 200
 
-                    property var accData: []
-                    property var lossData: []
-
                     onPaint: {
                         var ctx = getContext("2d")
                         var w = width, h = height
@@ -223,11 +277,13 @@ Item {
                         ctx.fillStyle = "#EF4444"
                         ctx.fillText("1.0", w-20, 12); ctx.fillText("0.5", w-20, h/2+4); ctx.fillText("0", w-20, h-4)
 
+                        var maxRounds = Math.max(accData.length, lossData.length, 100)
+
                         // 精度线 (绿)
                         ctx.strokeStyle = "#00D4AA"; ctx.lineWidth = 2
                         ctx.beginPath()
                         for (var i = 0; i < accData.length; i++) {
-                            var x = (i / 100) * w
+                            var x = (i / maxRounds) * w
                             var y = h - (accData[i] / 100) * h
                             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                         }
@@ -235,7 +291,7 @@ Item {
 
                         // 精度填充
                         if (accData.length > 1) {
-                            ctx.lineTo((accData.length - 1) / 100 * w, h); ctx.lineTo(0, h); ctx.closePath()
+                            ctx.lineTo((accData.length - 1) / maxRounds * w, h); ctx.lineTo(0, h); ctx.closePath()
                             ctx.fillStyle = "rgba(0,212,170,0.06)"; ctx.fill()
                         }
 
@@ -243,23 +299,11 @@ Item {
                         ctx.strokeStyle = "#EF4444"; ctx.lineWidth = 2
                         ctx.beginPath()
                         for (var i = 0; i < lossData.length; i++) {
-                            var x = (i / 100) * w
+                            var x = (i / maxRounds) * w
                             var y = h - lossData[i] * h
                             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                         }
                         ctx.stroke()
-                    }
-
-                    Timer {
-                        interval: 200; running: true; repeat: true
-                        onTriggered: {
-                            var round = trainChart.accData.length
-                            if (round < 100) {
-                                trainChart.accData.push(Math.min(98, 60 + 30 * (1 - Math.exp(-round / 20)) + Math.random() * 2))
-                                trainChart.lossData.push(Math.max(0.01, 0.8 * Math.exp(-round / 25) + Math.random() * 0.02))
-                                trainChart.requestPaint()
-                            }
-                        }
                     }
                 }
 
@@ -286,12 +330,10 @@ Item {
 
                         for (var r = 0; r < rows; r++) {
                             for (var c = 0; c < cols; c++) {
-                                // 模拟梯度值: 中心高，边缘低
                                 var dx = (c - cols/2) / (cols/2)
                                 var dy = (r - rows/2) / (rows/2)
                                 var val = Math.exp(-(dx*dx + dy*dy) * 2) * (0.8 + Math.random() * 0.2)
 
-                                // 热力图颜色: 蓝→青→绿→黄→红
                                 var red, green, blue
                                 if (val < 0.25) { red = 0; green = Math.round(val * 4 * 200); blue = 200 }
                                 else if (val < 0.5) { red = 0; green = 200; blue = Math.round((1 - (val - 0.25) * 4) * 200) }
@@ -326,27 +368,21 @@ Item {
                 Text { text: "📋 各节点本轮贡献"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; topPadding: 4 }
 
                 ListView {
+                    id: nodeContribListView
                     width: parent.width - 24; height: 100; clip: true; spacing: 2
-
-                    model: ListModel {
-                        ListElement { name: "盒子A"; samples: 1200; acc: "94.2%"; loss: "0.078"; status: "已上传"; duration: "12s" }
-                        ListElement { name: "盒子B"; samples: 980; acc: "91.8%"; loss: "0.092"; status: "已上传"; duration: "10s" }
-                        ListElement { name: "盒子C"; samples: 1100; acc: "93.1%"; loss: "0.084"; status: "已上传"; duration: "11s" }
-                        ListElement { name: "盒子D"; samples: 450; acc: "-"; loss: "-"; status: "训练中"; duration: "-" }
-                        ListElement { name: "盒子E"; samples: 0; acc: "-"; loss: "-"; status: "离线"; duration: "-" }
-                    }
+                    model: fedNodes
 
                     delegate: Rectangle {
                         width: ListView.view.width; height: 20
                         color: index % 2 ? "#0D1015" : "transparent"
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 8; spacing: 12
-                            Text { text: model.name; font.pixelSize: 10; color: "#E8E8E8"; font.bold: true; width: 50 }
-                            Text { text: model.samples + "样本"; font.pixelSize: 10; color: "#8B8FA3"; width: 60 }
-                            Text { text: "Acc:" + model.acc; font.pixelSize: 10; color: "#00D4AA"; width: 60 }
-                            Text { text: "Loss:" + model.loss; font.pixelSize: 10; color: "#EF4444"; width: 70 }
-                            Text { text: model.status; font.pixelSize: 10; color: model.status === "已上传" ? "#00D4AA" : model.status === "训练中" ? "#FFB800" : "#4A4D58"; width: 50 }
-                            Text { text: model.duration; font.pixelSize: 10; color: "#8B8FA3" }
+                            Text { text: modelData.name || "-"; font.pixelSize: 10; color: "#E8E8E8"; font.bold: true; width: 50 }
+                            Text { text: (modelData.sampleCount || 0) + "样本"; font.pixelSize: 10; color: "#8B8FA3"; width: 60 }
+                            Text { text: "Acc:" + (modelData.accuracy !== undefined ? modelData.accuracy : "-"); font.pixelSize: 10; color: "#00D4AA"; width: 60 }
+                            Text { text: "Loss:" + (modelData.loss !== undefined ? modelData.loss : "-"); font.pixelSize: 10; color: "#EF4444"; width: 70 }
+                            Text { text: modelData.status || "-"; font.pixelSize: 10; color: modelData.status === "active" ? "#00D4AA" : modelData.status === "syncing" ? "#FFB800" : "#4A4D58"; width: 50 }
+                            Text { text: modelData.duration || "-"; font.pixelSize: 10; color: "#8B8FA3" }
                         }
                     }
                 }
@@ -367,77 +403,63 @@ Item {
                     Text { text: "🧠 全局模型"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                     Column { spacing: 4
-                        Row { spacing: 8; Text { text: "架构:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "ResNet-18"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "参数量:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "11.7M"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "任务:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "入侵检测 (5类)"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "输入:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "224x224 RGB"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "最后聚合:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "Round 47, 12:03"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
+                        Row { spacing: 8; Text { text: "当前轮:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 8; Text { text: "活跃节点:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedNodes.filter(function(n){ return n.status === "active" }).length + " / " + fedNodes.length; font.pixelSize: 11; color: "#E8E8E8" } }
                     }
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    Text { text: "🔒 隐私报告"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-
-                    Column { spacing: 4
-                        Row { spacing: 8; Text { text: "差分隐私:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "已启用 (DP-SGD)"; font.pixelSize: 11; color: "#00D4AA" } }
-                        Row { spacing: 8; Text { text: "ε (epsilon):"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "8.0 / 10.0"; font.pixelSize: 11; color: "#FFB800" } }
-                        Row { spacing: 8; Text { text: "δ (delta):"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "1e-5"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "噪声倍率:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "1.2"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "裁剪范数:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "1.0"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "剩余预算:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: "20.0%"; font.pixelSize: 11; color: "#00D4AA" } }
-                    }
-
-                    // 隐私预算进度条
-                    Canvas {
-                        width: parent.width; height: 20
-                        onPaint: {
-                            var ctx = getContext("2d")
-                            ctx.clearRect(0, 0, width, height)
-                            ctx.fillStyle = "#252830"; ctx.fillRect(0, 6, width, 8)
-                            var used = 0.8
-                            var grad = ctx.createLinearGradient(0, 0, width * used, 0)
-                            grad.addColorStop(0, "#00D4AA"); grad.addColorStop(1, "#EF4444")
-                            ctx.fillStyle = grad; ctx.fillRect(0, 6, width * used, 8)
-                            ctx.fillStyle = "#E8E8E8"; ctx.font = "8px sans-serif"
-                            ctx.fillText("ε=" + (used * 10).toFixed(1) + " / 10.0", 4, 16)
-                        }
-                        Component.onCompleted: requestPaint()
-                    }
-
-                    Rectangle { height: 1; color: "#252830"; width: parent.width }
-
-                    Text { text: "📦 模型版本"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "📦 轮次历史"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     ListView {
-                        width: parent.width; height: 120; clip: true; spacing: 2
-
-                        model: ListModel {
-                            ListElement { ver: "v0.47"; acc: "92.4%"; round: 47; time: "刚刚"; current: true }
-                            ListElement { ver: "v0.46"; acc: "91.9%"; round: 46; time: "5分钟前"; current: false }
-                            ListElement { ver: "v0.45"; acc: "91.3%"; round: 45; time: "10分钟前"; current: false }
-                            ListElement { ver: "v0.40"; acc: "88.7%"; round: 40; time: "1小时前"; current: false }
-                            ListElement { ver: "v0.30"; acc: "82.1%"; round: 30; time: "2小时前"; current: false }
-                        }
+                        width: parent.width; height: 200; clip: true; spacing: 2
+                        model: fedRounds
 
                         delegate: Rectangle {
                             width: ListView.view.width; height: 22
-                            color: model.current ? "#1A3A2A" : "transparent"
+                            color: index === 0 ? "#1A3A2A" : "transparent"
                             Row {
                                 anchors.fill: parent; anchors.leftMargin: 4; spacing: 8
-                                Text { text: model.current ? "★" : " "; font.pixelSize: 10; color: "#FFB800" }
-                                Text { text: model.ver; font.pixelSize: 10; color: model.current ? "#00D4AA" : "#E8E8E8"; font.bold: model.current }
-                                Text { text: "Acc:" + model.acc; font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: "R" + model.round; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: model.time; font.pixelSize: 10; color: "#4A4D58" }
+                                Text { text: index === 0 ? "★" : " "; font.pixelSize: 10; color: "#FFB800" }
+                                Text { text: "R" + (modelData.round || index); font.pixelSize: 10; color: index === 0 ? "#00D4AA" : "#E8E8E8"; font.bold: index === 0 }
+                                Text { text: modelData.accuracy !== undefined ? "Acc:" + modelData.accuracy.toFixed(1) + "%" : "-"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: modelData.loss !== undefined ? "L:" + modelData.loss.toFixed(4) : "-"; font.pixelSize: 10; color: "#4A4D58" }
+                                Text { text: modelData.time || "-"; font.pixelSize: 10; color: "#4A4D58" }
                             }
                         }
                     }
 
-                    Button {
-                        text: "📥 部署最新模型到本地"
-                        width: parent.width
-                        background: Rectangle { color: "#3B82F6"; radius: 8; height: 36 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    Rectangle { height: 1; color: "#252830"; width: parent.width }
+
+                    Text { text: "🔗 节点管理"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+
+                    ListView {
+                        width: parent.width; height: Math.min(fedNodes.length * 28, 140); clip: true; spacing: 2
+                        model: fedNodes
+
+                        delegate: Rectangle {
+                            width: ListView.view.width; height: 26; color: "#0D0F12"; radius: 4
+                            Row {
+                                anchors.fill: parent; anchors.margins: 4; spacing: 6
+                                Rectangle { width: 6; height: 6; radius: 3; color: modelData.status === "active" ? "#00D4AA" : modelData.status === "syncing" ? "#FFB800" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: modelData.name || "-"; font.pixelSize: 10; color: "#E8E8E8"; width: 50 }
+                                Text { text: modelData.status || "-"; font.pixelSize: 9; color: "#8B8FA3"; width: 40 }
+
+                                Button {
+                                    text: "通过"; font.pixelSize: 8; visible: modelData.status === "pending"
+                                    background: Rectangle { color: "#00D4AA"; radius: 3; width: 28; height: 16 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 8; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: federationController.approveNode(modelData.id)
+                                }
+                                Button {
+                                    text: "移除"; font.pixelSize: 8
+                                    background: Rectangle { color: "#FF3D71"; radius: 3; width: 28; height: 16 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 8; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: federationController.removeNode(modelData.id)
+                                }
+                            }
+                        }
                     }
                 }
             }

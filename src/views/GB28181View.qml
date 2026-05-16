@@ -1,6 +1,6 @@
 // ========================================================================
 // GB28181View.qml — GB28181设备管理 (SIP信令 + 目录订阅 + 级联)
-// 超越Web端: 实时SIP信令监控、级联拓扑可视化
+// 数据源: deviceController (box-sdk REST API)
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -8,6 +8,49 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: gb28181View
+
+    // ── SIP配置属性 ──
+    property string sipDomain: ""
+    property string sipId: ""
+    property string sipPort: ""
+    property string sipPassword: ""
+    property string mediaServer: ""
+
+    Component.onCompleted: {
+        deviceController.refreshDevices()
+        configController.loadConfig()
+    }
+
+    // ── 监听设备数据更新 ──
+    Connections {
+        target: deviceController
+        function onDevicesUpdated() {
+            deviceListView.model = deviceController.devices
+            updateOnlineCount()
+        }
+    }
+
+    // ── 监听配置加载完成 ──
+    Connections {
+        target: configController
+        function onConfigUpdated() {
+            var cfg = configController.config
+            if (cfg["sip_domain"]) sipDomain = cfg["sip_domain"]
+            if (cfg["sip_id"]) sipId = cfg["sip_id"]
+            if (cfg["sip_port"]) sipPort = cfg["sip_port"]
+            if (cfg["sip_password"]) sipPassword = cfg["sip_password"]
+            if (cfg["media_server"]) mediaServer = cfg["media_server"]
+        }
+    }
+
+    function updateOnlineCount() {
+        var devices = deviceController.devices
+        var online = 0
+        for (var i = 0; i < devices.length; i++) {
+            if (devices[i].status === "online") online++
+        }
+        onlineCountText.text = "在线: " + online + " / 总计: " + devices.length
+    }
 
     // ── 顶部 ──
     Rectangle {
@@ -26,20 +69,21 @@ Item {
                 font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: deviceController.discoverDevices()
+                onClicked: deviceController.discoverDevices("gb28181")
             }
             Button {
                 text: "➕ 手动添加"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: addDevicePopup.open()
             }
             Button {
                 text: "🔄 刷新目录"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: deviceController.refreshCatalog()
+                onClicked: deviceController.refreshDevices()
             }
         }
     }
@@ -63,19 +107,44 @@ Item {
                     columns: 2; spacing: 6; width: parent.width - 24
 
                     Text { text: "SIP域:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    TextField { text: "3402000000"; font.pixelSize: 12; color: "#E8E8E8"; width: 160; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField {
+                        id: sipDomainField
+                        text: sipDomain; font.pixelSize: 12; color: "#E8E8E8"; width: 160
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        onAccepted: configController.saveConfig("sip_domain", text)
+                    }
 
                     Text { text: "SIP ID:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    TextField { text: "34020000002000000001"; font.pixelSize: 12; color: "#E8E8E8"; width: 160; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField {
+                        id: sipIdField
+                        text: sipId; font.pixelSize: 12; color: "#E8E8E8"; width: 160
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        onAccepted: configController.saveConfig("sip_id", text)
+                    }
 
                     Text { text: "端口:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    TextField { text: "5060"; font.pixelSize: 12; color: "#E8E8E8"; width: 160; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField {
+                        id: sipPortField
+                        text: sipPort; font.pixelSize: 12; color: "#E8E8E8"; width: 160
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        onAccepted: configController.saveConfig("sip_port", text)
+                    }
 
                     Text { text: "密码:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    TextField { text: "12345678"; echoMode: TextInput.Password; font.pixelSize: 12; color: "#E8E8E8"; width: 160; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField {
+                        id: sipPasswordField
+                        text: sipPassword; echoMode: TextInput.Password; font.pixelSize: 12; color: "#E8E8E8"; width: 160
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        onAccepted: configController.saveConfig("sip_password", text)
+                    }
 
                     Text { text: "流媒体:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    TextField { text: "127.0.0.1:5554"; font.pixelSize: 12; color: "#E8E8E8"; width: 160; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField {
+                        id: mediaServerField
+                        text: mediaServer; font.pixelSize: 12; color: "#E8E8E8"; width: 160
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        onAccepted: configController.saveConfig("media_server", text)
+                    }
                 }
 
                 Button {
@@ -83,25 +152,24 @@ Item {
                     width: parent.width - 24
                     background: Rectangle { color: "#00D4AA"; radius: 6; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        configController.saveConfig("sip_domain", sipDomainField.text)
+                        configController.saveConfig("sip_id", sipIdField.text)
+                        configController.saveConfig("sip_port", sipPortField.text)
+                        configController.saveConfig("sip_password", sipPasswordField.text)
+                        configController.saveConfig("media_server", mediaServerField.text)
+                    }
                 }
 
                 Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
 
-                // SIP信令监控
                 Text { text: "📡 SIP 信令监控"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
+                    id: sipLogView
                     width: parent.width - 24; height: 200; clip: true; spacing: 2
-                    model: ListModel {
-                        ListElement { time: "11:32:15"; msg: "← REGISTER 340200...01"; status: "200 OK" }
-                        ListElement { time: "11:32:14"; msg: "→ 200 OK"; status: "" }
-                        ListElement { time: "11:31:00"; msg: "→ CATALOG 查询"; status: "200 OK" }
-                        ListElement { time: "11:30:55"; msg: "← 200 OK (5设备)"; status: "" }
-                        ListElement { time: "11:28:10"; msg: "→ INVITE 通道01"; status: "推流中" }
-                        ListElement { time: "11:28:09"; msg: "← 200 SDP"; status: "" }
-                        ListElement { time: "11:15:30"; msg: "← NOTIFY 心跳"; status: "" }
-                        ListElement { time: "11:10:00"; msg: "→ KEEPALIVE"; status: "" }
-                    }
+                    model: ListModel { id: sipLogModel }
+
                     delegate: Rectangle {
                         width: ListView.view.width; height: 22; color: "transparent"
                         Row {
@@ -126,7 +194,7 @@ Item {
                 Row {
                     spacing: 12; width: parent.width
                     Text { text: "已注册设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                    Text { text: "在线: 5 / 总计: 6"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { id: onlineCountText; text: "加载中..."; font.pixelSize: 12; color: "#8B8FA3" }
                 }
 
                 // 表头
@@ -146,40 +214,35 @@ Item {
                 }
 
                 ListView {
+                    id: deviceListView
                     width: parent.width - 24; height: parent.height - 90; clip: true; spacing: 2
-
-                    model: ListModel {
-                        ListElement { deviceId: "34020000001320000001"; name: "海康IPC-01"; mfr: "海康"; channels: 4; status: "online"; regTime: "2026-05-16 08:00" }
-                        ListElement { deviceId: "34020000001320000002"; name: "大华IPC-02"; mfr: "大华"; channels: 2; status: "online"; regTime: "2026-05-16 08:01" }
-                        ListElement { deviceId: "34020000001320000003"; name: "宇视NVR-01"; mfr: "宇视"; channels: 16; status: "online"; regTime: "2026-05-16 08:02" }
-                        ListElement { deviceId: "34020000001320000004"; name: "海康IPC-03"; mfr: "海康"; channels: 1; status: "online"; regTime: "2026-05-16 08:03" }
-                        ListElement { deviceId: "34020000001320000005"; name: "天地IPC-04"; mfr: "天地"; channels: 1; status: "online"; regTime: "2026-05-16 08:05" }
-                        ListElement { deviceId: "34020000001320000006"; name: "华为IPC-05"; mfr: "华为"; channels: 2; status: "offline"; regTime: "2026-05-15 19:30" }
-                    }
+                    model: deviceController.devices
 
                     delegate: Rectangle {
                         width: ListView.view.width; height: 40; color: index % 2 ? "#0D1015" : "transparent"
                         radius: 4
 
+                        property var deviceData: modelData || model
+
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                             spacing: 8; anchors.verticalCenter: parent.verticalCenter
 
-                            Text { text: model.deviceId; font.pixelSize: 11; color: "#E8E8E8"; width: 180; elide: Text.ElideMiddle }
-                            Text { text: model.name; font.pixelSize: 11; color: "#E8E8E8"; width: 100 }
-                            Text { text: model.mfr; font.pixelSize: 11; color: "#8B8FA3"; width: 80 }
-                            Text { text: model.channels; font.pixelSize: 11; color: "#E8E8E8"; width: 50 }
+                            Text { text: deviceData.deviceId || ""; font.pixelSize: 11; color: "#E8E8E8"; width: 180; elide: Text.ElideMiddle }
+                            Text { text: deviceData.name || ""; font.pixelSize: 11; color: "#E8E8E8"; width: 100 }
+                            Text { text: deviceData.manufacturer || ""; font.pixelSize: 11; color: "#8B8FA3"; width: 80 }
+                            Text { text: (deviceData.channels !== undefined) ? deviceData.channels : "0"; font.pixelSize: 11; color: "#E8E8E8"; width: 50 }
                             Rectangle {
                                 width: 50; height: 20; radius: 4
-                                color: model.status === "online" ? "#0A2A1A" : "#2A0A10"
+                                color: deviceData.status === "online" ? "#0A2A1A" : "#2A0A10"
                                 Text {
-                                    text: model.status === "online" ? "在线" : "离线"
+                                    text: deviceData.status === "online" ? "在线" : "离线"
                                     font.pixelSize: 10; font.bold: true
-                                    color: model.status === "online" ? "#00D4AA" : "#FF3D71"
+                                    color: deviceData.status === "online" ? "#00D4AA" : "#FF3D71"
                                     anchors.centerIn: parent
                                 }
                             }
-                            Text { text: model.regTime; font.pixelSize: 10; color: "#8B8FA3"; width: 100 }
+                            Text { text: deviceData.registerTime || ""; font.pixelSize: 10; color: "#8B8FA3"; width: 100 }
 
                             Row {
                                 spacing: 4
@@ -187,16 +250,19 @@ Item {
                                     text: "预览"; font.pixelSize: 10
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 22 }
                                     contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: mediaController.startStream(deviceData.deviceId, "ch1")
                                 }
                                 Button {
                                     text: "目录"; font.pixelSize: 10
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 22 }
                                     contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: deviceController.getDeviceDetail(deviceData.deviceId)
                                 }
                                 Button {
                                     text: "录像"; font.pixelSize: 10
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 22 }
                                     contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: mediaController.startStream(deviceData.deviceId, "record")
                                 }
                             }
                         }
@@ -219,6 +285,8 @@ Item {
                     id: topoCanvas
                     width: parent.width - 24; height: 300
 
+                    property var topoDevices: deviceController.devices
+
                     onPaint: {
                         var ctx = getContext("2d")
                         ctx.clearRect(0, 0, width, height)
@@ -239,27 +307,73 @@ Item {
                         ctx.fillStyle = "#0D0F12"; ctx.font = "10px sans-serif"
                         ctx.fillText("ShieldBox (本级)", width/2-38, 90)
 
-                        // 下级设备连线
-                        var devices = [
-                            { x: 30, y: 140, name: "海康IPC-01", online: true },
-                            { x: 100, y: 150, name: "大华IPC-02", online: true },
-                            { x: 170, y: 140, name: "宇视NVR-01", online: true }
-                        ]
-                        for (var i = 0; i < devices.length; i++) {
-                            ctx.strokeStyle = devices[i].online ? "#00D4AA" : "#FF3D71"
+                        // 下级设备连线 — 从controller数据绘制
+                        var devices = topoDevices
+                        var maxShow = Math.min(devices.length, 6)
+                        var spacing = Math.max(40, (width - 60) / maxShow)
+                        for (var i = 0; i < maxShow; i++) {
+                            var dev = devices[i]
+                            var dx = 30 + i * spacing
+                            var dy = 140 + (i % 2) * 15
+                            var online = dev.status === "online"
+
+                            ctx.strokeStyle = online ? "#00D4AA" : "#FF3D71"
                             ctx.beginPath()
                             ctx.moveTo(width/2, 100)
-                            ctx.lineTo(devices[i].x + 30, devices[i].y)
+                            ctx.lineTo(dx + 30, dy)
                             ctx.stroke()
 
-                            ctx.fillStyle = devices[i].online ? "#1A3A2A" : "#3A1A1A"
-                            ctx.fillRect(devices[i].x, devices[i].y, 60, 24)
-                            ctx.fillStyle = devices[i].online ? "#00D4AA" : "#FF3D71"
+                            ctx.fillStyle = online ? "#1A3A2A" : "#3A1A1A"
+                            ctx.fillRect(dx, dy, 60, 24)
+                            ctx.fillStyle = online ? "#00D4AA" : "#FF3D71"
                             ctx.font = "9px sans-serif"
-                            ctx.fillText(devices[i].name, devices[i].x + 2, devices[i].y + 15)
+                            var label = (dev.name || "设备").substring(0, 8)
+                            ctx.fillText(label, dx + 2, dy + 15)
                         }
                     }
+
+                    Connections {
+                        target: deviceController
+                        function onDevicesUpdated() { topoCanvas.requestPaint() }
+                    }
                     Component.onCompleted: requestPaint()
+                }
+            }
+        }
+    }
+
+    // ── 手动添加设备弹窗 ──
+    Popup {
+        id: addDevicePopup
+        anchors.centerIn: parent
+        width: 360; height: 280
+        background: Rectangle { color: "#141720"; radius: 12; border.color: "#252830" }
+
+        Column {
+            anchors.fill: parent; anchors.margins: 16; spacing: 10
+            Text { text: "➕ 添加GB28181设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+
+            TextField { id: addIp; width: 320; placeholderText: "设备IP地址"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: addPort; width: 320; text: "5060"; placeholderText: "SIP端口"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: addUser; width: 320; placeholderText: "用户名"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: addPass; width: 320; placeholderText: "密码"; echoMode: TextInput.Password; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+
+            Row {
+                spacing: 12
+                Button {
+                    text: "取消"
+                    background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: addDevicePopup.close()
+                }
+                Button {
+                    text: "添加"
+                    background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        deviceController.addDevice("gb28181", addIp.text, parseInt(addPort.text), addUser.text, addPass.text)
+                        addDevicePopup.close()
+                    }
                 }
             }
         }

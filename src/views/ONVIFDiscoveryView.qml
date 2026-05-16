@@ -1,6 +1,6 @@
 // ========================================================================
 // ONVIFDiscoveryView.qml — ONVIF设备自动发现与管理
-// 超越Web端: WS-Discovery实时扫描动画、SOAP协议调试器
+// 数据源: deviceController (box-sdk REST API)
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -8,6 +8,26 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: onvifView
+
+    property bool scanning: false
+
+    Component.onCompleted: {
+        deviceController.refreshDevices()
+    }
+
+    Connections {
+        target: deviceController
+        function onDevicesUpdated() {
+            discoveredListView.model = deviceController.devices
+            updateDeviceCount()
+        }
+    }
+
+    function updateDeviceCount() {
+        var devices = deviceController.devices
+        var count = devices.length
+        deviceCountText.text = count + "台"
+    }
 
     Rectangle {
         id: toolbar
@@ -25,14 +45,20 @@ Item {
                 font.pixelSize: 12
                 background: Rectangle { color: scanning ? "#FF3D71" : "#3B82F6"; radius: 6; width: 120; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                property bool scanning: false
-                onClicked: { scanning = !scanning; scanAnim.running = scanning }
+                onClicked: {
+                    scanning = !scanning
+                    scanAnim.running = scanning
+                    if (scanning) {
+                        deviceController.discoverDevices("onvif")
+                    }
+                }
             }
             Button {
                 text: "➕ 手动添加"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: addOnvifPopup.open()
             }
         }
     }
@@ -58,6 +84,8 @@ Item {
                     width: parent.width - 24; height: 260
 
                     property real angle: 0
+                    property var radarDevices: deviceController.devices
+
                     SequentialAnimation on angle {
                         id: scanAnim
                         loops: Animation.Infinite
@@ -94,24 +122,26 @@ Item {
                             ctx.fill()
                         }
 
-                        // 设备标记
-                        var devices = [
-                            { dx: -40, dy: -30, name: "IPC-01", online: true },
-                            { dx: 50, dy: -60, name: "IPC-02", online: true },
-                            { dx: -70, dy: 20, name: "NVR-01", online: true },
-                            { dx: 30, dy: 50, name: "IPC-03", online: true },
-                            { dx: 60, dy: 10, name: "IPC-04", online: false },
-                            { dx: -20, dy: 70, name: "IPC-05", online: true }
+                        // 设备标记 — 从controller数据绘制
+                        var devices = radarDevices
+                        var maxShow = Math.min(devices.length, 8)
+                        var positions = [
+                            {dx:-40, dy:-30}, {dx:50, dy:-60}, {dx:-70, dy:20},
+                            {dx:30, dy:50}, {dx:60, dy:10}, {dx:-20, dy:70},
+                            {dx:0, dy:-80}, {dx:-60, dy:-50}
                         ]
-                        for (var d = 0; d < devices.length; d++) {
+                        for (var d = 0; d < maxShow; d++) {
                             var dev = devices[d]
-                            ctx.fillStyle = dev.online ? "#00D4AA" : "#FF3D71"
+                            var pos = positions[d]
+                            var online = dev.status === "online"
+                            ctx.fillStyle = online ? "#00D4AA" : "#FF3D71"
                             ctx.beginPath()
-                            ctx.arc(cx + dev.dx, cy + dev.dy, 5, 0, 2 * Math.PI)
+                            ctx.arc(cx + pos.dx, cy + pos.dy, 5, 0, 2 * Math.PI)
                             ctx.fill()
                             ctx.fillStyle = "#8B8FA3"
                             ctx.font = "9px sans-serif"
-                            ctx.fillText(dev.name, cx + dev.dx + 8, cy + dev.dy + 3)
+                            var label = (dev.name || "设备").substring(0, 8)
+                            ctx.fillText(label, cx + pos.dx + 8, cy + pos.dy + 3)
                         }
 
                         // 本机标记
@@ -121,17 +151,22 @@ Item {
                         ctx.fillText("ShieldBox", cx + 10, cy + 3)
                     }
 
+                    Connections {
+                        target: deviceController
+                        function onDevicesUpdated() { radarCanvas.requestPaint() }
+                    }
+
                     Timer { interval: 50; running: scanAnim.running; repeat: true; onTriggered: radarCanvas.requestPaint() }
                 }
 
-                // 子网信息
+                // 子网信息 — 从config获取
                 Rectangle {
                     width: parent.width - 24; height: 80; color: "#0D0F12"; radius: 6
                     Column {
                         anchors.fill: parent; anchors.margins: 8; spacing: 4
                         Text { text: "网络信息"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                        Text { text: "子网: 192.168.1.0/24"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "本机: 192.168.1.200"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "子网: " + (configController.networkConfig.subnet || "192.168.1.0/24"); font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "本机: " + (configController.networkConfig.hostIp || "192.168.1.200"); font.pixelSize: 11; color: "#8B8FA3" }
                         Text { text: "扫描范围: 192.168.1.1 - 192.168.1.254"; font.pixelSize: 11; color: "#8B8FA3" }
                     }
                 }
@@ -149,44 +184,51 @@ Item {
                 Row {
                     spacing: 12
                     Text { text: "已发现设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                    Text { text: "6台"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { id: deviceCountText; text: "0台"; font.pixelSize: 12; color: "#8B8FA3" }
                 }
 
                 ListView {
+                    id: discoveredListView
                     width: parent.width - 24; height: parent.height - 60; clip: true; spacing: 4
-
-                    model: ListModel {
-                        ListElement { ip: "192.168.1.100"; name: "海康 DS-2CD3T46"; type: "IPC"; mac: "A0:BD:1D:xx:xx:01"; status: "online"; services: "Streaming,Event,PTZ" }
-                        ListElement { ip: "192.168.1.101"; name: "大华 DH-IPC-HFW"; type: "IPC"; mac: "A0:BD:1D:xx:xx:02"; status: "online"; services: "Streaming,Event" }
-                        ListElement { ip: "192.168.1.102"; name: "宇视 IPC6222SR"; type: "IPC"; mac: "A0:BD:1D:xx:xx:03"; status: "online"; services: "Streaming,PTZ" }
-                        ListElement { ip: "192.168.1.110"; name: "海康 DS-7616NI"; type: "NVR"; mac: "A0:BD:1D:xx:xx:04"; status: "online"; services: "Streaming,Recording" }
-                        ListElement { ip: "192.168.1.103"; name: "天地 TP-IPC-B"; type: "IPC"; mac: "A0:BD:1D:xx:xx:05"; status: "online"; services: "Streaming" }
-                        ListElement { ip: "192.168.1.104"; name: "华为 IPC6212"; type: "IPC"; mac: "A0:BD:1D:xx:xx:06"; status: "offline"; services: "-" }
-                    }
+                    model: deviceController.devices
 
                     delegate: Rectangle {
                         width: ListView.view.width; height: 64; color: "#141720"; radius: 6
+
+                        property var devData: modelData || model
 
                         Column {
                             anchors.fill: parent; anchors.margins: 10; spacing: 4
 
                             Row {
                                 spacing: 8
-                                Rectangle { width: 6; height: 6; radius: 3; color: model.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: model.name; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-                                Text { text: model.type; font.pixelSize: 11; color: "#3B82F6" }
-                                Rectangle { width: 36; height: 16; radius: 3; color: model.status === "online" ? "#0A2A1A" : "#2A0A10"
-                                    Text { text: model.status; font.pixelSize: 9; color: model.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.centerIn: parent }
+                                Rectangle { width: 6; height: 6; radius: 3; color: devData.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: devData.name || ""; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                                Text { text: devData.type || "IPC"; font.pixelSize: 11; color: "#3B82F6" }
+                                Rectangle {
+                                    width: 36; height: 16; radius: 3
+                                    color: devData.status === "online" ? "#0A2A1A" : "#2A0A10"
+                                    Text { text: devData.status || "unknown"; font.pixelSize: 9; color: devData.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.centerIn: parent }
                                 }
                                 Item { width: 20 }
-                                Button { text: "添加"; font.pixelSize: 10; background: Rectangle { color: "#00D4AA"; radius: 4; width: 36; height: 20 }; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "配置"; font.pixelSize: 10; background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 20 }; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button {
+                                    text: "添加"; font.pixelSize: 10
+                                    background: Rectangle { color: "#00D4AA"; radius: 4; width: 36; height: 20 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: deviceController.addDevice("onvif", devData.ip, 80, "", "")
+                                }
+                                Button {
+                                    text: "配置"; font.pixelSize: 10
+                                    background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 20 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: deviceController.getDeviceDetail(devData.deviceId)
+                                }
                             }
                             Row {
                                 spacing: 12
-                                Text { text: "IP: " + model.ip; font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: "MAC: " + model.mac; font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: "服务: " + model.services; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "IP: " + (devData.ip || ""); font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "MAC: " + (devData.mac || ""); font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "服务: " + (devData.services || "-"); font.pixelSize: 10; color: "#8B8FA3" }
                             }
                         }
                     }
@@ -205,14 +247,15 @@ Item {
                 Text { text: "🔧 SOAP 调试器"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 ComboBox {
+                    id: soapMethodCombo
                     width: parent.width - 24
                     model: ["GetDeviceInformation", "GetProfiles", "GetStreamUri", "GetCapabilities", "GetSnapshotUri", "RelativeMove", "AbsoluteMove", "ContinuousMove"]
                     background: Rectangle { color: "#252830"; radius: 6 }
                 }
 
                 TextField {
+                    id: soapDeviceIp
                     width: parent.width - 24; height: 28
-                    text: "192.168.1.100"
                     placeholderText: "设备IP"
                     font.pixelSize: 12; color: "#E8E8E8"
                     background: Rectangle { color: "#252830"; radius: 4 }
@@ -220,8 +263,8 @@ Item {
 
                 Row {
                     spacing: 8
-                    TextField { width: 80; text: "admin"; placeholderText: "用户名"; font.pixelSize: 11; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
-                    TextField { width: 80; text: "******"; placeholderText: "密码"; echoMode: TextInput.Password; font.pixelSize: 11; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField { id: soapUser; width: 80; placeholderText: "用户名"; font.pixelSize: 11; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField { id: soapPass; width: 80; placeholderText: "密码"; echoMode: TextInput.Password; font.pixelSize: 11; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
                 }
 
                 Button {
@@ -229,6 +272,10 @@ Item {
                     width: parent.width - 24
                     background: Rectangle { color: "#3B82F6"; radius: 6; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        // 通过deviceController发起SOAP请求
+                        deviceController.getDeviceDetail(soapDeviceIp.text)
+                    }
                 }
 
                 Text { text: "响应:"; font.pixelSize: 12; color: "#8B8FA3" }
@@ -236,12 +283,50 @@ Item {
                 ScrollView {
                     width: parent.width - 24; height: 200; clip: true
                     TextArea {
-                        text: '<?xml version="1.0"?>\n<env:Envelope>\n  <env:Body>\n    <tds:GetDeviceInformationResponse>\n      <tds:Manufacturer>Hikvision</tds:Manufacturer>\n      <tds:Model>DS-2CD3T46</tds:Model>\n      <tds:FirmwareVersion>V5.7.1</tds:FirmwareVersion>\n      <tds:SerialNumber>DS2CD3T46...</tds:SerialNumber>\n      <tds:HardwareId>1684X</tds:HardwareId>\n    </tds:GetDeviceInformationResponse>\n  </env:Body>\n</env:Envelope>'
+                        id: soapResponseArea
+                        text: "等待请求..."
                         font.pixelSize: 10; color: "#00D4AA"
                         font.family: "monospace"
                         wrapMode: Text.WordWrap
                         background: Rectangle { color: "#0A0C10"; radius: 4 }
                         readOnly: true
+                    }
+                }
+            }
+        }
+    }
+
+    // ── 手动添加ONVIF设备弹窗 ──
+    Popup {
+        id: addOnvifPopup
+        anchors.centerIn: parent
+        width: 360; height: 300
+        background: Rectangle { color: "#141720"; radius: 12; border.color: "#252830" }
+
+        Column {
+            anchors.fill: parent; anchors.margins: 16; spacing: 10
+            Text { text: "➕ 添加ONVIF设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+
+            TextField { id: onvifIp; width: 320; placeholderText: "设备IP地址"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: onvifPort; width: 320; text: "80"; placeholderText: "ONVIF端口"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: onvifUser; width: 320; placeholderText: "用户名"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: onvifPass; width: 320; placeholderText: "密码"; echoMode: TextInput.Password; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+
+            Row {
+                spacing: 12
+                Button {
+                    text: "取消"
+                    background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: addOnvifPopup.close()
+                }
+                Button {
+                    text: "添加"
+                    background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        deviceController.addDevice("onvif", onvifIp.text, parseInt(onvifPort.text), onvifUser.text, onvifPass.text)
+                        addOnvifPopup.close()
                     }
                 }
             }

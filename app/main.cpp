@@ -18,6 +18,11 @@
 #include "controllers/AIController.h"
 #include "controllers/ConfigController.h"
 #include "controllers/StatusController.h"
+#include "controllers/LinkageController.h"
+#include "controllers/PipelineController.h"
+#include "controllers/OTAController.h"
+#include "controllers/AuditController.h"
+#include "controllers/FederationController.h"
 #include "models/DeviceListModel.h"
 #include "models/AlarmListModel.h"
 #include "utils/ThemeConfig.h"
@@ -60,6 +65,13 @@ int main(int argc, char *argv[]) {
     ConfigController configController(&apiClient);
     StatusController statusController(&apiClient);
 
+    // ── New Controllers ──
+    LinkageController linkageController(&apiClient);
+    PipelineController pipelineController(&apiClient);
+    OTAController otaController(&apiClient);
+    AuditController auditController(&apiClient);
+    FederationController federationController(&apiClient);
+
     // ── QML Engine ──
     QQmlApplicationEngine engine;
 
@@ -70,6 +82,11 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("aiController", &aiController);
     engine.rootContext()->setContextProperty("configController", &configController);
     engine.rootContext()->setContextProperty("statusController", &statusController);
+    engine.rootContext()->setContextProperty("linkageController", &linkageController);
+    engine.rootContext()->setContextProperty("pipelineController", &pipelineController);
+    engine.rootContext()->setContextProperty("otaController", &otaController);
+    engine.rootContext()->setContextProperty("auditController", &auditController);
+    engine.rootContext()->setContextProperty("federationController", &federationController);
     engine.rootContext()->setContextProperty("deviceModel", &deviceModel);
     engine.rootContext()->setContextProperty("alarmModel", &alarmModel);
     engine.rootContext()->setContextProperty("apiClient", &apiClient);

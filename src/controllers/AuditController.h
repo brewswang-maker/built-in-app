@@ -1,0 +1,31 @@
+#pragma once
+#include <QObject>
+#include <QVariantList>
+
+class ApiClient;
+
+class AuditController : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(QVariantList logs READ logs NOTIFY logsUpdated)
+    Q_PROPERTY(int totalCount READ totalCount NOTIFY logsUpdated)
+
+public:
+    explicit AuditController(ApiClient* api, QObject* parent = nullptr);
+
+    QVariantList logs() const { return m_logs; }
+    int totalCount() const { return m_totalCount; }
+
+    Q_INVOKABLE void refreshLogs(int page = 1, int pageSize = 50);
+    Q_INVOKABLE void searchLogs(const QVariantMap& filters);
+    Q_INVOKABLE void exportLogs(const QString& format);
+
+signals:
+    void logsUpdated();
+    void exportCompleted(const QString& path);
+    void errorOccurred(int code, const QString& message);
+
+private:
+    ApiClient* m_api;
+    QVariantList m_logs;
+    int m_totalCount = 0;
+};

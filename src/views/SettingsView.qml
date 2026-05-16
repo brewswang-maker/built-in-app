@@ -1,254 +1,360 @@
 // ========================================================================
-// SettingsView.qml — 增强版设置 (对标Web端4个Tab)
-// 新增: 4个Tab(基本/网络&云端/告警策略/AI模型) | 联动动作配置 | 云端连接
+// SettingsView.qml — 系统设置 (基本/网络/告警策略/AI模型 4Tab)
+// Controller: configController
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    id: settingsPage
+    id: settingsView
+
+    property int currentTab: 0
+
+    Component.onCompleted: {
+        configController.loadConfig()
+        configController.getNetworkConfig()
+        configController.getAlgorithmList()
+    }
+
+    Connections {
+        target: configController
+        function onConfigUpdated() {
+            // 配置已更新 — UI绑定自动刷新
+        }
+        function onNetworkConfigUpdated() {
+            ipField.text = configController.networkConfig.ip || ""
+            subnetField.text = configController.networkConfig.subnet || ""
+            gatewayField.text = configController.networkConfig.gateway || ""
+            dnsField.text = configController.networkConfig.dns || ""
+        }
+        function onAlgorithmListUpdated() {
+            aiModelList.model = configController.algorithmList
+        }
+    }
 
     Rectangle {
         id: toolbar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 48; color: "#141720"; radius: 8
+        height: 52; color: "#141720"
 
         RowLayout {
-            anchors.fill: parent; anchors.margins: 12; spacing: 12
+            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
+
             Text { text: "⚙️ 系统设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
-            Text { text: "设备: ShieldBox Pro (BM1684X)"; font.pixelSize: 11; color: "#4A4D58" }
-            Text { text: "固件: v2.3.2"; font.pixelSize: 11; color: "#4A4D58" }
+
+            // Tab切换
+            Row {
+                spacing: 2
+                Repeater {
+                    model: ["基本", "网络", "告警策略", "AI模型"]
+                    delegate: Button {
+                        text: modelData; font.pixelSize: 11
+                        background: Rectangle { color: settingsView.currentTab === index ? "#3B82F6" : "#252830"; radius: 6; width: 70; height: 28 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: settingsView.currentTab === index ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: settingsView.currentTab = index
+                    }
+                }
+            }
+
+            Button {
+                text: "📥 导入"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: configController.importConfig("")
+            }
+            Button {
+                text: "📤 导出"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: configController.exportConfig()
+            }
         }
     }
 
-    // ═══ Tab栏 ═══
-    TabBar {
-        id: tabBar
-        anchors.top: toolbar.bottom; anchors.left: parent.left; anchors.right: parent.right
-        height: 40; background: Rectangle { color: "#141720" }
-
-        TabButton { text: "基本设置"; font.pixelSize: 13
-            contentItem: Text { text: parent.text; font.pixelSize: 13; color: tabBar.currentIndex === 0 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            background: Rectangle { color: tabBar.currentIndex === 0 ? "#0D0F12" : "transparent"; radius: 4 }
-        }
-        TabButton { text: "网络 & 云端"; font.pixelSize: 13
-            contentItem: Text { text: parent.text; font.pixelSize: 13; color: tabBar.currentIndex === 1 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            background: Rectangle { color: tabBar.currentIndex === 1 ? "#0D0F12" : "transparent"; radius: 4 }
-        }
-        TabButton { text: "告警策略"; font.pixelSize: 13
-            contentItem: Text { text: parent.text; font.pixelSize: 13; color: tabBar.currentIndex === 2 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            background: Rectangle { color: tabBar.currentIndex === 2 ? "#0D0F12" : "transparent"; radius: 4 }
-        }
-        TabButton { text: "AI模型"; font.pixelSize: 13
-            contentItem: Text { text: parent.text; font.pixelSize: 13; color: tabBar.currentIndex === 3 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            background: Rectangle { color: tabBar.currentIndex === 3 ? "#0D0F12" : "transparent"; radius: 4 }
-        }
-    }
-
+    // ── Tab内容 ──
     StackLayout {
-        anchors.top: tabBar.bottom; anchors.bottom: parent.bottom
+        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
         anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: 8; currentIndex: tabBar.currentIndex
+        anchors.margins: 12; currentIndex: settingsView.currentTab
 
-        // ═══ Tab 1: 基本设置 ═══
-        ScrollView { clip: true
-            Column {
-                width: settingsPage.width - 24; spacing: 8; padding: 8
+        // ═══ Tab 0: 基本设置 ═══
+        Rectangle {
+            color: "#0D0F12"; radius: 8
 
-                Text { text: "🖥️ 系统信息"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                Grid { columns: 2; columnSpacing: 20; rowSpacing: 4; width: parent.width
-                    Text { text: "设备型号:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: "ShieldBox Pro"; font.pixelSize: 12; color: "#E8E8E8" }
-                    Text { text: "NPU:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: "算能BM1684X (32TOPS)"; font.pixelSize: 12; color: "#E8E8E8" }
-                    Text { text: "内存:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: "8GB DDR4"; font.pixelSize: 12; color: "#E8E8E8" }
-                    Text { text: "存储:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: "128GB eMMC (已用 67GB)"; font.pixelSize: 12; color: "#E8E8E8" }
-                    Text { text: "固件版本:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: "v2.3.2 (A分区)"; font.pixelSize: 12; color: "#E8E8E8" }
-                    Text { text: "序列号:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: "SBX-2026-0042"; font.pixelSize: 12; color: "#E8E8E8" }
-                }
+            ScrollView {
+                anchors.fill: parent; anchors.margins: 16; clip: true
 
-                Rectangle { height: 1; color: "#252830"; width: parent.width }
+                Column {
+                    width: parent.width - 32; spacing: 14
 
-                Text { text: "🕐 时间设置"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                Row { spacing: 12
-                    TextField { text: "2026-05-16"; width: 120; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    TextField { text: "12:00:00"; width: 100; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    ComboBox { width: 120; height: 32; model: ["自动NTP", "手动设置"]; background: Rectangle { color: "#252830"; radius: 6 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                }
+                    Text { text: "基本设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
 
-                Rectangle { height: 1; color: "#252830"; width: parent.width }
-
-                Text { text: "🔊 显示与声音"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                Row { spacing: 20; width: parent.width
-                    Column { spacing: 4
-                        Text { text: "屏幕亮度"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Slider { width: 200; from: 10; to: 100; value: 80 }
-                    }
-                    Column { spacing: 4
-                        Text { text: "告警音量"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Slider { width: 200; from: 0; to: 100; value: 60 }
-                    }
-                }
-                Row { spacing: 12
-                    CheckBox { text: "告警弹窗"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "告警声光"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "自动关闭弹窗(15s)"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                }
-
-                Button { text: "💾 保存基本设置"; font.pixelSize: 13
-                    background: Rectangle { color: "#3B82F6"; radius: 8; width: 140; height: 38 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                }
-            }
-        }
-
-        // ═══ Tab 2: 网络 & 云端 ═══
-        ScrollView { clip: true
-            Column {
-                width: settingsPage.width - 24; spacing: 8; padding: 8
-
-                Text { text: "🌐 网络配置"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                Grid { columns: 2; columnSpacing: 16; rowSpacing: 6; width: parent.width
-                    Text { text: "IP模式:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox { width: 160; height: 32; model: ["DHCP自动", "静态IP"]; background: Rectangle { color: "#252830"; radius: 6 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                    Text { text: "IP地址:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField { text: "192.168.1.100"; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    Text { text: "子网掩码:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField { text: "255.255.255.0"; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    Text { text: "网关:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField { text: "192.168.1.1"; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    Text { text: "DNS:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField { text: "8.8.8.8"; width: 200; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                }
-
-                Rectangle { height: 1; color: "#252830"; width: parent.width }
-
-                Text { text: "☁️ 云端连接"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                Grid { columns: 2; columnSpacing: 16; rowSpacing: 6; width: parent.width
-                    Text { text: "云端地址:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField { text: "https://api.shieldai.cloud"; width: 260; height: 32; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                    Text { text: "设备令牌:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 4
-                        TextField { text: "••••••••••••••••"; width: 200; height: 32; echoMode: TextInput.Password; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
-                        Button { text: "👁"; width: 32; height: 32; background: Rectangle { color: "#252830"; radius: 6 }; contentItem: Text { text: parent.text; color: "#8B8FA3" } }
-                    }
-                    Text { text: "连接状态:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 6
-                        Rectangle { width: 8; height: 8; radius: 4; color: "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "已连接 — 心跳正常"; font.pixelSize: 12; color: "#00D4AA" }
-                    }
-                    Text { text: "MQTT:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 6
-                        Rectangle { width: 8; height: 8; radius: 4; color: "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: "mqtts://emqx.shieldai.cloud:8883"; font.pixelSize: 12; color: "#00D4AA" }
-                    }
-                }
-
-                Row { spacing: 12
-                    CheckBox { text: "告警转发到云端"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "配置同步"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "联邦学习参与"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                }
-
-                Button { text: "💾 保存网络设置"; font.pixelSize: 13
-                    background: Rectangle { color: "#3B82F6"; radius: 8; width: 140; height: 38 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                }
-            }
-        }
-
-        // ═══ Tab 3: 告警策略 ═══
-        ScrollView { clip: true
-            Column {
-                width: settingsPage.width - 24; spacing: 8; padding: 8
-
-                Text { text: "🚨 告警策略配置"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-
-                Grid { columns: 2; columnSpacing: 16; rowSpacing: 8; width: parent.width
-                    Text { text: "告警去重窗口:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 4; SpinBox { from: 1; to: 60; value: 5; height: 32 }; Text { text: "秒"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter } }
-
-                    Text { text: "最小置信度:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 8
-                        Slider { width: 180; from: 0.3; to: 0.95; value: 0.5; stepSize: 0.05 }
-                        Text { text: (0.5 * 100).toFixed(0) + "%"; font.pixelSize: 12; color: "#E8E8E8"; width: 40 }
+                    // 设备名
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "设备名称"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField {
+                            id: deviceNameField
+                            width: parent.width; height: 36
+                            text: configController.config.deviceName || "ShieldBox-AI-01"
+                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
+                            background: Rectangle { color: "#252830"; radius: 6 }
+                        }
                     }
 
-                    Text { text: "严重告警最大延迟:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 4; SpinBox { from: 100; to: 5000; value: 500; stepSize: 100; height: 32 }; Text { text: "ms"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter } }
-
-                    Text { text: "自动确认超时:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Row { spacing: 4; SpinBox { from: 0; to: 60; value: 0; height: 32 }; Text { text: "分钟 (0=不自动)"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter } }
-                }
-
-                Rectangle { height: 1; color: "#252830"; width: parent.width }
-
-                Text { text: "🔗 联动动作"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-
-                Column { spacing: 4; width: parent.width
-                    CheckBox { text: "📸 自动截图 (告警时)"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "📹 3秒预录 (告警前)"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "🔊 声光报警 (严重告警)"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "☁️ 推送到云端"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "📱 推送到APP"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "🔔 继电器触发 (IO输出)"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                    CheckBox { text: "🔊 语音播报 (TTS)"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
-                }
-
-                Button { text: "💾 保存告警策略"; font.pixelSize: 13
-                    background: Rectangle { color: "#3B82F6"; radius: 8; width: 140; height: 38 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                }
-            }
-        }
-
-        // ═══ Tab 4: AI模型 ═══
-        ScrollView { clip: true
-            Column {
-                width: settingsPage.width - 24; spacing: 8; padding: 8
-
-                Text { text: "🧠 AI模型配置"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-
-                // 模型列表
-                ListView {
-                    width: parent.width; height: 280; spacing: 4; clip: true
-
-                    model: ListModel {
-                        ListElement { name: "person_detect_v3.bmodel"; version: "v3.2"; precision: "INT8"; size: "7.8"; inferMs: "12"; slot: 1; active: true }
-                        ListElement { name: "perimeter_guard.bmodel"; version: "v2.1"; precision: "INT8"; size: "5.2"; inferMs: "9"; slot: 2; active: true }
-                        ListElement { name: "fire_smoke.bmodel"; version: "v1.5"; precision: "FP16"; size: "12.1"; inferMs: "18"; slot: 3; active: true }
-                        ListElement { name: "ppe_detect.bmodel"; version: "v2.0"; precision: "INT8"; size: "6.3"; inferMs: "11"; slot: 4; active: false }
-                        ListElement { name: "face_recog.bmodel"; version: "v4.0"; precision: "INT8"; size: "15.7"; inferMs: "22"; slot: 5; active: false }
+                    // 时区
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "时区"; font.pixelSize: 12; color: "#8B8FA3" }
+                        ComboBox {
+                            id: timezoneCombo
+                            width: parent.width; height: 36
+                            model: ["Asia/Shanghai (UTC+8)", "Asia/Tokyo (UTC+9)", "America/New_York (UTC-5)", "Europe/London (UTC+0)"]
+                            background: Rectangle { color: "#252830"; radius: 6 }
+                        }
                     }
 
-                    delegate: Rectangle {
-                        width: ListView.view.width; height: 44; color: "#0D0F12"; radius: 4
-                        Row { anchors.fill: parent; anchors.margins: 8; spacing: 10
-                            Rectangle { width: 24; height: 24; radius: 12; color: model.active ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter
-                                Text { text: "S" + model.slot; font.pixelSize: 9; color: "#0D0F12"; font.bold: true; anchors.centerIn: parent } }
-                            Text { text: model.name; font.pixelSize: 11; color: "#E8E8E8"; width: 180; elide: Text.ElideRight }
-                            Text { text: model.precision; font.pixelSize: 10; color: "#6C5CE7"; width: 40 }
-                            Text { text: model.size + "MB"; font.pixelSize: 10; color: "#8B8FA3"; width: 50 }
-                            Text { text: model.inferMs + "ms"; font.pixelSize: 10; color: "#FFB800"; width: 40 }
-                            Button { text: model.active ? "卸载" : "加载"; font.pixelSize: 10
-                                background: Rectangle { color: model.active ? "#2A1A1A" : "#1A2A1A"; radius: 4; width: 44; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: model.active ? "#FF6B35" : "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                            }
+                    // 语言
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "语言"; font.pixelSize: 12; color: "#8B8FA3" }
+                        ComboBox {
+                            id: langCombo
+                            width: parent.width; height: 36
+                            model: ["简体中文", "English", "日本語"]
+                            background: Rectangle { color: "#252830"; radius: 6 }
+                        }
+                    }
+
+                    // NTP服务器
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "NTP服务器"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField {
+                            id: ntpField
+                            width: parent.width; height: 36
+                            text: configController.config.ntpServer || "ntp.aliyun.com"
+                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
+                            background: Rectangle { color: "#252830"; radius: 6 }
+                        }
+                    }
+
+                    // 自动重启
+                    Row {
+                        spacing: 12
+                        CheckBox {
+                            id: autoReboot
+                            text: "每日自动重启"
+                            checked: configController.config.autoReboot || false
+                        }
+                        SpinBox { from: 0; to: 23; value: 3; enabled: autoReboot.checked }
+                        Text { text: "时"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+
+                    // 日志级别
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "日志级别"; font.pixelSize: 12; color: "#8B8FA3" }
+                        ComboBox { width: parent.width; model: ["DEBUG", "INFO", "WARN", "ERROR"]; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+
+                    // 保存按钮
+                    Button {
+                        text: "💾 保存基本设置"; font.pixelSize: 13
+                        background: Rectangle { color: "#00D4AA"; radius: 8; width: 180; height: 40 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            configController.saveConfig("deviceName", deviceNameField.text)
+                            configController.saveConfig("timezone", timezoneCombo.currentText)
+                            configController.saveConfig("language", langCombo.currentText)
+                            configController.saveConfig("ntpServer", ntpField.text)
+                            configController.saveConfig("autoReboot", autoReboot.checked)
                         }
                     }
                 }
+            }
+        }
 
-                Button { text: "📤 上传模型"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32; border.color: "#4A4D58"; border.width: 1 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+        // ═══ Tab 1: 网络设置 ═══
+        Rectangle {
+            color: "#0D0F12"; radius: 8
+
+            ScrollView {
+                anchors.fill: parent; anchors.margins: 16; clip: true
+
+                Column {
+                    width: parent.width - 32; spacing: 14
+
+                    Text { text: "网络设置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "IP地址"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField { id: ipField; width: parent.width; height: 36; text: configController.networkConfig.ip || "192.168.1.200"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "子网掩码"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField { id: subnetField; width: parent.width; height: 36; text: configController.networkConfig.subnet || "255.255.255.0"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "网关"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField { id: gatewayField; width: parent.width; height: 36; text: configController.networkConfig.gateway || "192.168.1.1"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "DNS服务器"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField { id: dnsField; width: parent.width; height: 36; text: configController.networkConfig.dns || "8.8.8.8"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+
+                    Row {
+                        spacing: 12
+                        Text { text: "DHCP:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                        Switch { id: dhcpSwitch; checked: false }
+                    }
+
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "VLAN ID (可选)"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField { width: parent.width; height: 36; placeholderText: "留空表示不使用VLAN"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "API端口"; font.pixelSize: 12; color: "#8B8FA3" }
+                        TextField { id: apiPortField; width: parent.width; height: 36; text: "8080"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+                    }
+
+                    Button {
+                        text: "💾 保存网络设置"; font.pixelSize: 13
+                        background: Rectangle { color: "#00D4AA"; radius: 8; width: 180; height: 40 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            configController.setNetworkConfig({
+                                ip: ipField.text, subnet: subnetField.text,
+                                gateway: gatewayField.text, dns: dnsField.text,
+                                dhcp: dhcpSwitch.checked, port: apiPortField.text
+                            })
+                        }
+                    }
+                }
+            }
+        }
+
+        // ═══ Tab 2: 告警策略 ═══
+        Rectangle {
+            color: "#0D0F12"; radius: 8
+
+            ScrollView {
+                anchors.fill: parent; anchors.margins: 16; clip: true
+
+                Column {
+                    width: parent.width - 32; spacing: 14
+
+                    Text { text: "告警策略"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+
+                    // 灵敏度
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "检测灵敏度: " + sensitivitySlider.value + "%"; font.pixelSize: 12; color: "#E8E8E8" }
+                        Slider { id: sensitivitySlider; width: parent.width; from: 10; to: 100; value: configController.config.sensitivity || 70; stepSize: 5 }
+                    }
+
+                    // 静默期
+                    Column { spacing: 4; width: parent.width
+                        Text { text: "告警静默期 (秒)"; font.pixelSize: 12; color: "#8B8FA3" }
+                        SpinBox { from: 5; to: 300; value: configController.config.silencePeriod || 30; stepSize: 5 }
+                    }
+
+                    // 自动确认
+                    Row { spacing: 12
+                        CheckBox { text: "低级别告警自动确认 (30分钟后)"; checked: configController.config.autoConfirm || false }
+                    }
+                    Row { spacing: 12
+                        CheckBox { text: "AI判定误报自动静音"; checked: configController.config.autoMuteFalseAlarm || true }
+                    }
+
+                    Rectangle { height: 1; color: "#252830"; width: parent.width }
+
+                    // 通知渠道
+                    Text { text: "通知渠道"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Row { spacing: 16
+                        CheckBox { text: "本地弹窗"; checked: true }
+                        CheckBox { text: "语音播报"; checked: true }
+                    }
+                    Row { spacing: 16
+                        CheckBox { text: "手机推送"; checked: false }
+                        CheckBox { text: "短信通知"; checked: false }
+                    }
+                    Row { spacing: 16
+                        CheckBox { text: "邮件通知"; checked: false }
+                        CheckBox { text: "WebHook"; checked: false }
+                    }
+
+                    // 联动动作
+                    Rectangle { height: 1; color: "#252830"; width: parent.width }
+                    Text { text: "默认联动动作"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Row { spacing: 16
+                        CheckBox { text: "触发录像"; checked: true }
+                        CheckBox { text: "自动截图"; checked: true }
+                    }
+                    Row { spacing: 16
+                        CheckBox { text: "声光报警"; checked: false }
+                        CheckBox { text: "电视墙弹出"; checked: false }
+                    }
+
+                    Button {
+                        text: "💾 保存告警策略"; font.pixelSize: 13
+                        background: Rectangle { color: "#00D4AA"; radius: 8; width: 180; height: 40 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            configController.saveConfig("sensitivity", sensitivitySlider.value)
+                            configController.saveConfig("silencePeriod", 30)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ═══ Tab 3: AI模型 ═══
+        Rectangle {
+            color: "#0D0F12"; radius: 8
+
+            Column {
+                anchors.fill: parent; anchors.margins: 16; spacing: 8
+
+                Row {
+                    spacing: 12
+                    Text { text: "AI模型配置"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                    Text { text: configController.algorithmList.length + " 个已加载"; font.pixelSize: 11; color: "#8B8FA3" }
+                }
+
+                ListView {
+                    id: aiModelList
+                    width: parent.width; height: parent.height - 50; clip: true; spacing: 6
+                    model: configController.algorithmList
+
+                    delegate: Rectangle {
+                        width: ListView.view.width; height: 56; color: "#141720"; radius: 6
+                        property var mData: modelData || model
+
+                        Row {
+                            anchors.fill: parent; anchors.margins: 10; spacing: 12
+
+                            Text { text: "🧠"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
+                            Column { spacing: 2; width: 160
+                                Text { text: mData.name || "模型"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                                Text { text: (mData.precision || "INT8") + " | " + (mData.fps || 0) + " FPS"; font.pixelSize: 10; color: "#8B8FA3" }
+                            }
+                            Column { spacing: 2
+                                Text { text: "灵敏度:"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Slider { width: 120; from: 10; to: 100; value: mData.sensitivity || 70; stepSize: 5
+                                    onMoved: configController.configureAlgorithm(mData.id, { sensitivity: value })
+                                }
+                            }
+                            Column { spacing: 2
+                                Text { text: "最小置信度:"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Slider { width: 120; from: 10; to: 100; value: mData.minConfidence || 50; stepSize: 5
+                                    onMoved: configController.configureAlgorithm(mData.id, { minConfidence: value })
+                                }
+                            }
+                            Switch {
+                                checked: mData.enabled !== false
+                                onToggled: configController.configureAlgorithm(mData.id, { enabled: checked })
+                            }
+                        }
+                    }
                 }
             }
         }

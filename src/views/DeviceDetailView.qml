@@ -1,16 +1,27 @@
 // ========================================================================
-// DeviceDetailView.qml — 设备详情 (通道管理 + 算法配置 + 码流信息)
-// 超越Web端: 实时码流参数调节、SNMPTrap监听、继电器/IO控制
+// DeviceDetailView.qml — 设备详情 (信息+通道+PTZ+预览)
+// Controller: deviceController + mediaController
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    id: deviceDetail
+    id: detailView
 
     property string deviceId: ""
-    property string deviceName: "海康IPC-01"
+    property var deviceDetail: ({})
+
+    Component.onCompleted: {
+        if (deviceId) deviceController.getDeviceDetail(deviceId)
+    }
+
+    Connections {
+        target: deviceController
+        function onDeviceDetailReceived(detail) {
+            deviceDetail = detail
+        }
+    }
 
     Rectangle {
         id: toolbar
@@ -21,17 +32,26 @@ Item {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
             Button {
-                text: "← 返回"
-                font.pixelSize: 12
+                text: "← 返回"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
-            Text { text: "📹 " + deviceName; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-            Rectangle { width: 8; height: 8; radius: 4; color: "#00D4AA" }
-            Text { text: "在线"; font.pixelSize: 12; color: "#00D4AA" }
+            Text { text: deviceDetail.name || "设备详情"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Rectangle { width: 8; height: 8; radius: 4; color: deviceDetail.status === "online" ? "#00D4AA" : "#FF3D71" }
+            Text { text: deviceDetail.status || "unknown"; font.pixelSize: 12; color: deviceDetail.status === "online" ? "#00D4AA" : "#FF3D71" }
             Item { Layout.fillWidth: true }
-            Button { text: "🔄 刷新"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-            Button { text: "🗑 删除"; font.pixelSize: 12; background: Rectangle { color: "#FF3D71"; radius: 6; width: 60; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+            Button {
+                text: "🔄 刷新"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: deviceController.getDeviceDetail(deviceId)
+            }
+            Button {
+                text: "🗑 删除设备"; font.pixelSize: 12
+                background: Rectangle { color: "#FF3D71"; radius: 6; width: 80; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: deviceController.removeDevice(deviceId)
+            }
         }
     }
 
@@ -40,72 +60,59 @@ Item {
         anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 8; spacing: 8
 
-        // ── 左侧: 设备信息 + 通道 ──
+        // ── 左侧: 设备信息 ──
         Rectangle {
-            Layout.fillHeight: true; Layout.preferredWidth: 380
+            Layout.fillHeight: true; Layout.preferredWidth: 280
             color: "#141720"; radius: 8
 
-            Column {
-                anchors.fill: parent; anchors.margins: 12; spacing: 8
+            ScrollView {
+                anchors.fill: parent; anchors.margins: 12; clip: true
 
-                // 设备基本信息
-                Text { text: "📋 设备信息"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Column {
+                    width: 256; spacing: 10
 
-                Grid {
-                    columns: 2; spacing: 6; width: parent.width - 24
-                    Text { text: "设备ID:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "34020000001320000001"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "IP地址:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "192.168.1.100"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "协议:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "GB28181"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "厂商:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "海康威视"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "型号:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "DS-2CD3T46WDV3"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "固件:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "V5.7.1 build 210312"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "通道数:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "4 (在线:3 / 离线:1)"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "注册时间:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "2026-05-16 08:00:15"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "运行时长:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: "3小时32分"; font.pixelSize: 11; color: "#E8E8E8" }
-                }
-
-                Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
-
-                // 通道列表
-                Text { text: "📹 通道列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-
-                ListView {
-                    width: parent.width - 24; height: 180; clip: true; spacing: 4
-
-                    model: ListModel {
-                        ListElement { ch: "CH1"; name: "主码流"; type: "H.265 4K@25fps"; bitrate: "6144kbps"; status: "online" }
-                        ListElement { ch: "CH2"; name: "子码流"; type: "H.264 1080P@15fps"; bitrate: "2048kbps"; status: "online" }
-                        ListElement { ch: "CH3"; name: "三码流"; type: "H.264 720P@15fps"; bitrate: "1024kbps"; status: "online" }
-                        ListElement { ch: "CH4"; name: "四码流"; type: "JPEG 640x480@1fps"; bitrate: "256kbps"; status: "offline" }
+                    // 设备图标+名称
+                    Rectangle {
+                        width: parent.width; height: 80; color: "#0D0F12"; radius: 8
+                        Column {
+                            anchors.centerIn: parent; spacing: 4
+                            Text { text: "📹"; font.pixelSize: 28; horizontalAlignment: Text.AlignHCenter }
+                            Text { text: deviceDetail.name || "设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter }
+                        }
                     }
 
-                    delegate: Rectangle {
-                        width: ListView.view.width; height: 48; color: "#0D0F12"; radius: 4
-                        Column {
-                            anchors.fill: parent; anchors.margins: 8; spacing: 2
-                            Row {
-                                spacing: 8
-                                Rectangle { width: 6; height: 6; radius: 3; color: model.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: model.ch + " " + model.name; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                                Button { text: "预览"; font.pixelSize: 9; background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            }
-                            Text { text: model.type + " | " + model.bitrate; font.pixelSize: 10; color: "#8B8FA3" }
-                        }
+                    // 基本信息
+                    Text { text: "📋 基本信息"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Column { spacing: 4; width: parent.width
+                        Row { spacing: 6; Text { text: "型号:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.model || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "序列号:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.serialNumber || "-"; font.pixelSize: 11; color: "#3B82F6" } }
+                        Row { spacing: 6; Text { text: "固件:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.firmware || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "IP:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.ip || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "MAC:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.mac || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "协议:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.protocol || "-"; font.pixelSize: 11; color: "#8B5CF6" } }
+                    }
+
+                    // 运行状态
+                    Text { text: "📊 运行状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Column { spacing: 4; width: parent.width
+                        Row { spacing: 6; Text { text: "温度:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.temperature || "-") + "°C"; font.pixelSize: 11; color: deviceDetail.temperature > 70 ? "#FF3D71" : "#00D4AA" } }
+                        Row { spacing: 6; Text { text: "CPU:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.cpuUsage || "-") + "%"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "内存:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.memoryUsage || "-") + "%"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "运行时间:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.uptime || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "通道数:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.channelCount || "0"; font.pixelSize: 11; color: "#E8E8E8" } }
+                    }
+
+                    // 操作
+                    Text { text: "🔧 操作"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Column { spacing: 6; width: parent.width
+                        Button { text: "🔄 重启设备"; width: parent.width; background: Rectangle { color: "#FFB800"; radius: 6; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        Button { text: "🔧 恢复出厂"; width: parent.width; background: Rectangle { color: "#252830"; radius: 6; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                     }
                 }
             }
         }
 
-        // ── 中间: 算法配置 ──
+        // ── 中间: 通道列表 + 视频预览 ──
         Rectangle {
             Layout.fillHeight: true; Layout.fillWidth: true
             color: "#0D0F12"; radius: 8
@@ -113,44 +120,52 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "🧠 算法配置"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Row {
+                    spacing: 12
+                    Text { text: "通道列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Text { text: (deviceDetail.channels || 0) + " 路"; font.pixelSize: 11; color: "#8B8FA3" }
+                }
 
-                ListView {
-                    width: parent.width - 24; height: parent.height - 60; clip: true; spacing: 4
+                // 视频预览区
+                Rectangle {
+                    width: parent.width - 24; height: 200; color: "#000"; radius: 8
 
-                    model: ListModel {
-                        ListElement { name: "人员入侵检测"; model: "person_detect.bmodel"; enabled: true; confidence: 0.85; fps: 25.4; tpu: "32%" }
-                        ListElement { name: "烟火检测"; model: "fire_smoke.bmodel"; enabled: true; confidence: 0.80; fps: 28.1; tpu: "22%" }
-                        ListElement { name: "安全帽检测"; model: "ppe_detect.bmodel"; enabled: true; confidence: 0.90; fps: 22.0; tpu: "18%" }
-                        ListElement { name: "区域入侵"; model: "region_detect.bmodel"; enabled: false; confidence: 0.75; fps: 0; tpu: "0%" }
-                        ListElement { name: "车牌识别"; model: "plate_recog.bmodel"; enabled: false; confidence: 0.88; fps: 0; tpu: "0%" }
-                        ListElement { name: "人脸比对"; model: "face_recog.bmodel"; enabled: false; confidence: 0.92; fps: 0; tpu: "0%" }
+                    Text {
+                        anchors.centerIn: parent
+                        text: "点击通道开始预览"
+                        font.pixelSize: 14; color: "#4A4D58"
                     }
+                }
+
+                // 通道网格
+                GridView {
+                    width: parent.width - 24; height: parent.height - 280; cellWidth: 140; cellHeight: 50; clip: true
+                    model: deviceDetail.channelList || []
 
                     delegate: Rectangle {
-                        width: ListView.view.width; height: 72; color: "#141720"; radius: 6
+                        width: 132; height: 42; color: "#141720"; radius: 6
 
-                        Column {
-                            anchors.fill: parent; anchors.margins: 10; spacing: 4
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: mediaController.startStream(modelData.channelId || "", "live")
+                        }
 
-                            Row {
-                                spacing: 8; width: parent.width
-                                Switch {
-                                    checked: model.enabled
-                                    onCheckedChanged: console.log(model.name, checked)
-                                }
-                                Text { text: model.name; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
-                                Item { width: 10 }
-                                Text { text: model.fps > 0 ? model.fps + " FPS" : "未启用"; font.pixelSize: 11; color: model.fps > 0 ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: "TPU " + model.tpu; font.pixelSize: 10; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
+                        Row {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 6
+                            Rectangle { width: 4; height: 4; radius: 2; color: modelData.streaming ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: modelData.name || "CH" + (index+1); font.pixelSize: 11; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
+                            Item { width: 10 }
+                            Button {
+                                text: "▶"; font.pixelSize: 10
+                                background: Rectangle { color: "#252830"; radius: 3; width: 22; height: 18 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                onClicked: mediaController.startStream(modelData.channelId || "", "live")
                             }
-
-                            Row {
-                                spacing: 12
-                                Text { text: "模型:" + model.model; font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: "置信度:" + (model.confidence * 100) + "%"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Button { text: "设置ROI"; font.pixelSize: 9; background: Rectangle { color: "#252830"; radius: 3; width: 48; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "测试"; font.pixelSize: 9; background: Rectangle { color: "#3B82F6"; radius: 3; width: 32; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button {
+                                text: "📷"; font.pixelSize: 10
+                                background: Rectangle { color: "#252830"; radius: 3; width: 22; height: 18 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                onClicked: mediaController.snapshot(modelData.channelId || "")
                             }
                         }
                     }
@@ -158,66 +173,61 @@ Item {
             }
         }
 
-        // ── 右侧: IO控制面板 ──
+        // ── 右侧: PTZ控制 ──
         Rectangle {
-            Layout.fillHeight: true; Layout.preferredWidth: 220
+            Layout.fillHeight: true; Layout.preferredWidth: 180
             color: "#141720"; radius: 8
 
             Column {
-                anchors.fill: parent; anchors.margins: 12; spacing: 8
+                anchors.fill: parent; anchors.margins: 10; spacing: 6
 
-                Text { text: "⚡ IO控制"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "🎮 PTZ"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
-                // 继电器输出
-                GroupBox {
-                    title: "继电器输出"
-                    width: parent.width - 24; font.pixelSize: 12; label.color: "#E8E8E8"
+                Grid {
+                    columns: 3; spacing: 3; anchors.horizontalCenter: parent.horizontalCenter
 
-                    Column { spacing: 6; width: parent.width
-                        Repeater {
-                            model: ["继电器1 (警灯)", "继电器2 (警铃)", "继电器3 (门禁)"]
-                            delegate: Row {
-                                spacing: 8
-                                Text { text: modelData; font.pixelSize: 11; color: "#E8E8E8"; width: 120 }
-                                Button { text: "触发"; font.pixelSize: 10; background: Rectangle { color: "#FF3D71"; radius: 4; width: 36; height: 20 }; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Repeater {
+                        model: ["↖", "↑", "↗", "←", "⏹", "→", "↙", "↓", "↘"]
+                        delegate: Button {
+                            width: 44; height: 44
+                            background: Rectangle { color: pressed ? "#3B82F6" : "#252830"; radius: 6 }
+                            contentItem: Text { text: modelData; font.pixelSize: 14; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: {
+                                var cmds = ["left_up","up","right_up","left","stop","right","left_down","down","right_down"]
+                                mediaController.ptzControl(deviceId, cmds[index], 0.5)
                             }
                         }
                     }
                 }
 
-                // DI输入状态
-                GroupBox {
-                    title: "DI输入状态"
-                    width: parent.width - 24; font.pixelSize: 12; label.color: "#E8E8E8"
+                Column { spacing: 2; width: parent.width - 20
+                    Text { text: "变倍"; font.pixelSize: 10; color: "#8B8FA3" }
+                    Slider { width: parent.width; from: 1; to: 20; value: 1; onMoved: mediaController.ptzControl(deviceId, "zoom", value/20) }
+                }
+                Column { spacing: 2; width: parent.width - 20
+                    Text { text: "聚焦"; font.pixelSize: 10; color: "#8B8FA3" }
+                    Slider { width: parent.width; from: 0; to: 100; value: 50; onMoved: mediaController.ptzControl(deviceId, "focus", value/100) }
+                }
 
-                    Column { spacing: 6; width: parent.width
-                        Repeater {
-                            model: [
-                                { name: "DI1 (门磁)", state: "闭合" },
-                                { name: "DI2 (红外)", state: "断开" },
-                                { name: "DI3 (烟感)", state: "正常" }
-                            ]
-                            delegate: Row {
-                                spacing: 8
-                                Rectangle { width: 8; height: 8; radius: 4; color: modelData.state === "闭合" || modelData.state === "正常" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: modelData.name; font.pixelSize: 11; color: "#E8E8E8"; width: 80 }
-                                Text { text: modelData.state; font.pixelSize: 11; color: "#8B8FA3" }
-                            }
+                Text { text: "📍 预置点"; font.pixelSize: 11; color: "#E8E8E8" }
+                Grid { columns: 4; spacing: 3
+                    Repeater {
+                        model: 8
+                        delegate: Button {
+                            text: "P" + (index+1); font.pixelSize: 9
+                            width: 34; height: 22
+                            background: Rectangle { color: "#252830"; radius: 3 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: mediaController.ptzControl(deviceId, "preset_" + (index+1), 0)
                         }
                     }
                 }
 
-                // 串口通信
-                GroupBox {
-                    title: "串口通信"
-                    width: parent.width - 24; font.pixelSize: 12; label.color: "#E8E8E8"
-
-                    Column { spacing: 6; width: parent.width
-                        Text { text: "RS485: /dev/ttyS3"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "波特率: 9600"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "协议: Pelco-D"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "状态: 已连接"; font.pixelSize: 11; color: "#00D4AA" }
-                    }
+                Button {
+                    text: "📷 截图"; width: parent.width - 20
+                    background: Rectangle { color: "#00D4AA"; radius: 6; height: 30 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: mediaController.snapshot(deviceId)
                 }
             }
         }

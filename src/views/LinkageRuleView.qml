@@ -2,6 +2,7 @@
 // LinkageRuleView.qml — 事件联动配置 (海康平台标准)
 // 条件: 时间段/区域/位置/事件类型/事件源/自动合并
 // 动作: 客户端(20+项)/Web/APP/小程序/系统
+// Controller: linkageController
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -11,6 +12,26 @@ Item {
     id: linkagePage
 
     property var editingRule: null
+    property var rules: []
+
+    Component.onCompleted: {
+        linkageController.refreshRules()
+    }
+
+    Connections {
+        target: linkageController
+        function onRulesUpdated() {
+            rules = linkageController.rules
+            ruleListView.model = rules
+        }
+        function onRuleCreated() {
+            ruleEditor.visible = false
+            linkageController.refreshRules()
+        }
+        function onRuleDeleted() {
+            linkageController.refreshRules()
+        }
+    }
 
     // ── 工具栏 ──
     Rectangle {
@@ -29,7 +50,13 @@ Item {
             Button { text: "➕ 新建规则"; font.pixelSize: 12
                 background: Rectangle { color: "#00D4AA"; radius: 8; width: 100; height: 34 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: ruleEditor.visible = true
+                onClicked: {
+                    editingRule = null
+                    ruleNameField.text = ""
+                    prioritySpinBox.value = 50
+                    cooldownSpinBox.value = 5000
+                    ruleEditor.visible = true
+                }
             }
         }
     }
@@ -54,15 +81,9 @@ Item {
             }
 
             ListView {
+                id: ruleListView
                 width: parent.width; height: parent.height - 44; spacing: 4; clip: true
-
-                model: ListModel {
-                    ListElement { name: "周界入侵联动"; enabled: true; eventTypes: "周界入侵"; actions: "弹视频+截图+声光"; priority: 90 }
-                    ListElement { name: "烟火报警联动"; enabled: true; eventTypes: "烟火检测"; actions: "弹视频+抓图+119通知"; priority: 95 }
-                    ListElement { name: "安全帽检测联动"; enabled: true; eventTypes: "PPE检测"; actions: "语音播报+抓图+APP推送"; priority: 60 }
-                    ListElement { name: "夜间周界加强"; enabled: false; eventTypes: "周界入侵"; actions: "弹视频+录像+逐级推送"; priority: 80 }
-                    ListElement { name: "车牌识别联动"; enabled: true; eventTypes: "车牌识别"; actions: "道闸开门+截图记录"; priority: 50 }
-                }
+                model: rules
 
                 delegate: Rectangle {
                     width: ListView.view.width; height: 72; color: "#0D0F12"; radius: 8
@@ -71,28 +92,39 @@ Item {
                     RowLayout {
                         anchors.fill: parent; anchors.margins: 10; spacing: 10
 
-                        Switch { checked: modelData.enabled; Layout.preferredHeight: 28 }
+                        Switch {
+                            checked: modelData.enabled
+                            Layout.preferredHeight: 28
+                            onToggled: linkageController.toggleRule(modelData.id, checked)
+                        }
 
                         ColumnLayout { Layout.fillWidth: true; spacing: 2
                             Row { spacing: 6
-                                Text { text: modelData.name; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                                Text { text: modelData.name || "-"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                                 Rectangle { width: 24; height: 16; radius: 8; color: "#1A2A1A"
-                                    Text { text: "P" + modelData.priority; font.pixelSize: 9; color: "#00D4AA"; anchors.centerIn: parent } }
+                                    Text { text: "P" + (modelData.priority || 0); font.pixelSize: 9; color: "#00D4AA"; anchors.centerIn: parent } }
                             }
                             Row { spacing: 12
-                                Text { text: "🎯 " + modelData.eventTypes; font.pixelSize: 10; color: "#6C5CE7" }
-                                Text { text: "⚡ " + modelData.actions; font.pixelSize: 10; color: "#8B8FA3"; elide: Text.ElideRight; width: 200 }
+                                Text { text: "🎯 " + (modelData.eventTypes || "-"); font.pixelSize: 10; color: "#6C5CE7" }
+                                Text { text: "⚡ " + (modelData.actions || "-"); font.pixelSize: 10; color: "#8B8FA3"; elide: Text.ElideRight; width: 200 }
                             }
                         }
 
                         Button { text: "✏️"; font.pixelSize: 14
                             background: Rectangle { color: "transparent" }
                             contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#8B8FA3" }
-                            onClicked: ruleEditor.visible = true
+                            onClicked: {
+                                editingRule = modelData
+                                ruleNameField.text = modelData.name || ""
+                                prioritySpinBox.value = modelData.priority || 50
+                                cooldownSpinBox.value = modelData.cooldown || 5000
+                                ruleEditor.visible = true
+                            }
                         }
                         Button { text: "🗑️"; font.pixelSize: 14
                             background: Rectangle { color: "transparent" }
                             contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FF3D71" }
+                            onClicked: linkageController.deleteRule(modelData.id)
                         }
                     }
                 }
@@ -116,7 +148,7 @@ Item {
 
                 // ── 基本信息 ──
                 Row { spacing: 8
-                    Text { text: "📝 新建联动规则"; font.pixelSize: 15; font.bold: true; color: "#E8E8E8" }
+                    Text { text: editingRule ? "📝 编辑联动规则" : "📝 新建联动规则"; font.pixelSize: 15; font.bold: true; color: "#E8E8E8" }
                     Item { width: 100 }
                     Button { text: "✕ 关闭"; font.pixelSize: 11
                         background: Rectangle { color: "transparent" }
@@ -126,18 +158,22 @@ Item {
                 }
 
                 Text { text: "规则名称"; font.pixelSize: 11; color: "#8B8FA3" }
-                TextField { width: parent.width; height: 32; placeholderText: "例: 周界入侵联动"
+                TextField {
+                    id: ruleNameField
+                    width: parent.width; height: 32; placeholderText: "例: 周界入侵联动"
                     placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 6 } }
+                    background: Rectangle { color: "#252830"; radius: 6 }
+                    text: editingRule ? editingRule.name || "" : ""
+                }
 
                 Row { spacing: 12
                     Column { spacing: 2
                         Text { text: "优先级 (1-100)"; font.pixelSize: 11; color: "#8B8FA3" }
-                        SpinBox { from: 1; to: 100; value: 50; width: 100 }
+                        SpinBox { id: prioritySpinBox; from: 1; to: 100; value: editingRule ? editingRule.priority || 50 : 50; width: 100 }
                     }
                     Column { spacing: 2
                         Text { text: "冷却时间(ms)"; font.pixelSize: 11; color: "#8B8FA3" }
-                        SpinBox { from: 1000; to: 60000; value: 5000; stepSize: 1000; width: 120 }
+                        SpinBox { id: cooldownSpinBox; from: 1000; to: 60000; value: editingRule ? editingRule.cooldown || 5000 : 5000; stepSize: 1000; width: 120 }
                     }
                 }
 
@@ -388,6 +424,18 @@ Item {
                     Button { text: "💾 保存规则"; font.pixelSize: 13
                         background: Rectangle { color: "#00D4AA"; radius: 8; width: 110; height: 38 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            var ruleData = {
+                                name: ruleNameField.text,
+                                priority: prioritySpinBox.value,
+                                cooldown: cooldownSpinBox.value
+                            }
+                            if (editingRule) {
+                                linkageController.updateRule(editingRule.id, ruleData)
+                            } else {
+                                linkageController.createRule(ruleData)
+                            }
+                        }
                     }
                 }
 

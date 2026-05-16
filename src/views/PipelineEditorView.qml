@@ -1,6 +1,7 @@
 // ========================================================================
 // PipelineEditorView.qml — 算法流水线可视化编辑器
-// 超越Web端: 支持拖拽连线、实时预览、硬件加速pipeline可视化
+// Controller: pipelineController
+// 零硬编码数据，所有交互通过Controller
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -8,6 +9,64 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: pipelineEditor
+
+    property var pipelines: []
+    property var currentPipelineDetail: null
+    property var pipelineNodes: []
+    property var pipelineConnections: []
+    property var selectedNodeData: null
+
+    Component.onCompleted: {
+        pipelineController.refreshPipelines()
+    }
+
+    Connections {
+        target: pipelineController
+        function onPipelinesUpdated() {
+            pipelines = pipelineController.pipelines
+            pipelineSelector.model = pipelines.map(function(p) { return p.name || "未命名" })
+            if (pipelines.length > 0 && pipelineSelector.currentIndex < 0) {
+                pipelineSelector.currentIndex = 0
+            }
+            if (pipelines.length > 0 && pipelineSelector.currentIndex >= 0) {
+                var pid = pipelines[pipelineSelector.currentIndex].id
+                if (pid) pipelineController.getPipelineDetail(pid)
+            }
+        }
+        function onPipelineDetailReceived(detail) {
+            currentPipelineDetail = detail || pipelineController.currentPipeline
+            if (currentPipelineDetail) {
+                pipelineNodes = currentPipelineDetail.nodes || []
+                pipelineConnections = currentPipelineDetail.connections || []
+                nodeRepeater.model = pipelineNodes
+                connectionCanvas.requestPaint()
+                updateStatusBar()
+            }
+        }
+        function onPipelineStarted(pid) {
+            updateStatusBar()
+        }
+        function onPipelineStopped(pid) {
+            updateStatusBar()
+        }
+    }
+
+    function updateStatusBar() {
+        statusNodes.text = "节点: " + pipelineNodes.length
+        statusConns.text = "连接: " + pipelineConnections.length
+        var pipelineName = "Pipeline"
+        if (pipelines.length > 0 && pipelineSelector.currentIndex >= 0 && pipelineSelector.currentIndex < pipelines.length) {
+            pipelineName = pipelines[pipelineSelector.currentIndex].name || "Pipeline"
+        }
+        statusPipelineName.text = "Pipeline: " + pipelineName
+    }
+
+    function getSelectedPipelineId() {
+        if (pipelines.length > 0 && pipelineSelector.currentIndex >= 0 && pipelineSelector.currentIndex < pipelines.length) {
+            return pipelines[pipelineSelector.currentIndex].id
+        }
+        return ""
+    }
 
     // ── 顶部工具栏 ──
     Rectangle {
@@ -38,8 +97,8 @@ Item {
             ComboBox {
                 id: pipelineSelector
                 width: 200
-                model: ["新建 Pipeline", "人员入侵检测", "烟火联合检测", "PPE穿戴检测", "区域入侵+追踪"]
-                currentIndex: 1
+                model: []
+                currentIndex: -1
                 background: Rectangle { color: "#252830"; radius: 6 }
                 contentItem: Text {
                     text: pipelineSelector.displayText
@@ -55,6 +114,12 @@ Item {
                     contentItem: Text { text: modelData; color: "#E8E8E8"; font.pixelSize: 13 }
                     background: Rectangle { color: highlighted ? "#00D4AA" : "transparent" }
                 }
+                onActivated: {
+                    if (currentIndex >= 0 && currentIndex < pipelines.length) {
+                        var pid = pipelines[currentIndex].id
+                        if (pid) pipelineController.getPipelineDetail(pid)
+                    }
+                }
             }
 
             Button {
@@ -62,21 +127,109 @@ Item {
                 font.pixelSize: 12
                 background: Rectangle { color: "#00D4AA"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: pipelineCanvas.runPipeline()
+                onClicked: {
+                    var pid = getSelectedPipelineId()
+                    if (pid) pipelineController.startPipeline(pid)
+                }
+            }
+            Button {
+                text: "⏹ 停止"
+                font.pixelSize: 12
+                background: Rectangle { color: "#FF3D71"; radius: 6; width: 72; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    var pid = getSelectedPipelineId()
+                    if (pid) pipelineController.stopPipeline(pid)
+                }
             }
             Button {
                 text: "💾 保存"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: pipelineCanvas.savePipeline()
+                onClicked: {
+                    var pid = getSelectedPipelineId()
+                    if (pid) {
+                        pipelineController.updatePipeline(pid, {
+                            nodes: pipelineNodes,
+                            connections: pipelineConnections
+                        })
+                    }
+                }
             }
             Button {
-                text: "+ 添加节点"
+                text: "➕ 新建"
                 font.pixelSize: 12
-                background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFFFFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: addNodeMenu.open()
+                background: Rectangle { color: "#3B82F6"; radius: 6; width: 72; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFFFFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: createPipelineDialog.open()
+            }
+            Button {
+                text: "🗑 删除"
+                font.pixelSize: 12
+                background: Rectangle { color: "#FF3D71"; radius: 6; width: 72; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    var pid = getSelectedPipelineId()
+                    if (pid) pipelineController.deletePipeline(pid)
+                }
+            }
+        }
+    }
+
+    // ── 创建流水线弹窗 ──
+    Dialog {
+        id: createPipelineDialog
+        title: "创建流水线"
+        modal: true
+        anchors.centerIn: parent
+        background: Rectangle { color: "#1A1D23"; radius: 12; border.color: "#252830"; border.width: 1 }
+
+        Column {
+            spacing: 12; width: 300
+
+            Text { text: "流水线名称:"; font.pixelSize: 13; color: "#E8E8E8" }
+            TextField {
+                id: newPipelineName
+                width: parent.width
+                placeholderText: "输入流水线名称"
+                color: "#E8E8E8"
+                background: Rectangle { color: "#252830"; radius: 6; height: 36 }
+            }
+
+            Text { text: "描述 (可选):"; font.pixelSize: 13; color: "#E8E8E8" }
+            TextField {
+                id: newPipelineDesc
+                width: parent.width
+                placeholderText: "输入描述"
+                color: "#E8E8E8"
+                background: Rectangle { color: "#252830"; radius: 6; height: 36 }
+            }
+
+            Row {
+                spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
+                Button {
+                    text: "取消"
+                    background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 36 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: createPipelineDialog.close()
+                }
+                Button {
+                    text: "创建"
+                    background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 36 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        pipelineController.createPipeline({
+                            name: newPipelineName.text,
+                            description: newPipelineDesc.text,
+                            nodes: [],
+                            connections: []
+                        })
+                        newPipelineName.text = ""
+                        newPipelineDesc.text = ""
+                        createPipelineDialog.close()
+                    }
+                }
             }
         }
     }
@@ -86,38 +239,39 @@ Item {
         id: addNodeMenu
         y: toolbar.height
 
-        MenuItem {
-            text: "📹 视频源 (RTSP/GB28181)"
-            onTriggered: pipelineCanvas.addNode("source")
+        MenuItem { text: "📹 视频源 (RTSP/GB28181)"; onTriggered: addPipelineNode("source") }
+        MenuItem { text: "🧠 AI推理 (BModel)"; onTriggered: addPipelineNode("inference") }
+        MenuItem { text: "🔄 目标追踪"; onTriggered: addPipelineNode("tracker") }
+        MenuItem { text: "📐 区域过滤"; onTriggered: addPipelineNode("region_filter") }
+        MenuItem { text: "🚨 告警触发"; onTriggered: addPipelineNode("alert") }
+        MenuItem { text: "📊 数据聚合"; onTriggered: addPipelineNode("aggregator") }
+        MenuItem { text: "📤 输出 (录像/推流/回调)"; onTriggered: addPipelineNode("output") }
+        MenuItem { text: "🖼️ 画面叠加 (OSD)"; onTriggered: addPipelineNode("overlay") }
+    }
+
+    function addPipelineNode(type) {
+        var templates = {
+            source:        { icon: "📹", color: "#3B82F6", hasInput: false, hasOutput: true },
+            inference:     { icon: "🧠", color: "#8B5CF6", hasInput: true,  hasOutput: true },
+            tracker:       { icon: "🔄", color: "#06B6D4", hasInput: true,  hasOutput: true },
+            region_filter: { icon: "📐", color: "#10B981", hasInput: true,  hasOutput: true },
+            alert:         { icon: "🚨", color: "#EF4444", hasInput: true,  hasOutput: false },
+            aggregator:    { icon: "📊", color: "#F59E0B", hasInput: true,  hasOutput: true },
+            output:        { icon: "📤", color: "#EC4899", hasInput: true,  hasOutput: false },
+            overlay:       { icon: "🖼️", color: "#6366F1", hasInput: true,  hasOutput: true }
         }
-        MenuItem {
-            text: "🧠 AI推理 (BModel)"
-            onTriggered: pipelineCanvas.addNode("inference")
+        var t = templates[type] || templates.source
+        var newNode = {
+            x: 300 + Math.random() * 200,
+            y: 80 + Math.random() * 150,
+            name: type, type: type, icon: t.icon, color: t.color,
+            selected: false, hasInput: t.hasInput, hasOutput: t.hasOutput, status: "就绪"
         }
-        MenuItem {
-            text: "🔄 目标追踪"
-            onTriggered: pipelineCanvas.addNode("tracker")
-        }
-        MenuItem {
-            text: "📐 区域过滤"
-            onTriggered: pipelineCanvas.addNode("region_filter")
-        }
-        MenuItem {
-            text: "🚨 告警触发"
-            onTriggered: pipelineCanvas.addNode("alert")
-        }
-        MenuItem {
-            text: "📊 数据聚合"
-            onTriggered: pipelineCanvas.addNode("aggregator")
-        }
-        MenuItem {
-            text: "📤 输出 (录像/推流/回调)"
-            onTriggered: pipelineCanvas.addNode("output")
-        }
-        MenuItem {
-            text: "🖼️ 画面叠加 (OSD)"
-            onTriggered: pipelineCanvas.addNode("overlay")
-        }
+        pipelineNodes.push(newNode)
+        pipelineNodesChanged()
+        nodeRepeater.model = pipelineNodes
+        connectionCanvas.requestPaint()
+        updateStatusBar()
     }
 
     // ── 左侧节点库 ──
@@ -144,14 +298,14 @@ Item {
 
             Repeater {
                 model: [
-                    { icon: "📹", name: "视频源", type: "source", color: "#3B82F6" },
-                    { icon: "🧠", name: "AI推理", type: "inference", color: "#8B5CF6" },
-                    { icon: "🔄", name: "目标追踪", type: "tracker", color: "#06B6D4" },
+                    { icon: "📹", name: "视频源",   type: "source",        color: "#3B82F6" },
+                    { icon: "🧠", name: "AI推理",   type: "inference",     color: "#8B5CF6" },
+                    { icon: "🔄", name: "目标追踪", type: "tracker",       color: "#06B6D4" },
                     { icon: "📐", name: "区域过滤", type: "region_filter", color: "#10B981" },
-                    { icon: "🚨", name: "告警触发", type: "alert", color: "#EF4444" },
-                    { icon: "📊", name: "数据聚合", type: "aggregator", color: "#F59E0B" },
-                    { icon: "📤", name: "输出", type: "output", color: "#EC4899" },
-                    { icon: "🖼️", name: "画面叠加", type: "overlay", color: "#6366F1" }
+                    { icon: "🚨", name: "告警触发", type: "alert",         color: "#EF4444" },
+                    { icon: "📊", name: "数据聚合", type: "aggregator",    color: "#F59E0B" },
+                    { icon: "📤", name: "输出",     type: "output",        color: "#EC4899" },
+                    { icon: "🖼️", name: "画面叠加", type: "overlay",      color: "#6366F1" }
                 ]
 
                 delegate: Rectangle {
@@ -184,7 +338,7 @@ Item {
                         id: nodeMouseArea
                         anchors.fill: parent
                         hoverEnabled: true
-                        onClicked: pipelineCanvas.addNode(modelData.type)
+                        onClicked: addPipelineNode(modelData.type)
                     }
                 }
             }
@@ -229,18 +383,17 @@ Item {
                 ctx.clearRect(0, 0, width, height)
                 ctx.strokeStyle = "#00D4AA"
                 ctx.lineWidth = 2
-                // 绘制节点间连线
-                for (var i = 0; i < pipelineCanvas.connections.length; i++) {
-                    var conn = pipelineCanvas.connections[i]
-                    var fromNode = pipelineCanvas.getNode(conn.from)
-                    var toNode = pipelineCanvas.getNode(conn.to)
+                for (var i = 0; i < pipelineConnections.length; i++) {
+                    var conn = pipelineConnections[i]
+                    var fromNode = (conn.from >= 0 && conn.from < pipelineNodes.length) ? pipelineNodes[conn.from] : null
+                    var toNode = (conn.to >= 0 && conn.to < pipelineNodes.length) ? pipelineNodes[conn.to] : null
                     if (fromNode && toNode) {
                         ctx.beginPath()
-                        ctx.moveTo(fromNode.x + fromNode.width, fromNode.y + fromNode.height / 2)
+                        ctx.moveTo(fromNode.x + 180, fromNode.y + 40)
                         ctx.bezierCurveTo(
-                            fromNode.x + fromNode.width + 60, fromNode.y + fromNode.height / 2,
-                            toNode.x - 60, toNode.y + toNode.height / 2,
-                            toNode.x, toNode.y + toNode.height / 2
+                            fromNode.x + 180 + 60, fromNode.y + 40,
+                            toNode.x - 60, toNode.y + 40,
+                            toNode.x, toNode.y + 40
                         )
                         ctx.stroke()
                     }
@@ -250,7 +403,8 @@ Item {
 
         // 节点Repeater
         Repeater {
-            model: pipelineCanvas.nodes
+            id: nodeRepeater
+            model: pipelineNodes
 
             delegate: Rectangle {
                 id: nodeDelegate
@@ -272,7 +426,6 @@ Item {
                     color: modelData.color
                     radius: 8
 
-                    // 底部直角
                     Rectangle {
                         anchors.bottom: parent.bottom
                         anchors.left: parent.left
@@ -334,9 +487,18 @@ Item {
                     drag.target: nodeDelegate
                     drag.minimumX: 0
                     drag.minimumY: 0
-                    onClicked: pipelineCanvas.selectNode(index)
-                    onDoubleClicked: pipelineCanvas.configureNode(index)
-                    onPositionChanged: connectionCanvas.requestPaint()
+                    onClicked: {
+                        for (var i = 0; i < pipelineNodes.length; i++) pipelineNodes[i].selected = false
+                        pipelineNodes[index].selected = true
+                        selectedNodeData = pipelineNodes[index]
+                        pipelineNodesChanged()
+                        nodeRepeater.model = pipelineNodes
+                    }
+                    onPositionChanged: {
+                        pipelineNodes[index].x = nodeDelegate.x
+                        pipelineNodes[index].y = nodeDelegate.y
+                        connectionCanvas.requestPaint()
+                    }
                 }
             }
         }
@@ -344,10 +506,10 @@ Item {
         // 空状态提示
         Text {
             anchors.centerIn: parent
-            text: "从左侧拖入节点或点击「+ 添加节点」开始构建 Pipeline"
+            text: pipelineNodes.length === 0 ? "从左侧拖入节点或点击「+ 添加节点」开始构建 Pipeline" : ""
             font.pixelSize: 14
             color: "#4A4D58"
-            visible: pipelineCanvas.nodes.length === 0
+            visible: pipelineNodes.length === 0
         }
     }
 
@@ -360,154 +522,199 @@ Item {
         width: 280
         color: "#141720"
 
-        Column {
+        ScrollView {
             anchors.fill: parent
-            anchors.margins: 12
-            spacing: 8
+            clip: true
 
-            Text {
-                text: "节点属性"
-                font.pixelSize: 14
-                font.bold: true
-                color: "#E8E8E8"
-            }
+            Column {
+                anchors.margins: 12
+                spacing: 8
+                width: 256
 
-            // 选中节点的属性编辑
-            Text {
-                text: pipelineCanvas.selectedNode ?
-                    "类型: " + pipelineCanvas.selectedNode.type : "点击节点查看属性"
-                font.pixelSize: 12
-                color: "#8B8FA3"
-                wrapMode: Text.WordWrap
-                width: parent.width - 24
-            }
+                Text {
+                    text: "节点属性"
+                    font.pixelSize: 14
+                    font.bold: true
+                    color: "#E8E8E8"
+                }
 
-            // AI推理节点配置
-            GroupBox {
-                title: "模型配置"
-                visible: pipelineCanvas.selectedNode &&
-                         pipelineCanvas.selectedNode.type === "inference"
-                width: parent.width - 24
-                font.pixelSize: 12
-                label.color: "#E8E8E8"
-
-                Column {
-                    spacing: 8
+                Text {
+                    text: selectedNodeData ? "类型: " + selectedNodeData.type : "点击节点查看属性"
+                    font.pixelSize: 12
+                    color: "#8B8FA3"
+                    wrapMode: Text.WordWrap
                     width: parent.width
+                }
 
-                    Text { text: "BModel 文件"; font.pixelSize: 11; color: "#8B8FA3" }
-                    ComboBox {
-                        width: parent.width
-                        model: ["person_detect_1684x.bmodel", "fire_smoke_1684x.bmodel",
-                                "ppe_detect_1684x.bmodel", "face_recognition.bmodel"]
-                        background: Rectangle { color: "#252830"; radius: 4 }
-                    }
+                // AI推理节点配置
+                GroupBox {
+                    title: "模型配置"
+                    visible: selectedNodeData && selectedNodeData.type === "inference"
+                    width: parent.width
+                    font.pixelSize: 12
+                    label.color: "#E8E8E8"
 
-                    Text { text: "置信度阈值"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Row {
-                        spacing: 8
-                        Slider { width: 160; from: 0.1; to: 1.0; value: 0.5 }
-                        Text { text: "0.50"; font.pixelSize: 12; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
-                    }
+                    Column {
+                        spacing: 8; width: parent.width
 
-                    Text { text: "NMS阈值"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Row {
-                        spacing: 8
-                        Slider { width: 160; from: 0.1; to: 1.0; value: 0.45 }
-                        Text { text: "0.45"; font.pixelSize: 12; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
-                    }
+                        Text { text: "BModel 文件"; font.pixelSize: 11; color: "#8B8FA3" }
+                        TextField {
+                            id: modelFileField
+                            width: parent.width
+                            placeholderText: "输入模型文件路径"
+                            text: selectedNodeData ? (selectedNodeData.modelFile || "") : ""
+                            color: "#E8E8E8"
+                            background: Rectangle { color: "#252830"; radius: 4; height: 32 }
+                        }
 
-                    CheckBox {
-                        text: "TPU加速"
-                        checked: true
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
+                        Text { text: "置信度阈值"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Row {
+                            spacing: 8
+                            Slider {
+                                id: confSlider
+                                width: 160; from: 0.1; to: 1.0
+                                value: selectedNodeData ? (selectedNodeData.confidence || 0.5) : 0.5
+                            }
+                            Text {
+                                text: confSlider.value.toFixed(2)
+                                font.pixelSize: 12; color: "#E8E8E8"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        Text { text: "NMS阈值"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Row {
+                            spacing: 8
+                            Slider {
+                                id: nmsSlider
+                                width: 160; from: 0.1; to: 1.0
+                                value: selectedNodeData ? (selectedNodeData.nmsThreshold || 0.45) : 0.45
+                            }
+                            Text {
+                                text: nmsSlider.value.toFixed(2)
+                                font.pixelSize: 12; color: "#E8E8E8"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+
+                        CheckBox {
+                            id: tpuCheck
+                            text: "TPU加速"
+                            checked: selectedNodeData ? (selectedNodeData.tpuEnabled !== false) : true
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
+                        }
+
+                        Button {
+                            text: "应用配置"
+                            background: Rectangle { color: "#00D4AA"; radius: 6; width: 100; height: 32 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: {
+                                if (selectedNodeData) {
+                                    selectedNodeData.modelFile = modelFileField.text
+                                    selectedNodeData.confidence = confSlider.value
+                                    selectedNodeData.nmsThreshold = nmsSlider.value
+                                    selectedNodeData.tpuEnabled = tpuCheck.checked
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            // 告警节点配置
-            GroupBox {
-                title: "告警配置"
-                visible: pipelineCanvas.selectedNode &&
-                         pipelineCanvas.selectedNode.type === "alert"
-                width: parent.width - 24
-                font.pixelSize: 12
-                label.color: "#E8E8E8"
-
-                Column {
-                    spacing: 8
+                // 告警节点配置
+                GroupBox {
+                    title: "告警配置"
+                    visible: selectedNodeData && selectedNodeData.type === "alert"
                     width: parent.width
+                    font.pixelSize: 12
+                    label.color: "#E8E8E8"
 
-                    Text { text: "告警级别"; font.pixelSize: 11; color: "#8B8FA3" }
-                    ComboBox {
-                        width: parent.width
-                        model: ["低", "中", "高", "紧急"]
-                        currentIndex: 2
-                        background: Rectangle { color: "#252830"; radius: 4 }
-                    }
+                    Column {
+                        spacing: 8; width: parent.width
 
-                    CheckBox {
-                        text: "截图"
-                        checked: true
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
-                    }
-                    CheckBox {
-                        text: "录像(前后10秒)"
-                        checked: true
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
-                    }
-                    CheckBox {
-                        text: "继电器输出"
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
-                    }
-                    CheckBox {
-                        text: "本地蜂鸣器"
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
-                    }
+                        Text { text: "告警级别"; font.pixelSize: 11; color: "#8B8FA3" }
+                        ComboBox {
+                            id: alertLevelCombo
+                            width: parent.width
+                            model: ["低", "中", "高", "紧急"]
+                            currentIndex: selectedNodeData ? (["low","medium","high","critical"].indexOf(selectedNodeData.alertLevel || "high")) : 2
+                            background: Rectangle { color: "#252830"; radius: 4 }
+                        }
 
-                    Text { text: "冷却时间(秒)"; font.pixelSize: 11; color: "#8B8FA3" }
-                    SpinBox {
-                        from: 5; to: 300; value: 30
-                        width: parent.width
+                        CheckBox {
+                            id: alertSnapshotCheck
+                            text: "截图"
+                            checked: selectedNodeData ? (selectedNodeData.enableSnapshot !== false) : true
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
+                        }
+                        CheckBox {
+                            id: alertRecordCheck
+                            text: "录像(前后10秒)"
+                            checked: selectedNodeData ? (selectedNodeData.enableRecord !== false) : true
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
+                        }
+
+                        Text { text: "冷却时间(秒)"; font.pixelSize: 11; color: "#8B8FA3" }
+                        SpinBox {
+                            id: cooldownSpin
+                            from: 5; to: 300
+                            value: selectedNodeData ? (selectedNodeData.cooldown || 30) : 30
+                            width: parent.width
+                        }
+
+                        Button {
+                            text: "应用配置"
+                            background: Rectangle { color: "#00D4AA"; radius: 6; width: 100; height: 32 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            onClicked: {
+                                if (selectedNodeData) {
+                                    selectedNodeData.alertLevel = ["low","medium","high","critical"][alertLevelCombo.currentIndex]
+                                    selectedNodeData.enableSnapshot = alertSnapshotCheck.checked
+                                    selectedNodeData.enableRecord = alertRecordCheck.checked
+                                    selectedNodeData.cooldown = cooldownSpin.value
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            // Pipeline运行状态
-            GroupBox {
-                title: "运行状态"
-                width: parent.width - 24
-                font.pixelSize: 12
-                label.color: "#E8E8E8"
-
-                Column {
-                    spacing: 6
+                // Pipeline运行状态
+                GroupBox {
+                    title: "运行状态"
                     width: parent.width
+                    font.pixelSize: 12
+                    label.color: "#E8E8E8"
 
-                    Row {
-                        spacing: 8
-                        Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "运行中"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true }
-                    }
-                    Row {
-                        spacing: 8
-                        Text { text: "TPU:"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "78.3%"; font.pixelSize: 11; color: "#FFB800" }
-                    }
-                    Row {
-                        spacing: 8
-                        Text { text: "吞吐:"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "25.4 FPS"; font.pixelSize: 11; color: "#E8E8E8" }
-                    }
-                    Row {
-                        spacing: 8
-                        Text { text: "延迟:"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "38ms"; font.pixelSize: 11; color: "#00D4AA" }
-                    }
-                    Row {
-                        spacing: 8
-                        Text { text: "内存:"; font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "1.2GB / 4GB"; font.pixelSize: 11; color: "#E8E8E8" }
+                    Column {
+                        spacing: 6; width: parent.width
+
+                        Row {
+                            spacing: 8
+                            Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text {
+                                text: currentPipelineDetail && currentPipelineDetail.running ? "运行中" : "停止"
+                                font.pixelSize: 11
+                                color: currentPipelineDetail && currentPipelineDetail.running ? "#00D4AA" : "#8B8FA3"
+                                font.bold: true
+                            }
+                        }
+                        Row {
+                            spacing: 8
+                            Text { text: "节点数:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: pipelineNodes.length + ""; font.pixelSize: 11; color: "#E8E8E8" }
+                        }
+                        Row {
+                            spacing: 8
+                            Text { text: "连接数:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: pipelineConnections.length + ""; font.pixelSize: 11; color: "#E8E8E8" }
+                        }
+                        Row {
+                            spacing: 8
+                            Text { text: "延迟:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text {
+                                text: currentPipelineDetail ? (currentPipelineDetail.latency || "-") : "-"
+                                font.pixelSize: 11; color: "#00D4AA"
+                            }
+                        }
                     }
                 }
             }
@@ -529,85 +736,12 @@ Item {
             anchors.rightMargin: 16
             spacing: 24
 
-            Text { text: "节点: 5"; font.pixelSize: 11; color: "#8B8FA3" }
-            Text { text: "连接: 4"; font.pixelSize: 11; color: "#8B8FA3" }
-            Text { text: "TPU: 78%"; font.pixelSize: 11; color: "#FFB800" }
-            Text { text: "FPS: 25.4"; font.pixelSize: 11; color: "#00D4AA" }
+            Text { id: statusNodes; text: "节点: 0"; font.pixelSize: 11; color: "#8B8FA3" }
+            Text { id: statusConns; text: "连接: 0"; font.pixelSize: 11; color: "#8B8FA3" }
 
             Item { Layout.fillWidth: true }
 
-            Text { text: "Pipeline: 人员入侵检测 v2.1"; font.pixelSize: 11; color: "#4A4D58" }
-        }
-    }
-
-    // ── Pipeline Canvas Logic (JS) ──
-    QtObject {
-        id: pipelineCanvas
-
-        property var nodes: [
-            { x: 40, y: 60, name: "RTSP-1", type: "source", icon: "📹", color: "#3B82F6",
-              selected: false, hasInput: false, hasOutput: true, status: "运行中", fps: 30 },
-            { x: 280, y: 60, name: "人员检测", type: "inference", icon: "🧠", color: "#8B5CF6",
-              selected: true, hasInput: true, hasOutput: true, status: "运行中", fps: 25 },
-            { x: 520, y: 40, name: "目标追踪", type: "tracker", icon: "🔄", color: "#06B6D4",
-              selected: false, hasInput: true, hasOutput: true, status: "运行中", fps: 25 },
-            { x: 520, y: 150, name: "区域过滤", type: "region_filter", icon: "📐", color: "#10B981",
-              selected: false, hasInput: true, hasOutput: true, status: "就绪" },
-            { x: 760, y: 80, name: "告警触发", type: "alert", icon: "🚨", color: "#EF4444",
-              selected: false, hasInput: true, hasOutput: false, status: "监控中" }
-        ]
-
-        property var connections: [
-            { from: 0, to: 1 },
-            { from: 1, to: 2 },
-            { from: 1, to: 3 },
-            { from: 2, to: 4 }
-        ]
-
-        property var selectedNode: nodes.find(function(n) { return n.selected })
-
-        function addNode(type) {
-            var templates = {
-                source: { icon: "📹", color: "#3B82F6", hasInput: false, hasOutput: true },
-                inference: { icon: "🧠", color: "#8B5CF6", hasInput: true, hasOutput: true },
-                tracker: { icon: "🔄", color: "#06B6D4", hasInput: true, hasOutput: true },
-                region_filter: { icon: "📐", color: "#10B981", hasInput: true, hasOutput: true },
-                alert: { icon: "🚨", color: "#EF4444", hasInput: true, hasOutput: false },
-                aggregator: { icon: "📊", color: "#F59E0B", hasInput: true, hasOutput: true },
-                output: { icon: "📤", color: "#EC4899", hasInput: true, hasOutput: false },
-                overlay: { icon: "🖼️", color: "#6366F1", hasInput: true, hasOutput: true }
-            }
-            var t = templates[type]
-            nodes.push({
-                x: 300 + Math.random() * 200,
-                y: 80 + Math.random() * 150,
-                name: type, type: type, icon: t.icon, color: t.color,
-                selected: false, hasInput: t.hasInput, hasOutput: t.hasOutput, status: "就绪"
-            })
-            nodesChanged()
-            connectionCanvas.requestPaint()
-        }
-
-        function selectNode(index) {
-            for (var i = 0; i < nodes.length; i++) nodes[i].selected = (i === index)
-            nodesChanged()
-            selectedNode = nodes[index]
-        }
-
-        function configureNode(index) {
-            // 打开详细配置弹窗
-        }
-
-        function getNode(index) {
-            return index >= 0 && index < nodes.length ? nodes[index] : null
-        }
-
-        function runPipeline() {
-            // POST /pipelines/:id/start
-        }
-
-        function savePipeline() {
-            // POST /pipelines with current config
+            Text { id: statusPipelineName; text: "Pipeline: -"; font.pixelSize: 11; color: "#4A4D58" }
         }
     }
 }

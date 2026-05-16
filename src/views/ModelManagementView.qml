@@ -1,12 +1,48 @@
 // ========================================================================
-// ModelManagementView.qml — 模型管理 (上传/转换/激活/性能分析)
+// ModelManagementView.qml — AI模型管理 (TPU槽位 + 模型上传 + 激活/停用)
+// Controller: configController
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    id: modelMgmt
+    id: modelView
+
+    property int tpuSlots: 8
+    property var compareModels: []
+
+    Component.onCompleted: {
+        configController.getAlgorithmList()
+    }
+
+    Connections {
+        target: configController
+        function onAlgorithmListUpdated() {
+            modelGrid.model = configController.algorithmList
+            updateSlotVisual()
+        }
+        function onConfigUpdated() {
+            configController.getAlgorithmList()
+        }
+    }
+
+    function updateSlotVisual() {
+        var algos = configController.algorithmList
+        slotRepeater.model = []
+        var slots = []
+        for (var i = 0; i < tpuSlots; i++) {
+            var found = false
+            for (var j = 0; j < algos.length; j++) {
+                if (algos[j].slot === i && algos[j].loaded) {
+                    slots.push({ slot: i, name: algos[j].name, loaded: true, fps: algos[j].fps || 0 })
+                    found = true; break
+                }
+            }
+            if (!found) slots.push({ slot: i, name: "空闲", loaded: false, fps: 0 })
+        }
+        slotRepeater.model = slots
+    }
 
     Rectangle {
         id: toolbar
@@ -15,50 +51,165 @@ Item {
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-            Text { text: "📦 模型管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+
+            Text { text: "🧠 AI模型管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
-            Text { text: "TPU槽位: 5/8"; font.pixelSize: 12; color: "#FFB800" }
-            Text { text: "存储: 1.2/4GB"; font.pixelSize: 12; color: "#8B8FA3" }
-            Button { text: "⬆️ 上传模型"; font.pixelSize: 12; background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-            Button { text: "🔄 转换模型"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+            Text { text: "TPU: " + tpuSlots + " 槽位"; font.pixelSize: 12; color: "#8B8FA3" }
+
+            Button {
+                text: "📤 上传模型"; font.pixelSize: 12
+                background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: uploadPopup.open()
+            }
+            Button {
+                text: "🔄 刷新"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: configController.getAlgorithmList()
+            }
         }
     }
 
-    // ── TPU槽位可视化 ──
-    Rectangle {
-        id: tpuSlots
-        anchors.top: toolbar.bottom; anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: 8; height: 80; color: "#141720"; radius: 8
+    Column {
+        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
+        anchors.left: parent.left; anchors.right: parent.right
+        anchors.margins: 8; spacing: 8
 
-        Column {
-            anchors.fill: parent; anchors.margins: 12; spacing: 6
+        // ── TPU槽位可视化 ──
+        Rectangle {
+            width: parent.width; height: 80; color: "#141720"; radius: 8
 
-            Text { text: "TPU 槽位分配 (BM1684X — 32 TOPS)"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+            Column {
+                anchors.fill: parent; anchors.margins: 10; spacing: 6
 
-            Row {
-                spacing: 8; width: parent.width
+                Row {
+                    spacing: 8
+                    Text { text: "TPU 槽位状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "(BM1684X)"; font.pixelSize: 10; color: "#4A4D58" }
+                }
 
-                Repeater {
-                    model: [
-                        { slot: 1, name: "人员检测", pct: 32, color: "#3B82F6", active: true },
-                        { slot: 2, name: "烟火检测", pct: 22, color: "#EF4444", active: true },
-                        { slot: 3, name: "PPE检测", pct: 18, color: "#10B981", active: true },
-                        { slot: 4, name: "区域入侵", pct: 6, color: "#F59E0B", active: true },
-                        { slot: 5, name: "车牌识别", pct: 0, color: "#4A4D58", active: true },
-                        { slot: 6, name: "空闲", pct: 0, color: "#252830", active: false },
-                        { slot: 7, name: "空闲", pct: 0, color: "#252830", active: false },
-                        { slot: 8, name: "空闲", pct: 0, color: "#252830", active: false }
-                    ]
+                Row {
+                    spacing: 6
+
+                    Repeater {
+                        id: slotRepeater
+                        model: []
+
+                        delegate: Rectangle {
+                            width: 100; height: 42; radius: 6
+                            color: modelData.loaded ? "#0A2A1A" : "#1A1D23"
+                            border.color: modelData.loaded ? "#00D4AA" : "#4A4D58"
+                            border.width: 1
+
+                            Column {
+                                anchors.fill: parent; anchors.margins: 4; spacing: 1
+                                Row {
+                                    spacing: 4
+                                    Text { text: "S" + modelData.slot; font.pixelSize: 9; color: "#4A4D58" }
+                                    Rectangle { width: 4; height: 4; radius: 2; color: modelData.loaded ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
+                                }
+                                Text { text: modelData.name; font.pixelSize: 9; color: modelData.loaded ? "#E8E8E8" : "#4A4D58"; elide: Text.ElideRight; width: 90 }
+                                Text { text: modelData.loaded ? modelData.fps + " FPS" : "空闲"; font.pixelSize: 8; color: modelData.loaded ? "#00D4AA" : "#4A4D58" }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 模型列表 ──
+        Rectangle {
+            width: parent.width; height: parent.height - 96; color: "#0D0F12"; radius: 8
+
+            Column {
+                anchors.fill: parent; anchors.margins: 12; spacing: 8
+
+                Row {
+                    spacing: 12
+                    Text { text: "模型列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Text { text: configController.algorithmList.length + " 个"; font.pixelSize: 11; color: "#8B8FA3" }
+                }
+
+                ListView {
+                    id: modelGrid
+                    width: parent.width - 24; height: parent.height - 50; clip: true; spacing: 6
+                    model: configController.algorithmList
 
                     delegate: Rectangle {
-                        width: (tpuSlots.width - 24 - 56) / 8; height: 40; color: "#0D0F12"; radius: 6
-                        border.color: model.active ? model.color : "#1A1D23"; border.width: 1
+                        width: ListView.view.width; height: 72; color: "#141720"; radius: 8
+                        property var mData: modelData || model
 
-                        Column {
-                            anchors.fill: parent; anchors.margins: 4; spacing: 1
-                            Text { text: "S" + model.slot; font.pixelSize: 8; color: "#4A4D58" }
-                            Text { text: model.name; font.pixelSize: 8; color: model.active ? "#E8E8E8" : "#4A4D58"; elide: Text.ElideRight; width: parent.width }
-                            Text { text: model.pct > 0 ? model.pct + "%" : ""; font.pixelSize: 9; color: model.color; font.bold: true }
+                        Row {
+                            anchors.fill: parent; anchors.margins: 10; spacing: 12
+
+                            // 模型图标
+                            Rectangle {
+                                width: 48; height: 48; radius: 8
+                                color: mData.loaded ? "#0A2A1A" : "#1A1D23"
+                                border.color: mData.loaded ? "#00D4AA" : "#4A4D58"
+                                Text { text: "🧠"; font.pixelSize: 20; anchors.centerIn: parent }
+                            }
+
+                            // 模型信息
+                            Column {
+                                spacing: 3; width: 180
+                                Text { text: mData.name || "模型"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                                Row { spacing: 8
+                                    Text { text: mData.precision || "INT8"; font.pixelSize: 10; color: "#3B82F6" }
+                                    Text { text: mData.size || "12.4 MB"; font.pixelSize: 10; color: "#8B8FA3" }
+                                    Text { text: "Slot " + (mData.slot || "-"); font.pixelSize: 10; color: "#8B5CF6" }
+                                }
+                                Row { spacing: 4
+                                    Rectangle { width: 36; height: 14; radius: 3; color: mData.loaded ? "#0A2A1A" : "#2A0A10"
+                                        Text { text: mData.loaded ? "已加载" : "未加载"; font.pixelSize: 8; color: mData.loaded ? "#00D4AA" : "#FF3D71"; anchors.centerIn: parent }
+                                    }
+                                    Text { text: mData.fps ? mData.fps + " FPS" : ""; font.pixelSize: 9; color: "#00D4AA" }
+                                }
+                            }
+
+                            Item { width: 20 }
+
+                            // 性能指标
+                            Column {
+                                spacing: 2; width: 100
+                                Text { text: "推理延迟"; font.pixelSize: 9; color: "#8B8FA3" }
+                                Text { text: (mData.latency || "8.2") + " ms"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true }
+                                Text { text: "准确率 " + (mData.accuracy || "94.2%"); font.pixelSize: 9; color: "#00D4AA" }
+                            }
+
+                            // 操作按钮
+                            Column {
+                                spacing: 4
+                                Button {
+                                    text: mData.loaded ? "停用" : "激活"; font.pixelSize: 10
+                                    background: Rectangle {
+                                        color: mData.loaded ? "#FF3D71" : "#00D4AA"; radius: 4; width: 50; height: 22
+                                    }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: {
+                                        var action = mData.loaded ? "deactivate" : "activate"
+                                        configController.configureAlgorithm(mData.id || mData.name, { action: action })
+                                    }
+                                }
+                                Button {
+                                    text: "对比"; font.pixelSize: 10
+                                    background: Rectangle { color: "#252830"; radius: 4; width: 50; height: 22 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: {
+                                        if (compareModels.length < 2) {
+                                            compareModels.push(mData)
+                                            if (compareModels.length === 2) comparePopup.open()
+                                        }
+                                    }
+                                }
+                                Button {
+                                    text: "删除"; font.pixelSize: 10
+                                    background: Rectangle { color: "#252830"; radius: 4; width: 50; height: 22 }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    onClicked: configController.configureAlgorithm(mData.id || mData.name, { action: "delete" })
+                                }
+                            }
                         }
                     }
                 }
@@ -66,86 +217,63 @@ Item {
         }
     }
 
-    // ── 模型列表 ──
-    Rectangle {
-        anchors.top: tpuSlots.bottom; anchors.bottom: parent.bottom
-        anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: 8; color: "#0D0F12"; radius: 8
+    // ── 上传模型弹窗 ──
+    Popup {
+        id: uploadPopup
+        anchors.centerIn: parent; width: 400; height: 300
+        background: Rectangle { color: "#141720"; radius: 12; border.color: "#252830" }
 
         Column {
-            anchors.fill: parent; anchors.margins: 12; spacing: 8
+            anchors.fill: parent; anchors.margins: 16; spacing: 10
+            Text { text: "📤 上传AI模型"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
-            Text { text: "模型列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+            TextField { id: modelPath; width: 360; placeholderText: "模型文件路径 (.bmodel)"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            ComboBox { id: modelTarget; width: 360; model: ["BM1684X (INT8)", "BM1684X (FP16)", "BM1684X (INT8+FP16)"]; background: Rectangle { color: "#252830"; radius: 6 } }
+            ComboBox { id: modelSlot; width: 360; model: ["自动分配", "Slot 0", "Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7"]; background: Rectangle { color: "#252830"; radius: 6 } }
 
-            ListView {
-                width: parent.width - 24; height: parent.height - 40; clip: true; spacing: 4
+            CheckBox { text: "上传后自动激活"; checked: true }
 
-                model: ListModel {
-                    ListElement { name: "person_detect_1684x.bmodel"; type: "检测"; input: "640x640"; output: "bbox+conf"; size: "8.2MB"; precision: "INT8"; status: "活跃"; fps: 25.4; slot: 1 }
-                    ListElement { name: "fire_smoke_1684x.bmodel"; type: "分类+检测"; input: "512x512"; output: "bbox+cls"; size: "6.1MB"; precision: "INT8"; status: "活跃"; fps: 28.1; slot: 2 }
-                    ListElement { name: "ppe_detect_1684x.bmodel"; type: "检测"; input: "640x640"; output: "bbox+conf"; size: "7.8MB"; precision: "INT8"; status: "活跃"; fps: 22.0; slot: 3 }
-                    ListElement { name: "region_detect_1684x.bmodel"; type: "检测"; input: "640x640"; output: "bbox+conf"; size: "5.5MB"; precision: "INT8"; status: "已加载"; fps: 0; slot: 4 }
-                    ListElement { name: "plate_recog_1684x.bmodel"; type: "OCR"; input: "320x320"; output: "text"; size: "4.2MB"; precision: "INT8"; status: "已加载"; fps: 0; slot: 5 }
-                    ListElement { name: "face_recog_1684x.bmodel"; type: "识别"; input: "112x112"; output: "embedding"; size: "12.1MB"; precision: "FP16"; status: "未加载"; fps: 0; slot: 0 }
-                    ListElement { name: "action_fight_1684x.bmodel"; type: "行为"; input: "224x224x16"; output: "action_cls"; size: "9.5MB"; precision: "INT8"; status: "未加载"; fps: 0; slot: 0 }
-                    ListElement { name: "crowd_count_1684x.bmodel"; type: "估计"; input: "512x512"; output: "density"; size: "3.8MB"; precision: "INT8"; status: "未加载"; fps: 0; slot: 0 }
-                }
-
-                delegate: Rectangle {
-                    width: ListView.view.width; height: 56; color: "#141720"; radius: 6
-
-                    Row {
-                        anchors.fill: parent; anchors.margins: 8; spacing: 8
-
-                        // 槽位指示
-                        Rectangle {
-                            width: 24; height: 24; radius: 4
-                            color: model.slot > 0 ? "#1A3A2A" : "#1A1D23"
-                            anchors.verticalCenter: parent.verticalCenter
-                            Text { text: model.slot > 0 ? "S"+model.slot : "-"; font.pixelSize: 9; color: model.slot > 0 ? "#00D4AA" : "#4A4D58"; anchors.centerIn: parent }
-                        }
-
-                        Column {
-                            spacing: 2; anchors.verticalCenter: parent.verticalCenter
-                            Row {
-                                spacing: 6
-                                Text { text: model.name; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                                Rectangle { width: 40; height: 14; radius: 3; color: "#1A2A3A"
-                                    Text { text: model.type; font.pixelSize: 8; color: "#3B82F6"; anchors.centerIn: parent }
-                                }
-                                Rectangle { width: 30; height: 14; radius: 3; color: "#1A3A2A"
-                                    Text { text: model.precision; font.pixelSize: 8; color: "#00D4AA"; anchors.centerIn: parent }
-                                }
-                            }
-                            Row {
-                                spacing: 8
-                                Text { text: "输入:" + model.input; font.pixelSize: 9; color: "#8B8FA3" }
-                                Text { text: "输出:" + model.output; font.pixelSize: 9; color: "#8B8FA3" }
-                                Text { text: model.size; font.pixelSize: 9; color: "#4A4D58" }
-                                Text { text: model.fps > 0 ? model.fps + " FPS" : ""; font.pixelSize: 9; color: "#00D4AA" }
-                            }
-                        }
-
-                        Item { width: 20 }
-
-                        // 状态
-                        Rectangle {
-                            width: 52; height: 18; radius: 4
-                            color: model.status === "活跃" ? "#0A2A1A" : model.status === "已加载" ? "#2A2A0A" : "#1A1D23"
-                            anchors.verticalCenter: parent.verticalCenter
-                            Text { text: model.status; font.pixelSize: 9; font.bold: true; color: model.status === "活跃" ? "#00D4AA" : model.status === "已加载" ? "#FFB800" : "#4A4D58"; anchors.centerIn: parent }
-                        }
-
-                        Row {
-                            spacing: 4; anchors.verticalCenter: parent.verticalCenter
-                            Button { text: model.status === "未加载" ? "加载" : "卸载"; font.pixelSize: 9; background: Rectangle { color: model.status === "未加载" ? "#3B82F6" : "#FF3D71"; radius: 4; width: 36; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "替换"; font.pixelSize: 9; background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "基准"; font.pixelSize: 9; background: Rectangle { color: "#8B5CF6"; radius: 4; width: 36; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "删除"; font.pixelSize: 9; background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 18 }; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                        }
+            Row {
+                spacing: 12
+                Button { text: "取消"; background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }; onClicked: uploadPopup.close() }
+                Button { text: "上传并转换"; background: Rectangle { color: "#00D4AA"; radius: 6; width: 100; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        configController.configureAlgorithm("upload", { path: modelPath.text, target: modelTarget.currentText, slot: modelSlot.currentIndex })
+                        uploadPopup.close()
                     }
                 }
             }
+        }
+    }
+
+    // ── 性能对比弹窗 ──
+    Popup {
+        id: comparePopup
+        anchors.centerIn: parent; width: 360; height: 280
+        background: Rectangle { color: "#141720"; radius: 12; border.color: "#252830" }
+
+        Column {
+            anchors.fill: parent; anchors.margins: 16; spacing: 8
+            Text { text: "📊 模型性能对比"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+
+            Row {
+                spacing: 16
+                Column { spacing: 2
+                    Text { text: compareModels.length > 0 ? compareModels[0].name : "-"; font.pixelSize: 13; color: "#3B82F6"; font.bold: true }
+                    Text { text: "FPS: " + (compareModels.length > 0 ? compareModels[0].fps : "-"); font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "延迟: " + (compareModels.length > 0 ? compareModels[0].latency : "-") + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "精度: " + (compareModels.length > 0 ? compareModels[0].precision : "-"); font.pixelSize: 11; color: "#8B8FA3" }
+                }
+                Text { text: "VS"; font.pixelSize: 16; color: "#FFB800"; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
+                Column { spacing: 2
+                    Text { text: compareModels.length > 1 ? compareModels[1].name : "-"; font.pixelSize: 13; color: "#00D4AA"; font.bold: true }
+                    Text { text: "FPS: " + (compareModels.length > 1 ? compareModels[1].fps : "-"); font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "延迟: " + (compareModels.length > 1 ? compareModels[1].latency : "-") + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "精度: " + (compareModels.length > 1 ? compareModels[1].precision : "-"); font.pixelSize: 11; color: "#8B8FA3" }
+                }
+            }
+
+            Button { text: "关闭"; background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }; onClicked: { comparePopup.close(); compareModels = [] } }
         }
     }
 }

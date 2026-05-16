@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file alias="DashboardView.qml">../src/views/DashboardView.qml</file>
+        <file alias="VideoGridView.qml">../src/views/VideoGridView.qml</file>
+        <file alias="AlarmView.qml">../src/views/AlarmView.qml</file>
+        <file alias="AlgorithmView.qml">../src/views/AlgorithmView.qml</file>
+        <file alias="SettingsView.qml">../src/views/SettingsView.qml</file>
+        <file alias="AIChatView.qml">../src/views/AIChatView.qml</file>
+        <file alias="StatisticsView.qml">../src/views/StatisticsView.qml</file>
+        <file alias="AlarmPopup.qml">../src/views/AlarmPopup.qml</file>
+        <file alias="VideoTile.qml">../src/views/components/VideoTile.qml</file>
+        <file alias="StatusIndicator.qml">../src/views/components/StatusIndicator.qml</file>
+        <file alias="AlarmBadge.qml">../src/views/components/AlarmBadge.qml</file>
+    </qresource>
+</RCC>

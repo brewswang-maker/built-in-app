@@ -19,6 +19,8 @@ void MediaController::startStream(const QString& deviceId, const QString& channe
     m_api->post("/api/v1/zlm/channel/urls", body,
         [this, deviceId](QJsonObject resp) {
             QString url = resp["url"].toString();
+            m_streamUrls[deviceId] = url;
+            emit streamUrlsUpdated();
             emit streamStarted(deviceId, url);
         },
         [this](int code, QString msg) {
@@ -78,4 +80,52 @@ void MediaController::refreshStreams() {
             emit channelsUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+void MediaController::startTalk(const QString& channelId) {
+    QJsonObject body;
+    body["channel_id"] = channelId;
+    m_api->post(QString("/api/v1/channels/%1/talk/start").arg(channelId), body,
+        [](QJsonObject) {},
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+void MediaController::stopTalk() {
+    m_api->post("/api/v1/channels/talk/stop", QJsonObject(),
+        [](QJsonObject) {},
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+void MediaController::ptzGotoPreset(const QString& deviceId, int presetId) {
+    QJsonObject body;
+    body["preset_id"] = presetId;
+    m_api->post(QString("/api/v1/ptz/%1/preset/%2/goto").arg(deviceId).arg(presetId), body,
+        [](QJsonObject) {},
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+void MediaController::ptzSetPreset(const QString& deviceId, int presetId) {
+    QJsonObject body;
+    body["preset_id"] = presetId;
+    m_api->post(QString("/api/v1/ptz/%1/preset/%2/set").arg(deviceId).arg(presetId), body,
+        [](QJsonObject) {},
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+void MediaController::startPatrol(const QString& deviceId) {
+    QJsonObject body;
+    m_api->post(QString("/api/v1/ptz/%1/patrol/start").arg(deviceId), body,
+        [](QJsonObject) {},
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+void MediaController::stopPatrol(const QString& deviceId) {
+    QJsonObject body;
+    m_api->post(QString("/api/v1/ptz/%1/patrol/stop").arg(deviceId), body,
+        [](QJsonObject) {},
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+QString MediaController::getStreamUrl(const QString& deviceId) const {
+    return m_streamUrls.value(deviceId).toString();
 }

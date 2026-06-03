@@ -108,7 +108,6 @@ Item {
                     leftPadding: 10
                 }
                 popup.background: Rectangle { color: "#1A1D23"; radius: 8 }
-                popup.contentItem.color: "#E8E8E8"
                 delegate: ItemDelegate {
                     width: pipelineSelector.width
                     contentItem: Text { text: modelData; color: "#E8E8E8"; font.pixelSize: 13 }
@@ -552,7 +551,6 @@ Item {
                     visible: selectedNodeData && selectedNodeData.type === "inference"
                     width: parent.width
                     font.pixelSize: 12
-                    label.color: "#E8E8E8"
 
                     Column {
                         spacing: 8; width: parent.width
@@ -626,7 +624,6 @@ Item {
                     visible: selectedNodeData && selectedNodeData.type === "alert"
                     width: parent.width
                     font.pixelSize: 12
-                    label.color: "#E8E8E8"
 
                     Column {
                         spacing: 8; width: parent.width
@@ -682,7 +679,6 @@ Item {
                     title: "运行状态"
                     width: parent.width
                     font.pixelSize: 12
-                    label.color: "#E8E8E8"
 
                     Column {
                         spacing: 6; width: parent.width

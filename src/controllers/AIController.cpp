@@ -52,17 +52,48 @@ void AIController::onSseReadyRead() {
             QString data = line.mid(6);
             if (data == "[DONE]") continue;
             QJsonDocument doc = QJsonDocument::fromJson(data.toUtf8());
+            if (doc.isNull()) continue;
             QJsonObject obj = doc.object();
-            QString token = obj["token"].toString();
-            if (!token.isEmpty()) {
-                m_currentResponse += token;
-                emit tokenReceived(token);
-            }
-            // Check for tool calls
-            if (obj.contains("tool_call")) {
-                QString tool = obj["tool_call"].toObject()["name"].toString();
-                QString result = obj["tool_call"].toObject()["result"].toString();
+            QString type = obj["type"].toString();
+
+            if (type == "text" || type == "content") {
+                QString token = obj["content"].toString();
+                if (token.isEmpty()) token = obj["token"].toString();
+                if (!token.isEmpty()) {
+                    m_currentResponse += token;
+                    emit tokenReceived(token);
+                }
+            } else if (type == "thinking" || type == "thinking_done") {
+                // Thinking phase events — handled by thinkingChanged signal
+                QVariantMap thinkData;
+                thinkData["agent_name"] = obj["agent_name"].toString();
+                thinkData["agent_role"] = obj["agent_role"].toString();
+                thinkData["step"] = obj["step"].toInt();
+                emit thinkingChanged();
+            } else if (type == "tool_call") {
+                QJsonObject toolObj = obj["tool_call"].toObject();
+                if (toolObj.isEmpty()) toolObj = obj;
+                QString tool = toolObj["name"].toString();
+                QString result = toolObj["result"].toString();
                 emit toolCalled(tool, result);
+            } else if (type == "tool_result") {
+                QString tool = obj["tool_name"].toString();
+                QString result = obj["result"].toString();
+                if (!tool.isEmpty()) emit toolCalled(tool, result);
+            } else if (type == "done") {
+                // Stream complete — finished handler will process
+            } else {
+                // Fallback: try legacy token format
+                QString token = obj["token"].toString();
+                if (!token.isEmpty()) {
+                    m_currentResponse += token;
+                    emit tokenReceived(token);
+                }
+                if (obj.contains("tool_call")) {
+                    QString tool = obj["tool_call"].toObject()["name"].toString();
+                    QString result = obj["tool_call"].toObject()["result"].toString();
+                    emit toolCalled(tool, result);
+                }
             }
         }
     }

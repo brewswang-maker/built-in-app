@@ -105,8 +105,10 @@ Item {
                     // 操作
                     Text { text: "🔧 操作"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                     Column { spacing: 6; width: parent.width
-                        Button { text: "🔄 重启设备"; width: parent.width; background: Rectangle { color: "#FFB800"; radius: 6; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                        Button { text: "🔧 恢复出厂"; width: parent.width; background: Rectangle { color: "#252830"; radius: 6; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        Button { text: "🔄 重启设备"; width: parent.width; background: Rectangle { color: "#FFB800"; radius: 6; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        Button { text: "🔧 恢复出厂"; width: parent.width; background: Rectangle { color: "#252830"; radius: 6; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                     }
                 }
             }

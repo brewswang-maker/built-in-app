@@ -43,4 +43,7 @@ private:
     double m_progress = 0;
     bool m_upgrading = false;
     QVariantList m_history;
+    int m_pollCount = 0;
+
+    void pollProgress();
 };

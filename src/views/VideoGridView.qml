@@ -1,6 +1,6 @@
 // ========================================================================
-// VideoGridView.qml — 增强版视频预览 (对标Web端LiveView 474行)
-// 新增: PTZ完整面板(预置位+速度) | WebRTC播放 | 截图 | 全屏 | 对讲 | 双击全屏 | 通道列表
+// VideoGridView.qml — 视频预览宫格
+// 功能: 1/4/9/16宫格 | PTZ控制 | 系统状态栏 | RTSP视频流
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -12,6 +12,32 @@ Item {
 
     property int activeSlot: -1
     property bool isFullscreen: false
+
+    // Helper: get device ID for a slot index
+    function slotDeviceId(slot) {
+        if (slot >= 0 && slot < deviceController.devices.length)
+            return deviceController.devices[slot].device_id || ""
+        return ""
+    }
+    function slotChannelId(slot) {
+        if (slot >= 0 && slot < deviceController.devices.length)
+            return deviceController.devices[slot].channel_id || deviceController.devices[slot].device_id || ""
+        return ""
+    }
+
+    // Request stream for a slot
+    function requestStream(slot) {
+        var devId = slotDeviceId(slot)
+        if (devId.length > 0)
+            mediaController.startStream(devId, slotChannelId(slot))
+    }
+
+    // Request streams for all visible slots
+    function requestAllStreams() {
+        var count = mediaController.currentLayout
+        for (var i = 0; i < count; i++)
+            requestStream(i)
+    }
 
     // ═══ 工具栏 ═══
     Rectangle {
@@ -77,12 +103,13 @@ Item {
         }
     }
 
+    // ═══ 主内容区 ═══
     RowLayout {
-        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
+        anchors.top: toolbar.bottom; anchors.bottom: statusBar.top
         anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 4; spacing: 4
 
-        // ═══ 左侧: 通道列表 (多宫格时隐藏) ═══
+        // ═══ 左侧: 通道列表 (单画面时显示) ═══
         Rectangle {
             Layout.fillHeight: true; Layout.preferredWidth: 180; color: "#141720"; radius: 8
             visible: mediaController.currentLayout === 1
@@ -112,7 +139,6 @@ Item {
                     }
                 }
 
-                // 搜索
                 TextField {
                     width: parent.width - 16; height: 28; placeholderText: "搜索通道..."
                     placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 11
@@ -140,6 +166,9 @@ Item {
                     channelName: index < deviceController.devices.length ? deviceController.devices[index].device_name || ("Camera_" + (index + 1)) : ("Camera_" + (index + 1))
                     status: index < deviceController.devices.length ? deviceController.devices[index].status || "offline" : "offline"
                     algorithmTag: index < deviceController.devices.length ? deviceController.devices[index].algorithm || "" : ""
+                    streamUrl: mediaController.getStreamUrl(
+                        index < deviceController.devices.length ? (deviceController.devices[index].device_id || "") : ""
+                    )
                     active: videoGridPage.activeSlot === index
 
                     // 双击全屏
@@ -176,12 +205,10 @@ Item {
                             var cx = 70, cy = 70, r = 55
                             ctx.clearRect(0, 0, width, height)
 
-                            // 外圆
                             ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI)
                             ctx.fillStyle = "#0D0F12"; ctx.fill()
                             ctx.strokeStyle = "#252830"; ctx.lineWidth = 2; ctx.stroke()
 
-                            // 方向按钮 (8个扇区)
                             var dirs = ["up", "right_up", "right", "right_down", "down", "left_down", "left", "left_up"]
                             var labels = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
                             for (var i = 0; i < 8; i++) {
@@ -195,7 +222,6 @@ Item {
                                 ctx.fillText(labels[i], bx, by)
                             }
 
-                            // 中心
                             ctx.beginPath(); ctx.arc(cx, cy, 16, 0, 2 * Math.PI)
                             ctx.fillStyle = "#1A3A2A"; ctx.fill()
                             ctx.strokeStyle = "#00D4AA"; ctx.lineWidth = 1.5; ctx.stroke()
@@ -231,11 +257,9 @@ Item {
                         }
                     }
 
-                    // PTZ速度
                     Text { text: "速度: " + ptzSpeed.value.toFixed(1); font.pixelSize: 10; color: "#8B8FA3" }
                     Slider { id: ptzSpeed; width: 140; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.1 }
 
-                    // 变倍/焦距/光圈
                     Text { text: "变倍 Zoom"; font.pixelSize: 10; color: "#8B8FA3" }
                     Row { spacing: 4
                         Button { width: 60; height: 26; text: "➖"; font.pixelSize: 12
@@ -288,12 +312,12 @@ Item {
                     Text { text: "🔄 轮巡"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                     Row { spacing: 4
                         Button { text: "▶ 开始"; font.pixelSize: 10
-                            onClicked: mediaController.startPatrol(activeSlot)
+                            onClicked: mediaController.startPatrol(slotDeviceId(activeSlot))
                             background: Rectangle { color: "#00D4AA"; radius: 4; width: 50; height: 26 }
                             contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                         Button { text: "⏹ 停止"; font.pixelSize: 10
-                            onClicked: mediaController.stopPatrol(activeSlot)
+                            onClicked: mediaController.stopPatrol(slotDeviceId(activeSlot))
                             background: Rectangle { color: "#FF3D71"; radius: 4; width: 50; height: 26 }
                             contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
@@ -301,5 +325,145 @@ Item {
                 }
             }
         }
+    }
+
+    // ═══ 底部: 系统状态栏 ═══
+    Rectangle {
+        id: statusBar
+        anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right
+        height: 40; color: "#0D0F12"; radius: 0
+
+        RowLayout {
+            anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
+            spacing: 24
+
+            // 系统状态标识
+            Rectangle {
+                width: 8; height: 8; radius: 4
+                color: statusController.networkStatus === "Connected" ? "#00D4AA" : "#FF3D71"
+                Layout.alignment: Qt.AlignVCenter
+            }
+            Text {
+                text: statusController.networkStatus === "Connected" ? "系统正常" : "连接断开"
+                font.pixelSize: 11; color: statusController.networkStatus === "Connected" ? "#00D4AA" : "#FF3D71"
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Rectangle { width: 1; height: 16; color: "#252830"; Layout.alignment: Qt.AlignVCenter }
+
+            // CPU
+            Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
+                Text { text: "CPU"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: (statusController.cpuUsage * 100).toFixed(0) + "%"
+                    font.pixelSize: 11; font.bold: true
+                    color: statusController.cpuUsage > 0.9 ? "#FF3D71" : statusController.cpuUsage > 0.7 ? "#FFB800" : "#00D4AA"
+                }
+                ProgressBar {
+                    width: 60; height: 6; from: 0; to: 1
+                    value: statusController.cpuUsage
+                    background: Rectangle { color: "#252830"; radius: 3 }
+                    contentItem: Item {
+                        Rectangle {
+                            width: parent.parent.visualPosition * parent.width
+                            height: parent.height; radius: 3
+                            color: statusController.cpuUsage > 0.9 ? "#FF3D71" : statusController.cpuUsage > 0.7 ? "#FFB800" : "#00D4AA"
+                        }
+                    }
+                }
+            }
+
+            // 内存
+            Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
+                Text { text: "MEM"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: (statusController.memoryUsage * 100).toFixed(0) + "%"
+                    font.pixelSize: 11; font.bold: true
+                    color: statusController.memoryUsage > 0.9 ? "#FF3D71" : statusController.memoryUsage > 0.7 ? "#FFB800" : "#00D4AA"
+                }
+                ProgressBar {
+                    width: 60; height: 6; from: 0; to: 1
+                    value: statusController.memoryUsage
+                    background: Rectangle { color: "#252830"; radius: 3 }
+                    contentItem: Item {
+                        Rectangle {
+                            width: parent.parent.visualPosition * parent.width
+                            height: parent.height; radius: 3
+                            color: statusController.memoryUsage > 0.9 ? "#FF3D71" : statusController.memoryUsage > 0.7 ? "#FFB800" : "#00D4AA"
+                        }
+                    }
+                }
+            }
+
+            // TPU
+            Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
+                Text { text: "TPU"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: (statusController.tpuUtilization * 100).toFixed(0) + "%"
+                    font.pixelSize: 11; font.bold: true
+                    color: statusController.tpuUtilization > 0.9 ? "#FF3D71" : statusController.tpuUtilization > 0.7 ? "#FFB800" : "#00D4AA"
+                }
+                ProgressBar {
+                    width: 60; height: 6; from: 0; to: 1
+                    value: statusController.tpuUtilization
+                    background: Rectangle { color: "#252830"; radius: 3 }
+                    contentItem: Item {
+                        Rectangle {
+                            width: parent.parent.visualPosition * parent.width
+                            height: parent.height; radius: 3
+                            color: statusController.tpuUtilization > 0.9 ? "#FF3D71" : statusController.tpuUtilization > 0.7 ? "#FFB800" : "#00D4AA"
+                        }
+                    }
+                }
+            }
+
+            // 温度
+            Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
+                Text { text: "TEMP"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: statusController.temperature.toFixed(1) + "°C"
+                    font.pixelSize: 11; font.bold: true
+                    color: statusController.temperature > 75 ? "#FF3D71" : statusController.temperature > 60 ? "#FFB800" : "#00D4AA"
+                }
+            }
+
+            Rectangle { width: 1; height: 16; color: "#252830"; Layout.alignment: Qt.AlignVCenter }
+
+            // 模型数
+            Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
+                Text { text: "模型"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: statusController.activeModels + " 活跃"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true }
+            }
+
+            // 运行时间
+            Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
+                Text { text: "运行"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: statusController.uptime || "--"; font.pixelSize: 11; color: "#8B8FA3" }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            // 时间
+            Text {
+                text: statusController.systemTime || Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
+                font.pixelSize: 11; color: "#8B8FA3"
+                Layout.alignment: Qt.AlignVCenter
+            }
+        }
+    }
+
+    // ═══ 启动时请求所有视频流 ═══
+    Connections {
+        target: mediaController
+        function onLayoutChanged() {
+            requestAllStreams()
+        }
+    }
+
+    Connections {
+        target: deviceController
+        function onDevicesUpdated() {
+            requestAllStreams()
+        }
+    }
+
+    Component.onCompleted: {
+        requestAllStreams()
     }
 }

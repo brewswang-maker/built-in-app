@@ -237,9 +237,9 @@ Item {
                 // 联邦策略
                 Text { text: "⚙️ 聚合策略"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                 Column { spacing: 4; width: parent.width - 24
-                    Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedCurrentRound ? (fedCurrentRound.algorithm || "FedAvg") : "FedAvg"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true } }
-                    Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedCurrentRound ? (fedCurrentRound.minNodes || "3") : "3"; font.pixelSize: 11; color: "#E8E8E8" } }
-                    Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
+                    Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.algorithm || "FedAvg") : "FedAvg"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true } }
+                    Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.minNodes || "3") : "3"; font.pixelSize: 11; color: "#E8E8E8" } }
+                    Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
                 }
             }
         }
@@ -403,9 +403,9 @@ Item {
                     Text { text: "🧠 全局模型"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                     Column { spacing: 4
-                        Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
-                        Row { spacing: 8; Text { text: "当前轮:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "活跃节点:"; font.pixelSize: 11; color: "#8B8FA3" }; Text { text: fedNodes.filter(function(n){ return n.status === "active" }).length + " / " + fedNodes.length; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
+                        Row { spacing: 8; Text { text: "当前轮:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "-"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 8; Text { text: "活跃节点:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedNodes.filter(function(n){ return n.status === "active" }).length + " / " + fedNodes.length; font.pixelSize: 11; color: "#E8E8E8" } }
                     }
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width }

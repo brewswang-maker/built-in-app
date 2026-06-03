@@ -164,7 +164,7 @@ Window {
                             }
 
                             // 通道信息叠加
-                            Rectangle { anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8; width: 200; height: 28; color: "rgba(0,0,0,0.7)"; radius: 4
+                            Rectangle { anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8; width: 200; height: 28; color: "#B3000000"; radius: 4
                                 Text {
                                     text: currentAlarm ? "📹 " + (currentAlarm.device_name || "") + " | CH" + (currentAlarm.channel_id || "?") : ""
                                     font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent
@@ -398,6 +398,6 @@ Window {
             countdownText.text = countdown + "s"
             if (countdown <= 0) linkagePopup.dismiss()
         }
-        onStarted: countdown = 15
+        Component.onCompleted: countdown = 15
     }
 }

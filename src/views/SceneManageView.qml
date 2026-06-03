@@ -162,8 +162,11 @@ Item {
 
             Row {
                 spacing: 12
-                Button { text: "取消"; background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }; onClicked: newScenePopup.close() }
-                Button { text: "创建"; background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 32 }; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                Button { text: "取消"; background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: newScenePopup.close() }
+                Button { text: "创建"; background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
                         configController.saveConfig("scene_new", { name: sceneNameField.text, icon: newSceneIcon, preset: presetCombo.currentText, active: false })
                         newScenePopup.close()

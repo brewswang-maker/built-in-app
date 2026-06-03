@@ -139,12 +139,25 @@ Item {
     Popup {
         id: calendarPopup
         y: toolbar.height
-        Calendar {
-            selectedDate: new Date()
-            onSelectedDateChanged: {
-                selectedDate = Qt.formatDate(selectedDate, "yyyy-MM-dd")
-                calendarPopup.close()
-                mediaController.refreshStreams()
+        width: 300; height: 50
+        Column {
+            spacing: 4
+            TextField {
+                id: dateField
+                width: 280; height: 36
+                placeholderText: "yyyy-MM-dd"
+                text: Qt.formatDate(new Date(), "yyyy-MM-dd")
+                color: "#E8E8E8"; font.pixelSize: 13
+                background: Rectangle { color: "#252830"; radius: 6 }
+            }
+            Button {
+                text: "确定"; width: 280; height: 32
+                background: Rectangle { color: "#00D4AA"; radius: 6 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    calendarPopup.close()
+                    mediaController.refreshStreams()
+                }
             }
         }
     }
@@ -196,14 +209,14 @@ Item {
                     // 通道信息叠加
                     Rectangle {
                         anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8
-                        width: 160; height: 24; color: "rgba(0,0,0,0.6)"; radius: 4
+                        width: 160; height: 24; color: "#99000000"; radius: 4
                         Text { text: "📹 " + (selectedChannel || "全部通道"); font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent }
                     }
 
                     // 时间戳叠加
                     Rectangle {
                         anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8
-                        width: 140; height: 24; color: "rgba(0,0,0,0.6)"; radius: 4
+                        width: 140; height: 24; color: "#99000000"; radius: 4
                         Text { text: selectedDate + " " + playbackTimeText.text; font.pixelSize: 11; color: "#FFB800"; anchors.centerIn: parent }
                     }
 

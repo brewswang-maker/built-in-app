@@ -332,21 +332,21 @@ Item {
         }
     }
 
-    // ── 统计 ──
+    // ── 统计（从实际告警数据动态计算）──
     QtObject {
         id: alarmStats
-        property int critical: 5
-        property int warning: 12
-        property int info: 23
-    }
-
-    // ── WebSocket实时推送 ──
-    Connections {
-        target: alarmController
-        function onNewAlarm(alarm) {
-            if (alarm.level === "critical") alarmStats.critical++
-            else if (alarm.level === "warning") alarmStats.warning++
-            else alarmStats.info++
+        property int critical: 0
+        property int warning: 0
+        property int info: 0
+        Component.onCompleted: {
+            var c = 0, w = 0, n = 0
+            for (var i = 0; i < alarmController.alarms.length; i++) {
+                var lvl = alarmController.alarms[i].level
+                if (lvl === "critical") c++
+                else if (lvl === "warning") w++
+                else n++
+            }
+            critical = c; warning = w; info = n
         }
     }
 

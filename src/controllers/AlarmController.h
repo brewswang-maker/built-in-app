@@ -6,6 +6,7 @@
 #endif
 
 class ApiClient;
+class AlarmListModel;
 
 class AlarmController : public QObject {
     Q_OBJECT
@@ -21,13 +22,16 @@ public:
     int alarmCount() const { return m_alarms.size(); }
     bool hasUnread() const { return m_hasUnread; }
 
-    void setAlarmModel(QObject* model) { m_alarmModel = model; }
+    void setAlarmModel(AlarmListModel* model);
 
     Q_INVOKABLE void refreshAlarms(int limit = 50);
     Q_INVOKABLE void confirmAlarm(const QString& alarmId);
     Q_INVOKABLE void markFalseAlarm(const QString& alarmId);
     Q_INVOKABLE void handleAlarm(const QString& alarmId, const QString& action);
     Q_INVOKABLE void connectWebSocket();
+    Q_INVOKABLE void exportAlarms(const QString& format);
+    Q_INVOKABLE void batchConfirm(const QVariantList& alarmIds);
+    Q_INVOKABLE void batchFalseAlarm(const QVariantList& alarmIds);
 
 signals:
     void alarmsUpdated();
@@ -39,7 +43,7 @@ private slots:
 
 private:
     ApiClient* m_api;
-    QObject* m_alarmModel = nullptr;
+    AlarmListModel* m_alarmModel = nullptr;
     QVariantList m_alarms;
     bool m_hasUnread = false;
     void* m_ws = nullptr;  // QWebSocket* when HAS_QT_WEBSOCKETS

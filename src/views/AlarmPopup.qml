@@ -74,7 +74,7 @@ Popup {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
 
                 Rectangle { width: 10; height: 10; radius: 5; color: "#FF3D71"
-                    SequentialAnimation on opacity { loops: Animation.Infinite; NumberAnimation { from: 1; to: 0.3; duration: 600 }; NumberAnimation { from: 0.3; to: 1; duration: 600 } }
+                    SequentialAnimation on opacity { loops: Animation.Infinite; NumberAnimation { from: 1; to: 0.3; duration: 600 } NumberAnimation { from: 0.3; to: 1; duration: 600 } }
                 }
                 Text { text: "⚠️ 新告警"; font.pixelSize: 14; font.bold: true; color: "#FF3D71" }
                 Item { Layout.fillWidth: true }
@@ -108,20 +108,36 @@ Popup {
 
                     Rectangle {
                         width: parent.width; height: parent.height - 30
-                        color: "#000"; radius: 4
+                        color: "#000"; radius: 4; clip: true
 
-                        // 模拟3秒视频回放
+                        // 快照图片 (真实加载)
+                        Image {
+                            id: snapshotImage
+                            anchors.fill: parent
+                            source: currentAlarm.snapshot_url || ""
+                            fillMode: Image.PreserveAspectCrop
+                            visible: status === Image.Ready
+                            cache: false
+                        }
+
+                        // 加载中指示器
+                        BusyIndicator {
+                            anchors.centerIn: parent
+                            running: snapshotImage.status === Image.Loading
+                            visible: running
+                        }
+
+                        // 无快照时显示检测框模拟
                         Canvas {
                             id: videoCanvas
                             anchors.fill: parent
-
-                            property int frame: 0
+                            visible: !snapshotImage.visible
 
                             onPaint: {
                                 var ctx = getContext("2d")
                                 ctx.fillStyle = "#0A0C10"; ctx.fillRect(0, 0, width, height)
 
-                                // 模拟检测框
+                                // 检测框
                                 ctx.strokeStyle = "#FF3D71"; ctx.lineWidth = 2
                                 ctx.strokeRect(width*0.3, height*0.2, width*0.4, height*0.5)
 
@@ -140,14 +156,35 @@ Popup {
                                 ctx.fillText(currentAlarm.time || "--:--:--", 4, height - 4)
                             }
 
-                            Timer { interval: 100; running: alarmPopup.visible; repeat: true; onTriggered: { videoCanvas.frame++; videoCanvas.requestPaint() } }
+                            onVisibleChanged: if (visible) requestPaint()
                         }
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: "回放 3s"
-                            font.pixelSize: 11; color: "#4A4D58"
-                            visible: !videoCanvas.visible
+                        // 检测框叠加层 (在快照图片上方绘制)
+                        Canvas {
+                            id: detectionOverlay
+                            anchors.fill: parent
+                            visible: snapshotImage.visible
+
+                            property var boxes: currentAlarm.detection_boxes || []
+
+                            onPaint: {
+                                var ctx = getContext("2d")
+                                ctx.clearRect(0, 0, width, height)
+                                for (var i = 0; i < boxes.length; i++) {
+                                    var b = boxes[i]
+                                    var bx = b.x * width, by = b.y * height
+                                    var bw = b.width * width, bh = b.height * height
+                                    ctx.strokeStyle = "#FF3D71"; ctx.lineWidth = 2
+                                    ctx.strokeRect(bx, by, bw, bh)
+                                    if (b.label) {
+                                        ctx.fillStyle = "#FF3D71"
+                                        ctx.fillRect(bx, by - 16, ctx.measureText(b.label).width + 8, 16)
+                                        ctx.fillStyle = "#FFF"; ctx.font = "bold 9px sans-serif"
+                                        ctx.fillText(b.label, bx + 4, by - 4)
+                                    }
+                                }
+                            }
+                            onBoxesChanged: requestPaint()
                         }
                     }
 

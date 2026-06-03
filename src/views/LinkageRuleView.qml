@@ -14,6 +14,179 @@ Item {
     property var editingRule: null
     property var rules: []
 
+    // ── 数据收集函数 ──
+    function collectRuleData() {
+        // 时间条件
+        var days = []
+        for (var d = 0; d < dayRepeater.count; d++) {
+            var dayItem = dayRepeater.itemAt(d)
+            if (dayItem && dayItem.checked) days.push(d + 1)  // 1=周一 .. 7=周日
+        }
+
+        // 事件类型
+        var eventTypes = []
+        for (var e = 0; e < eventTypeRepeater.count; e++) {
+            var evtItem = eventTypeRepeater.itemAt(e)
+            if (evtItem && evtItem.checked) eventTypes.push(eventTypeRepeater.model[e])
+        }
+
+        // 通道
+        var channels = []
+        for (var c = 0; c < channelRepeater.count; c++) {
+            var chItem = channelRepeater.itemAt(c)
+            if (chItem && chItem.checked) channels.push(channelRepeater.model[c])
+        }
+
+        // 条件对象
+        var conditions = {
+            time: {
+                enabled: true,
+                from: timeFromField.text,
+                to: timeToField.text,
+                days: days
+            },
+            space: {
+                location: locationCombo.currentIndex > 0 ? locationCombo.currentText : "",
+                roi: roiCombo.currentIndex > 0 ? roiCombo.currentText : "",
+                group: groupCombo.currentIndex > 0 ? groupCombo.currentText : ""
+            },
+            eventTypes: eventTypes,
+            minSeverity: severityCombo.currentIndex + 1,
+            minConfidence: Math.round(confidenceSlider.value * 100) / 100,
+            sources: { channels: channels },
+            merge: {
+                enabled: mergeEnabledCheck.checked,
+                window: mergeWindowSpin.value,
+                maxCount: mergeMaxSpin.value,
+                dimension: mergeDimensionCombo.currentText
+            }
+        }
+
+        // 动作列表 — 遍历 5 个 Tab 的 Column
+        var actions = []
+        var columns = [clientActionColumn, webActionColumn, appActionColumn, mpActionColumn, sysActionColumn]
+        for (var t = 0; t < columns.length; t++) {
+            var col = columns[t]
+            for (var i = 0; i < col.children.length; i++) {
+                var child = col.children[i]
+                if (child.actionType && child.checked) {
+                    actions.push({ type: child.actionType })
+                }
+            }
+        }
+
+        return {
+            name: ruleNameField.text,
+            priority: prioritySpinBox.value,
+            cooldown: cooldownSpinBox.value,
+            enabled: true,
+            conditions: conditions,
+            actions: actions
+        }
+    }
+
+    // ── 回填编辑表单 ──
+    function populateForm(ruleData) {
+        ruleNameField.text = ruleData.name || ""
+        prioritySpinBox.value = ruleData.priority || 50
+        cooldownSpinBox.value = ruleData.cooldown || 5000
+
+        var cond = ruleData.conditions || {}
+
+        // 时间
+        var tc = cond.time || {}
+        timeFromField.text = tc.from || "08:00"
+        timeToField.text = tc.to || "20:00"
+        var dayArr = tc.days || []
+        for (var d = 0; d < dayRepeater.count; d++) {
+            var di = dayRepeater.itemAt(d)
+            if (di) di.checked = dayArr.indexOf(d + 1) >= 0
+        }
+
+        // 空间
+        var sc = cond.space || {}
+        locationCombo.currentIndex = Math.max(0, locationCombo.model.indexOf(sc.location || ""))
+        roiCombo.currentIndex = Math.max(0, roiCombo.model.indexOf(sc.roi || ""))
+        groupCombo.currentIndex = Math.max(0, groupCombo.model.indexOf(sc.group || ""))
+
+        // 事件类型
+        var evtArr = cond.eventTypes || []
+        for (var e = 0; e < eventTypeRepeater.count; e++) {
+            var ei = eventTypeRepeater.itemAt(e)
+            if (ei) ei.checked = evtArr.indexOf(eventTypeRepeater.model[e]) >= 0
+        }
+
+        severityCombo.currentIndex = Math.max(0, (cond.minSeverity || 1) - 1)
+        confidenceSlider.value = cond.minConfidence || 0.5
+
+        // 通道
+        var chArr = (cond.sources || {}).channels || []
+        for (var c = 0; c < channelRepeater.count; c++) {
+            var ci = channelRepeater.itemAt(c)
+            if (ci) ci.checked = chArr.indexOf(channelRepeater.model[c]) >= 0
+        }
+
+        // 合并
+        var mc = cond.merge || {}
+        mergeEnabledCheck.checked = mc.enabled || false
+        mergeWindowSpin.value = mc.window || 10000
+        mergeMaxSpin.value = mc.maxCount || 10
+        mergeDimensionCombo.currentIndex = Math.max(0, mergeDimensionCombo.model.indexOf(mc.dimension || ""))
+
+        // 动作勾选
+        var acts = ruleData.actions || []
+        var actTypes = []
+        for (var a = 0; a < acts.length; a++) actTypes.push(acts[a].type || acts[a])
+        var columns = [clientActionColumn, webActionColumn, appActionColumn, mpActionColumn, sysActionColumn]
+        for (var t = 0; t < columns.length; t++) {
+            var col = columns[t]
+            for (var i = 0; i < col.children.length; i++) {
+                var child = col.children[i]
+                if (child.actionType) {
+                    child.checked = actTypes.indexOf(child.actionType) >= 0
+                }
+            }
+        }
+    }
+
+    // ── 重置表单 ──
+    function resetForm() {
+        ruleNameField.text = ""
+        prioritySpinBox.value = 50
+        cooldownSpinBox.value = 5000
+        timeFromField.text = "08:00"
+        timeToField.text = "20:00"
+        for (var d = 0; d < dayRepeater.count; d++) {
+            var di = dayRepeater.itemAt(d)
+            if (di) di.checked = d < 5
+        }
+        locationCombo.currentIndex = 0
+        roiCombo.currentIndex = 0
+        groupCombo.currentIndex = 0
+        for (var e = 0; e < eventTypeRepeater.count; e++) {
+            var ei = eventTypeRepeater.itemAt(e)
+            if (ei) ei.checked = false
+        }
+        severityCombo.currentIndex = 0
+        confidenceSlider.value = 0.5
+        for (var c = 0; c < channelRepeater.count; c++) {
+            var ci = channelRepeater.itemAt(c)
+            if (ci) ci.checked = c < 4
+        }
+        mergeEnabledCheck.checked = false
+        mergeWindowSpin.value = 10000
+        mergeMaxSpin.value = 10
+        mergeDimensionCombo.currentIndex = 0
+        var columns = [clientActionColumn, webActionColumn, appActionColumn, mpActionColumn, sysActionColumn]
+        for (var t = 0; t < columns.length; t++) {
+            var col = columns[t]
+            for (var i = 0; i < col.children.length; i++) {
+                var child = col.children[i]
+                if (child.actionType) child.checked = false
+            }
+        }
+    }
+
     Component.onCompleted: {
         linkageController.refreshRules()
     }
@@ -52,9 +225,7 @@ Item {
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     editingRule = null
-                    ruleNameField.text = ""
-                    prioritySpinBox.value = 50
-                    cooldownSpinBox.value = 5000
+                    resetForm()
                     ruleEditor.visible = true
                 }
             }
@@ -115,9 +286,7 @@ Item {
                             contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#8B8FA3" }
                             onClicked: {
                                 editingRule = modelData
-                                ruleNameField.text = modelData.name || ""
-                                prioritySpinBox.value = modelData.priority || 50
-                                cooldownSpinBox.value = modelData.cooldown || 5000
+                                populateForm(modelData)
                                 ruleEditor.visible = true
                             }
                         }
@@ -191,12 +360,12 @@ Item {
                     Column { spacing: 6; width: parent.width
                         Row { spacing: 4
                             Text { text: "从"; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-                            TextField { text: "08:00"; width: 70; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
+                            TextField { id: timeFromField; text: "08:00"; width: 70; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
                             Text { text: "至"; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-                            TextField { text: "20:00"; width: 70; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
+                            TextField { id: timeToField; text: "20:00"; width: 70; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
                         }
                         Row { spacing: 4
-                            Repeater { model: ["一","二","三","四","五","六","日"]
+                            Repeater { id: dayRepeater; model: ["一","二","三","四","五","六","日"]
                                 delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#8B8FA3" } checked: index < 5 }
                             }
                         }
@@ -211,13 +380,13 @@ Item {
 
                     Column { spacing: 6; width: parent.width
                         Text { text: "物理位置"; font.pixelSize: 11; color: "#8B8FA3" }
-                        ComboBox { width: parent.width; height: 28; model: ["全部位置", "3号厂区", "东围墙", "2号车间", "1号大门"]; background: Rectangle { color: "#252830"; radius: 4 }
+                        ComboBox { id: locationCombo; width: parent.width; height: 28; model: ["全部位置", "3号厂区", "东围墙", "2号车间", "1号大门"]; background: Rectangle { color: "#252830"; radius: 4 }
                             contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                         Text { text: "ROI区域 (算法检测区)"; font.pixelSize: 11; color: "#8B8FA3" }
-                        ComboBox { width: parent.width; height: 28; model: ["全部区域", "周界线A", "绊线B", "区域C"]; background: Rectangle { color: "#252830"; radius: 4 }
+                        ComboBox { id: roiCombo; width: parent.width; height: 28; model: ["全部区域", "周界线A", "绊线B", "区域C"]; background: Rectangle { color: "#252830"; radius: 4 }
                             contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                         Text { text: "设备分组"; font.pixelSize: 11; color: "#8B8FA3" }
-                        ComboBox { width: parent.width; height: 28; model: ["全部分组", "东区摄像头", "室内摄像头", "室外摄像头"]; background: Rectangle { color: "#252830"; radius: 4 }
+                        ComboBox { id: groupCombo; width: parent.width; height: 28; model: ["全部分组", "东区摄像头", "室内摄像头", "室外摄像头"]; background: Rectangle { color: "#252830"; radius: 4 }
                             contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                     }
                 }
@@ -230,19 +399,19 @@ Item {
 
                     Column { spacing: 4; width: parent.width
                         Row { spacing: 4
-                            Repeater { model: ["周界入侵","绊线","烟火","安全帽","人脸","车牌","人群","摔倒"]
+                            Repeater { id: eventTypeRepeater; model: ["周界入侵","绊线","烟火","安全帽","人脸","车牌","人群","摔倒"]
                                 delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8" } }
                             }
                         }
                         Row { spacing: 12
                             Column { spacing: 2
                                 Text { text: "最低严重度"; font.pixelSize: 10; color: "#8B8FA3" }
-                                ComboBox { width: 100; height: 28; model: ["1-提示","2-低","3-中","4-高","5-紧急"]; background: Rectangle { color: "#252830"; radius: 4 }
+                                ComboBox { id: severityCombo; width: 100; height: 28; model: ["1-提示","2-低","3-中","4-高","5-紧急"]; background: Rectangle { color: "#252830"; radius: 4 }
                                     contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
                             }
                             Column { spacing: 2
                                 Text { text: "最低置信度"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Row { Slider { width: 120; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.05 } Text { text: "50%"; font.pixelSize: 10; color: "#E8E8E8" } }
+                                Row { Slider { id: confidenceSlider; width: 120; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.05 } Text { text: Math.round(confidenceSlider.value * 100) + "%"; font.pixelSize: 10; color: "#E8E8E8" } }
                             }
                         }
                     }
@@ -257,7 +426,7 @@ Item {
                     Column { spacing: 6; width: parent.width
                         Text { text: "选择通道 (留空=全部)"; font.pixelSize: 11; color: "#8B8FA3" }
                         Row { spacing: 4
-                            Repeater { model: ["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08"]
+                            Repeater { id: channelRepeater; model: ["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08"]
                                 delegate: CheckBox { text: modelData; checked: index < 4; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8" } }
                             }
                         }
@@ -271,19 +440,19 @@ Item {
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 6; width: parent.width
-                        CheckBox { text: "启用自动合并"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8" } }
+                        CheckBox { id: mergeEnabledCheck; text: "启用自动合并"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8" } }
                         Row { spacing: 12
                             Column { spacing: 2
                                 Text { text: "合并窗口(ms)"; font.pixelSize: 10; color: "#8B8FA3" }
-                                SpinBox { from: 1000; to: 60000; value: 10000; stepSize: 1000; width: 120 }
+                                SpinBox { id: mergeWindowSpin; from: 1000; to: 60000; value: 10000; stepSize: 1000; width: 120 }
                             }
                             Column { spacing: 2
                                 Text { text: "最大合并数"; font.pixelSize: 10; color: "#8B8FA3" }
-                                SpinBox { from: 2; to: 100; value: 10; width: 80 }
+                                SpinBox { id: mergeMaxSpin; from: 2; to: 100; value: 10; width: 80 }
                             }
                             Column { spacing: 2
                                 Text { text: "合并维度"; font.pixelSize: 10; color: "#8B8FA3" }
-                                ComboBox { width: 80; height: 28; model: ["通道","类型","位置"]; background: Rectangle { color: "#252830"; radius: 4 }
+                                ComboBox { id: mergeDimensionCombo; width: 80; height: 28; model: ["通道","类型","位置"]; background: Rectangle { color: "#252830"; radius: 4 }
                                     contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
                             }
                         }
@@ -323,7 +492,7 @@ Item {
 
                     // ─── 客户端动作 (海康标准20+项) ───
                     ScrollView { clip: true
-                        Column { width: 412; spacing: 2
+                        Column { id: clientActionColumn; width: 412; spacing: 2
 
                             Text { text: "📹 视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
@@ -372,7 +541,7 @@ Item {
 
                     // ─── Web端 ───
                     ScrollView { clip: true
-                        Column { width: 412; spacing: 2
+                        Column { id: webActionColumn; width: 412; spacing: 2
                             ActionCheckRow { text: "Web端弹窗通知"; icon: "💬"; actionType: "WEB_POPUP" }
                             ActionCheckRow { text: "发送邮件"; icon: "📧"; actionType: "WEB_EMAIL" }
                             ActionCheckRow { text: "HTTP回调 (WebHook)"; icon: "🔗"; actionType: "WEB_WEBHOOK" }
@@ -382,7 +551,7 @@ Item {
 
                     // ─── APP ───
                     ScrollView { clip: true
-                        Column { width: 412; spacing: 2
+                        Column { id: appActionColumn; width: 412; spacing: 2
                             ActionCheckRow { text: "APP推送通知"; icon: "📱"; actionType: "APP_PUSH_NOTIFY" }
                             ActionCheckRow { text: "APP弹实时视频"; icon: "📹"; actionType: "APP_SHOW_LIVE" }
                             ActionCheckRow { text: "APP弹事件图片"; icon: "🖼️"; actionType: "APP_SHOW_IMAGE" }
@@ -393,7 +562,7 @@ Item {
 
                     // ─── 小程序 ───
                     ScrollView { clip: true
-                        Column { width: 412; spacing: 2
+                        Column { id: mpActionColumn; width: 412; spacing: 2
                             ActionCheckRow { text: "小程序订阅消息"; icon: "💬"; actionType: "MP_SUBSCRIBE_MSG" }
                             ActionCheckRow { text: "小程序弹事件图片"; icon: "🖼️"; actionType: "MP_SHOW_IMAGE" }
                             ActionCheckRow { text: "小程序弹实时视频"; icon: "📹"; actionType: "MP_SHOW_LIVE" }
@@ -402,7 +571,7 @@ Item {
 
                     // ─── 系统 ───
                     ScrollView { clip: true
-                        Column { width: 412; spacing: 2
+                        Column { id: sysActionColumn; width: 412; spacing: 2
                             ActionCheckRow { text: "MQTT消息发布"; icon: "📡"; actionType: "SYS_MQTT_PUBLISH" }
                             ActionCheckRow { text: "Modbus写寄存器"; icon: "🔌"; actionType: "SYS_MODBUS_WRITE" }
                             ActionCheckRow { text: "ONVIF事件触发"; icon: "🔗"; actionType: "SYS_ONVIF_TRIGGER" }
@@ -425,10 +594,10 @@ Item {
                         background: Rectangle { color: "#00D4AA"; radius: 8; width: 110; height: 38 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
-                            var ruleData = {
-                                name: ruleNameField.text,
-                                priority: prioritySpinBox.value,
-                                cooldown: cooldownSpinBox.value
+                            var ruleData = collectRuleData()
+                            if (!ruleData.name) {
+                                notificationController.addNotification("错误", "规则名称不能为空", "error")
+                                return
                             }
                             if (editingRule) {
                                 linkageController.updateRule(editingRule.id, ruleData)
@@ -452,6 +621,7 @@ Item {
         property string text: ""
         property string icon: ""
         property string actionType: ""
+        property alias checked: cb.checked
 
         CheckBox { id: cb; anchors.verticalCenter: parent.verticalCenter }
         Text { text: actionRow.icon; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }

@@ -2,11 +2,14 @@
 #include <QUrl>
 #include <QTimer>
 #include <QNetworkReply>
+#include <QSettings>
 
 ApiClient::ApiClient(QObject* parent)
     : QObject(parent)
     , m_manager(new QNetworkAccessManager(this))
 {
+    QSettings settings("ShieldBox", "ShieldBox AI");
+    m_authToken = settings.value("auth/token").toString();
 }
 
 void ApiClient::setBaseUrl(const QString& url) {

@@ -100,7 +100,7 @@ ApplicationWindow {
         anchors.top: header.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
-        width: 64
+        width: 72
         color: "#141720"
         z: 100
 
@@ -109,7 +109,7 @@ ApplicationWindow {
         Column {
             anchors.fill: parent
             anchors.margins: 4
-            spacing: 2
+            spacing: 1
 
             Repeater {
                 model: [
@@ -124,21 +124,18 @@ ApplicationWindow {
                     { icon: "🛡️", label: "态势", tip: "Situation 3D" },
                     { icon: "🤖", label: "AI", tip: "AI Assistant" },
                     { icon: "📊", label: "统计", tip: "Statistics" },
-                    { icon: "📹", label: "设备", tip: "Devices" },
-                    { icon: "📡", label: "通道", tip: "Channels" },
+                    { icon: "📟", label: "设备", tip: "Devices" },
+                    { icon: "📶", label: "通道", tip: "Channels" },
                     { icon: "📺", label: "流管理", tip: "Streams" },
                     { icon: "📦", label: "模型", tip: "Model Mgmt" },
                     { icon: "🌐", label: "联邦", tip: "Federation" },
-                    { icon: "📋", label: "审计", tip: "Audit" },
-                    { icon: "🎬", label: "场景", tip: "Scene Management" },
                     { icon: "🔗", label: "联动", tip: "Event Linkage" },
-                    { icon: "🔄", label: "升级", tip: "OTA Upgrade" },
                     { icon: "⚙️", label: "设置", tip: "Settings" }
                 ]
 
                 delegate: Button {
                     width: sidebar.width - 8
-                    height: 42
+                    height: 50
                     flat: true
                     highlighted: sidebar.currentIndex === index
                     onClicked: sidebar.currentIndex = index
@@ -149,16 +146,17 @@ ApplicationWindow {
                     }
 
                     contentItem: Column {
-                        spacing: 1
+                        spacing: 2
                         Text {
                             text: modelData.icon
-                            font.pixelSize: 20
+                            font.pixelSize: 22
                             horizontalAlignment: Text.AlignHCenter
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                         Text {
                             text: modelData.label
-                            font.pixelSize: 9
+                            font.pixelSize: 10
+                            font.bold: sidebar.currentIndex === index
                             color: sidebar.currentIndex === index ? "#00D4AA" : "#8B8FA3"
                             horizontalAlignment: Text.AlignHCenter
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -222,8 +220,8 @@ ApplicationWindow {
     NotificationPopup {
         id: notifPopup
         unreadCount: notificationController.unreadCount
-        onMarkAllRead: notificationController.markAllRead()
-        onClearAll: notificationController.clearAll()
+        // onMarkAllRead: removed
+        // onClearAll: removed
     }
 
     // ── Connections ──

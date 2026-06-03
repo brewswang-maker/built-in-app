@@ -3,6 +3,7 @@
 #include <QVariantList>
 
 class ApiClient;
+class DeviceListModel;
 
 class DeviceController : public QObject {
     Q_OBJECT
@@ -17,7 +18,7 @@ public:
     bool loading() const { return m_loading; }
     int deviceCount() const { return m_devices.size(); }
 
-    void setDeviceModel(QObject* model) { m_deviceModel = model; }
+    void setDeviceModel(DeviceListModel* model);
 
     Q_INVOKABLE void refreshDevices();
     Q_INVOKABLE void addDevice(const QString& protocol, const QString& ip,
@@ -37,7 +38,7 @@ private:
     void setLoading(bool loading);
 
     ApiClient* m_api;
-    QObject* m_deviceModel = nullptr;
+    DeviceListModel* m_deviceModel = nullptr;
     QVariantList m_devices;
     bool m_loading = false;
 };

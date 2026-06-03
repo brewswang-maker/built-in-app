@@ -20,13 +20,21 @@ find_package(Qt6 REQUIRED COMPONENTS
     Network
 )
 
-# WebSockets is optional
+# Optional Qt6 modules
 find_package(Qt6 COMPONENTS WebSockets)
 if(Qt6WebSockets_FOUND)
     add_compile_definitions(HAS_QT_WEBSOCKETS)
     message(STATUS "Qt6WebSockets found — WebSocket support enabled")
 else()
     message(STATUS "Qt6WebSockets NOT found — WebSocket support disabled")
+endif()
+
+find_package(Qt6 COMPONENTS Multimedia)
+if(Qt6Multimedia_FOUND)
+    add_compile_definitions(HAS_QT_MULTIMEDIA)
+    message(STATUS "Qt6Multimedia found — Multimedia support enabled")
+else()
+    message(STATUS "Qt6Multimedia NOT found — Multimedia support disabled")
 endif()
 
 # Collect sources
@@ -57,8 +65,20 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Network
 )
 
+if(Qt6Multimedia_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Multimedia)
+endif()
+
 if(Qt6WebSockets_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::WebSockets)
+endif()
+
+if(Qt6Charts_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Charts)
+endif()
+
+if(Qt6Svg_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Svg)
 endif()
 
 # Install

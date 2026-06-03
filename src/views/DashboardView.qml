@@ -206,31 +206,31 @@ Item {
                                 Text { text: "🌐"; font.pixelSize: 16; anchors.centerIn: parent }
                             }
                             Column { spacing: 2
-                                Text { text: "Round 47/100 — 精度 92.4%"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true }
-                                Text { text: "参与: 3/5 节点 | ε=8.0/10.0"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: federationController.federating ?
+                                    "Round " + federationController.currentRound + "/" + federationController.rounds + " — 训练中" :
+                                    "联邦学习 — 空闲"
+                                    ; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3"; font.bold: true }
+                                Text { text: "参与: " + federationController.nodes.length + " 节点"; font.pixelSize: 10; color: "#8B8FA3" }
                             }
                         }
                     }
 
-                    // ── 最近告警 (快速预览) ──
+                    // ── 最近告警 (来自 alarmController) ──
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
                     Text { text: "🚨 最新告警"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     Column { spacing: 2; width: parent.width
                         Repeater {
-                            model: [
-                                { type: "周界入侵", level: "critical", time: "02:15", location: "3号厂区东围墙", status: "已处置" },
-                                { type: "安全帽未戴", level: "warning", time: "09:30", location: "2号车间B区", status: "已提醒" },
-                                { type: "绊线触发", level: "info", time: "11:00", location: "1号大门入口", status: "已确认" }
-                            ]
+                            model: alarmController.alarms.length > 5 ? 5 : alarmController.alarms.length
                             delegate: Rectangle {
+                                property var alarm: alarmController.alarms[index] || {}
                                 width: 268; height: 28; color: "#0D0F12"; radius: 4
                                 Row { anchors.fill: parent; anchors.margins: 6; spacing: 6
-                                    Rectangle { width: 6; height: 6; radius: 3; color: modelData.level === "critical" ? "#FF3D71" : modelData.level === "warning" ? "#FF6B35" : "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: modelData.type; font.pixelSize: 10; color: "#E8E8E8"; font.bold: true; width: 60 }
-                                    Text { text: modelData.location; font.pixelSize: 9; color: "#8B8FA3"; width: 90; elide: Text.ElideRight }
-                                    Text { text: modelData.time; font.pixelSize: 9; color: "#4A4D58"; width: 40 }
-                                    Text { text: modelData.status; font.pixelSize: 9; color: "#00D4AA" }
+                                    Rectangle { width: 6; height: 6; radius: 3; color: alarm.level === "critical" ? "#FF3D71" : alarm.level === "warning" ? "#FF6B35" : "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: alarm.type || alarm.alarm_type || "-"; font.pixelSize: 10; color: "#E8E8E8"; font.bold: true; width: 60; elide: Text.ElideRight }
+                                    Text { text: alarm.location || alarm.zone || "-"; font.pixelSize: 9; color: "#8B8FA3"; width: 90; elide: Text.ElideRight }
+                                    Text { text: alarm.time || "-"; font.pixelSize: 9; color: "#4A4D58"; width: 40 }
+                                    Text { text: alarm.status === "confirmed" ? "已确认" : alarm.status === "false_alarm" ? "误报" : "待处理"; font.pixelSize: 9; color: alarm.status === "confirmed" ? "#00D4AA" : alarm.status === "false_alarm" ? "#FFB800" : "#FF6B35" }
                                 }
                             }
                         }
@@ -254,7 +254,7 @@ Item {
             Text { text: "TPU: " + statusController.tpuUtilization.toFixed(1) + "%"; font.pixelSize: 11; color: statusController.tpuUtilization > 90 ? "#FF3D71" : "#00D4AA" }
             Text { text: "内存: " + statusController.memoryUsage.toFixed(1) + "%"; font.pixelSize: 11; color: statusController.memoryUsage > 85 ? "#FF6B35" : "#8B8FA3" }
             Text { text: "温度: " + statusController.temperature.toFixed(0) + "°C"; font.pixelSize: 11; color: statusController.temperature > 70 ? "#FF3D71" : "#8B8FA3" }
-            Text { text: "DDR: " + statusController.ddrUsage + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
+            Text { text: "DDR: " + statusController.tpuMemoryUsed.toFixed(0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
             Text { text: "模型: " + statusController.activeModels + " | 运行: " + statusController.uptime; font.pixelSize: 11; color: "#4A4D58" }
 

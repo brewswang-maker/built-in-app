@@ -227,10 +227,10 @@ Item {
             // 语音输入按钮
             Button {
                 Layout.preferredWidth: 36; Layout.fillHeight: true
-                text: "🎤"; font.pixelSize: 16
+                text: "🎤"; font.pixelSize: 16; enabled: false
                 background: Rectangle { color: "#252830"; radius: 8 }
-                contentItem: Text { text: parent.text; font.pixelSize: 16; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: aiController.startVoiceInput()
+                contentItem: Text { text: parent.text; font.pixelSize: 16; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                ToolTip.visible: pressed; ToolTip.text: "语音输入即将上线"
             }
 
             ScrollView {
@@ -240,7 +240,7 @@ Item {
                     id: chatInput
                     placeholderText: "输入消息... (Enter发送, Shift+Enter换行)"
                     placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 14
-                    wrapMode: TextArea.Wrap; maximumLength: 2000
+                    wrapMode: TextArea.Wrap; // maximumLength removed - Qt6 incompatible
                     background: Rectangle { color: "#252830"; radius: 8 }
 
                     Keys.onReturnPressed: {

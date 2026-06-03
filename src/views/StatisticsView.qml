@@ -169,7 +169,7 @@ Item {
                 text: "📥 导出CSV"; font.pixelSize: 11
                 background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: statusController.exportStats("csv")
+                onClicked: configController.exportConfig("statistics", "csv")
             }
             Button {
                 text: "🔄 刷新"; font.pixelSize: 11

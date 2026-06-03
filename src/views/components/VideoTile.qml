@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtMultimedia
 
 Item {
     id: root
@@ -12,15 +13,32 @@ Item {
     property string fps: "0"
     property string algorithmTag: ""
     property var detectionBoxes: []
+    property bool active: false
 
     signal doubleClicked()
 
-    // Video output placeholder
+    // Video playback
     Rectangle {
         id: videoBackground
         anchors.fill: parent
         color: "#0D0F12"
         radius: 8
+        clip: true
+
+        MediaPlayer {
+            id: mediaPlayer
+            source: streamUrlText.text.length > 0 ? streamUrlText.text : ""
+            videoOutput: videoOutput
+            onErrorOccurred: function(error, errorString) {
+                console.warn("MediaPlayer error:", errorString)
+            }
+        }
+
+        VideoOutput {
+            id: videoOutput
+            anchors.fill: parent
+            visible: streamUrlText.text.length > 0
+        }
 
         Text {
             text: "📹 " + (channelName || "未连接")
@@ -29,13 +47,6 @@ Item {
             anchors.centerIn: parent
             visible: streamUrlText.text.length === 0
         }
-
-        // VideoOutput placeholder — replace with real VideoOutput when MediaPlayer available
-        // VideoOutput {
-        //     id: videoOutput
-        //     anchors.fill: parent
-        //     source: mediaPlayer
-        // }
     }
 
     // Detection boxes overlay
@@ -53,13 +64,19 @@ Item {
             border.width: 2
             radius: 2
 
-            Text {
-                text: modelData.label || ""
-                color: "#FFFFFF"
-                font.pixelSize: 10
-                font.family: "PingFang SC"
-                padding: 2
-                background: Rectangle { color: "#FF6B35"; radius: 2 }
+            Rectangle {
+                color: "#FF6B35"
+                radius: 2
+                implicitWidth: labelBgText.implicitWidth + 4
+                implicitHeight: labelBgText.implicitHeight + 2
+                Text {
+                    id: labelBgText
+                    text: modelData.label || ""
+                    color: "#FFFFFF"
+                    font.pixelSize: 10
+                    font.family: "PingFang SC"
+                    anchors.centerIn: parent
+                }
             }
         }
     }
@@ -129,13 +146,32 @@ Item {
             style: Text.Outline
             styleColor: "#000000"
         }
+
+        // Active slot highlight border
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: "#00D4AA"
+            border.width: 2
+            radius: 8
+            visible: root.active
+        }
     }
 
     // Hidden: device ID and stream URL
     Text { id: deviceIdText; visible: false }
     Text { id: streamUrlText; visible: false }
 
-    // Double click → fullscreen
+    // Auto-play when URL is set
+    onStreamUrlChanged: {
+        if (streamUrlText.text.length > 0) {
+            mediaPlayer.play()
+        } else {
+            mediaPlayer.stop()
+        }
+    }
+
+    // Double click -> fullscreen
     MouseArea {
         anchors.fill: parent
         onDoubleClicked: root.doubleClicked()

@@ -59,6 +59,7 @@ private:
     QNetworkRequest buildRequest(const QString& path) const;
 
     QNetworkAccessManager* m_manager;
-    QString m_baseUrl = "http://localhost:8080";
+    QString m_baseUrl = "http://localhost:18080";
     int m_timeoutMs = 5000;
+    QString m_authToken;
 };

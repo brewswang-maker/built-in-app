@@ -23,8 +23,11 @@
 #include "controllers/OTAController.h"
 #include "controllers/AuditController.h"
 #include "controllers/FederationController.h"
+#include "controllers/NotificationController.h"
+#include "controllers/AlgorithmController.h"
 #include "models/DeviceListModel.h"
 #include "models/AlarmListModel.h"
+#include "models/AlgorithmListModel.h"
 #include "utils/ThemeConfig.h"
 #include "utils/ApiClient.h"
 
@@ -37,10 +40,8 @@ int main(int argc, char *argv[]) {
     app.setApplicationName("ShieldBox AI");
     app.setApplicationVersion("1.0.0");
 
-    // 强制使用自定义QML风格
     QQuickStyle::setStyle("Basic");
 
-    // 加载中文字体
     QFont font("Noto Sans CJK SC", 13);
     app.setFont(font);
 
@@ -52,6 +53,7 @@ int main(int argc, char *argv[]) {
     // ── Models ──
     DeviceListModel deviceModel;
     AlarmListModel alarmModel;
+    AlgorithmListModel algorithmModel;
 
     // ── Controllers ──
     DeviceController deviceController(&apiClient);
@@ -71,11 +73,15 @@ int main(int argc, char *argv[]) {
     OTAController otaController(&apiClient);
     AuditController auditController(&apiClient);
     FederationController federationController(&apiClient);
+    NotificationController notificationController;
+    ThemeConfig themeConfig;
+
+    AlgorithmController algorithmController(&apiClient);
+    algorithmController.setAlgorithmModel(&algorithmModel);
 
     // ── QML Engine ──
     QQmlApplicationEngine engine;
 
-    // 注册controllers到QML上下文
     engine.rootContext()->setContextProperty("deviceController", &deviceController);
     engine.rootContext()->setContextProperty("alarmController", &alarmController);
     engine.rootContext()->setContextProperty("mediaController", &mediaController);
@@ -87,6 +93,10 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("otaController", &otaController);
     engine.rootContext()->setContextProperty("auditController", &auditController);
     engine.rootContext()->setContextProperty("federationController", &federationController);
+    engine.rootContext()->setContextProperty("notificationController", &notificationController);
+    engine.rootContext()->setContextProperty("theme", &themeConfig);
+    engine.rootContext()->setContextProperty("algorithmController", &algorithmController);
+    engine.rootContext()->setContextProperty("algorithmModel", &algorithmModel);
     engine.rootContext()->setContextProperty("deviceModel", &deviceModel);
     engine.rootContext()->setContextProperty("alarmModel", &alarmModel);
     engine.rootContext()->setContextProperty("apiClient", &apiClient);

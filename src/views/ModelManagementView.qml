@@ -176,7 +176,7 @@ Item {
         anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 8; color: "#0D0F12"; radius: 8
 
-        property alias comparePanel: showComparePanel
+        property bool comparePanel: false
 
         Column {
             anchors.fill: parent; anchors.margins: 12; spacing: 8

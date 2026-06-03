@@ -1,8 +1,13 @@
 #include "DeviceController.h"
 #include "utils/ApiClient.h"
+#include "models/DeviceListModel.h"
 
 DeviceController::DeviceController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {}
+
+void DeviceController::setDeviceModel(DeviceListModel* model) {
+    m_deviceModel = model;
+}
 
 void DeviceController::setLoading(bool loading) {
     if (m_loading != loading) {
@@ -20,6 +25,8 @@ void DeviceController::refreshDevices() {
                 m_devices.append(item.toVariant().toMap());
             }
             emit devicesUpdated();
+            if (m_deviceModel)
+                m_deviceModel->setDevices(m_devices);
             setLoading(false);
         },
         [this](int code, QString msg) {

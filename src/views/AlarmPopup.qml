@@ -23,6 +23,12 @@ Popup {
     signal silenced(string alarmId)
     signal replayRequested(string alarmId)
 
+    function showAlarm(alarm) {
+        currentAlarm = alarm
+        alarmPopup.open()
+        autoCloseTimer.restart()
+    }
+
     background: Rectangle {
         color: "#141720"; radius: 12
         border.color: "#FF3D71"; border.width: 2

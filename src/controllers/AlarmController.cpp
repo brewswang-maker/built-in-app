@@ -11,7 +11,19 @@
 #endif
 
 AlarmController::AlarmController(ApiClient* api, QObject* parent)
-    : QObject(parent), m_api(api) {
+    : QObject(parent), m_api(api), m_settings("SmartGateWay", "AlarmSettings") {
+}
+
+int AlarmController::popupDebounceMs() const {
+    return m_settings.value("popupDebounceMs", 30000).toInt();
+}
+
+void AlarmController::setPopupDebounceMs(int ms) {
+    if (ms < 0) ms = 0;
+    if (ms != popupDebounceMs()) {
+        m_settings.setValue("popupDebounceMs", ms);
+        emit popupDebounceChanged();
+    }
 }
 
 AlarmController::~AlarmController() {
@@ -88,12 +100,53 @@ void AlarmController::connectWebSocket() {
 void AlarmController::onWsTextMessage(const QString& message) {
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
     QVariantMap alarm = doc.object().toVariantMap();
+
+    // 同通道同类型去重: 仅保留最新一条
+    QString chId = alarm["channel_id_str"].toString();
+    if (chId.isEmpty()) chId = alarm["channel_id"].toString();
+    QString alarmType = alarm["alarm_type"].toString();
+
+    for (int i = 0; i < m_alarms.size(); ++i) {
+        QVariantMap existing = m_alarms[i].toMap();
+        QString exCh = existing["channel_id_str"].toString();
+        if (exCh.isEmpty()) exCh = existing["channel_id"].toString();
+        if (exCh == chId && existing["alarm_type"].toString() == alarmType) {
+            m_alarms.removeAt(i);
+            break;
+        }
+    }
+
     m_hasUnread = true;
     m_alarms.prepend(alarm);
+
+    // 防抖: 500ms 合并窗口，批量刷新 UI
+    if (!m_flushTimer) {
+        m_flushTimer = new QTimer(this);
+        m_flushTimer->setSingleShot(true);
+        connect(m_flushTimer, &QTimer::timeout, this, &AlarmController::flushPendingUI);
+    }
+    m_flushTimer->start(500);
+
+    // 弹窗防抖: 同设备同类型在 N 秒内不重复弹窗 (记录但抑制弹窗)
+    qint64 now = QDateTime::currentDateTime().toMSecsSinceEpoch();
+    QString popupKey = chId + ":" + alarmType;
+    int debounceMs = popupDebounceMs();
+    qint64 lastPopup = m_lastPopupMs.value(popupKey, 0);
+
+    if (debounceMs > 0 && (now - lastPopup) < debounceMs) {
+        // 被抑制: 记录到列表但不弹窗
+        emit suppressedAlarm(alarm);
+    } else {
+        // 弹窗
+        m_lastPopupMs[popupKey] = now;
+        emit newAlarm(alarm);
+    }
+}
+
+void AlarmController::flushPendingUI() {
     emit alarmsUpdated();
-    emit newAlarm(alarm);
     if (m_alarmModel)
-        m_alarmModel->prependAlarm(alarm);
+        m_alarmModel->setAlarms(m_alarms);
 }
 
 void AlarmController::exportAlarms(const QString& format) {

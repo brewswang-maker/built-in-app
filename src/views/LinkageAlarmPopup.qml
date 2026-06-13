@@ -7,6 +7,7 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtMultimedia
 
 Window {
     id: linkagePopup
@@ -23,6 +24,37 @@ Window {
     signal confirmed()
     signal falseAlarm()
     signal silenced()
+
+    function showAlarm(alarm, actions) {
+        currentAlarm = alarm
+        alarmId = alarm.alarm_id || alarm.id || ""
+        if (actions) linkageActions = actions
+        autoCloseTimer.countdown = 15
+        countdownText.text = "15s"
+        borderAnim.start()
+        autoCloseTimer.start()
+        linkagePopup.show()
+
+        // 初始化视频流
+        if (alarm.stream_url) {
+            alarmVideo.source = alarm.stream_url
+            alarmVideo.play()
+        } else if (alarm.channel_id) {
+            var chId = alarm.channel_id_str || ("" + alarm.channel_id)
+            if (chId.length >= 20 && chId.indexOf("gb_") !== 0) {
+                alarmVideo.source = "rtsp://127.0.0.1:554/rtp/gb_" + chId
+            } else {
+                alarmVideo.source = "rtsp://127.0.0.1:554/rtp/" + chId
+            }
+            alarmVideo.play()
+        }
+
+        // 刷新联动日志
+        if (alarmId) {
+            linkageController.refreshLogs(alarmId)
+            linkageController.getRuleStats()
+        }
+    }
 
     Component.onCompleted: {
         if (alarmId) {
@@ -67,9 +99,24 @@ Window {
     }
 
     function dismiss() {
+        alarmVideo.stop()
+        alarmVideo.source = ""
         visible = false
         autoCloseTimer.stop()
         borderAnim.stop()
+    }
+
+    onCurrentAlarmChanged: {
+        if (currentAlarm && currentAlarm.stream_url) {
+            alarmVideo.source = currentAlarm.stream_url
+            alarmVideo.play()
+        } else if (currentAlarm && currentAlarm.channel_id) {
+            alarmVideo.source = "rtsp://127.0.0.1:554/gb_" + currentAlarm.channel_id
+            alarmVideo.play()
+        } else {
+            alarmVideo.stop()
+            alarmVideo.source = ""
+        }
     }
 
     Rectangle {
@@ -133,11 +180,28 @@ Window {
                             Layout.fillWidth: true; Layout.fillHeight: true; color: "#000"
                             radius: 8
 
+                            // 实时视频播放 (Qt 6 Video 组件)
+                            Video {
+                                id: alarmVideo
+                                anchors.fill: parent
+                                fillMode: VideoOutput.PreserveAspectFit
+                                autoPlay: false
+                                onErrorOccurred: function(error, errorString) {
+                                    console.warn("AlarmPopup Video error:", errorString)
+                                    videoPlaceholder.visible = true
+                                }
+                                onPlaybackStateChanged: {
+                                    videoPlaceholder.visible = (playbackState !== MediaPlayer.PlayingState)
+                                }
+                            }
+
                             // 视频占位 — 等待流
                             Text {
+                                id: videoPlaceholder
                                 anchors.centerIn: parent
-                                text: "📹 等待流..."
+                                text: alarmVideo.source.toString() === "" ? "等待流..." : "加载中..."
                                 font.pixelSize: 16; color: "#4A4D58"
+                                visible: true
                             }
 
                             // ROI 叠加占位 (从 currentAlarm.roi)

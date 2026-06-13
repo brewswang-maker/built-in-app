@@ -228,10 +228,12 @@ ApplicationWindow {
     Connections {
         target: alarmController
         function onNewAlarm(alarm) {
-            alarmPopup.showAlarm(alarm)
-            // 有联动规则时弹出增强版
-            if (alarm.has_linkage) {
-                linkageAlarmPopup.showAlarm(alarm, alarm.linkage_actions)
+            // 高级别告警或联动告警使用增强版弹窗
+            var level = alarm.severity || alarm.level || 0
+            if (level >= 3 || alarm.has_linkage) {
+                linkageAlarmPopup.showAlarm(alarm, alarm.linkage_actions || [])
+            } else {
+                alarmPopup.showAlarm(alarm)
             }
         }
     }

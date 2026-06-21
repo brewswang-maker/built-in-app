@@ -1,6 +1,7 @@
 // ========================================================================
 // VideoGridView.qml — 视频预览宫格
-// 功能: 1/4/9/16宫格 | PTZ控制 | 系统状态栏 | RTSP视频流
+// 功能: 1/4/9/16宫格 | PTZ控制 | 系统状态栏 | 多协议降级链 | PiP | 倍速 | 抓帧
+// 规范: P0 #3 视频降级链 rtsp -> flv -> ws-flv -> hls -> webrtc
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -12,6 +13,17 @@ Item {
 
     property int activeSlot: -1
     property bool isFullscreen: false
+
+    // 当前应用的降级链(QML 会话级,支持用户切换)
+    property var protocolChain: ["rtsp", "flv", "ws-flv", "hls", "webrtc"]
+    // PiP 状态(由 mediaController 统一管理,这里只读镜像)
+    property bool pipActive: mediaController.pipChannelId !== ""
+    property string pipChannelId: mediaController.pipChannelId
+    // 抓帧 / 协议 提示信息
+    property string toastText: ""
+    property string toastKind: "info"   // info | ok | warn | error
+    // 当前选中的播放倍速(同步到 mediaController)
+    property real playbackRate: mediaController.playbackRate
 
     // Helper: get device ID for a slot index
     function slotDeviceId(slot) {
@@ -25,11 +37,13 @@ Item {
         return ""
     }
 
-    // Request stream for a slot
+    // Request stream for a slot (with the current degradation chain)
     function requestStream(slot) {
         var devId = slotDeviceId(slot)
-        if (devId.length > 0)
-            mediaController.startStream(devId, slotChannelId(slot))
+        if (devId.length > 0) {
+            mediaController.startStreamWithProtocols(
+                devId, slotChannelId(slot), protocolChain)
+        }
     }
 
     // Request streams for all visible slots
@@ -37,6 +51,13 @@ Item {
         var count = mediaController.currentLayout
         for (var i = 0; i < count; i++)
             requestStream(i)
+    }
+
+    // 通用 Toast 提示
+    function showToast(text, kind) {
+        toastText = text
+        toastKind = kind || "info"
+        toastTimer.restart()
     }
 
     // ═══ 工具栏 ═══
@@ -76,8 +97,92 @@ Item {
 
             Rectangle { width: 1; height: 24; color: "#252830" }
 
+            // 协议降级链选择器 (规范 P0 #3)
+            ComboBox {
+                id: protocolSelector
+                width: 140; height: 30
+                font.pixelSize: 11
+                model: [
+                    { text: "RTSP (优先)", value: ["rtsp", "flv", "ws-flv", "hls", "webrtc"] },
+                    { text: "FLV (Web)", value: ["flv", "ws-flv", "hls", "rtsp", "webrtc"] },
+                    { text: "WS-FLV (低延迟)", value: ["ws-flv", "flv", "rtsp", "hls", "webrtc"] },
+                    { text: "HLS (兼容)", value: ["hls", "ws-flv", "flv", "rtsp", "webrtc"] },
+                    { text: "WebRTC (P2P)", value: ["webrtc", "ws-flv", "flv", "hls", "rtsp"] }
+                ]
+                textRole: "text"
+                valueRole: "value"
+                currentIndex: 0
+                background: Rectangle { color: "#252830"; radius: 6 }
+                contentItem: Text {
+                    text: protocolSelector.model[protocolSelector.currentIndex].text
+                    color: "#E8E8E8"; font.pixelSize: 11
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 8
+                }
+                onActivated: {
+                    videoGridPage.protocolChain = currentValue
+                    videoGridPage.showToast("降级链已切换: " + currentText, "info")
+                    videoGridPage.requestAllStreams()
+                }
+                ToolTip.visible: hovered
+                ToolTip.text: "P0#3 视频降级链 (rtsp/flv/ws-flv/hls/webrtc)"
+            }
+
+            // 倍速选择 (1x/2x/4x)
+            ComboBox {
+                id: rateSelector
+                width: 70; height: 30
+                font.pixelSize: 11
+                model: mediaController.supportedPlaybackRates()
+                currentIndex: 0
+                background: Rectangle { color: "#252830"; radius: 6 }
+                contentItem: Text {
+                    text: parseFloat(mediaController.supportedPlaybackRates()[rateSelector.currentIndex]) + "x"
+                    color: "#E8E8E8"; font.pixelSize: 11
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                }
+                onActivated: {
+                    var r = mediaController.supportedPlaybackRates()[currentIndex]
+                    mediaController.playbackRate = r
+                    videoGridPage.playbackRate = r
+                    videoGridPage.showToast("倍速切换: " + r + "x", "info")
+                }
+            }
+
+            // PiP 开关
+            Button {
+                id: pipButton
+                text: pipActive ? "🪟 退出画中画" : "🪟 画中画"
+                font.pixelSize: 11
+                enabled: activeSlot >= 0
+                onClicked: {
+                    if (pipActive) {
+                        mediaController.exitPip()
+                        videoGridPage.showToast("已退出画中画", "info")
+                    } else if (activeSlot >= 0) {
+                        mediaController.enterPip(videoGridPage.slotChannelId(activeSlot))
+                        videoGridPage.showToast("画中画: " + videoGridPage.slotDeviceId(activeSlot), "info")
+                    }
+                }
+                background: Rectangle {
+                    color: pipActive ? "#00D4AA" : "#252830"
+                    radius: 6; width: 90; height: 30
+                }
+                contentItem: Text {
+                    text: pipButton.text; font.pixelSize: 11
+                    color: pipActive ? "#0D0F12" : "#E8E8E8"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
             // 操作按钮
-            Button { text: "📷 截图"; font.pixelSize: 11; onClicked: mediaController.snapshot(activeSlot >= 0 ? activeSlot : 0)
+            Button {
+                text: "📷 抓帧"; font.pixelSize: 11
+                enabled: activeSlot >= 0
+                onClicked: mediaController.snapshotToFile(
+                    videoGridPage.slotChannelId(activeSlot))
                 background: Rectangle { color: "#252830"; radius: 6; width: 56; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
@@ -454,12 +559,113 @@ Item {
         function onLayoutChanged() {
             requestAllStreams()
         }
+        function onPipChanged() {
+            videoGridPage.pipChannelId = mediaController.pipChannelId
+        }
+        function onPlaybackRateChanged() {
+            videoGridPage.playbackRate = mediaController.playbackRate
+        }
+        function onSnapshotSaved(channelId, filePath) {
+            videoGridPage.showToast("抓帧已保存: " + filePath, "ok")
+        }
+        function onSnapshotFailed(channelId, code, message) {
+            videoGridPage.showToast("抓帧失败 [" + code + "]: " + message, "error")
+        }
+    }
+
+    // 降级链事件: protocolFailed / activeProtocolChanged
+    Connections {
+        target: mediaController.degradation
+        function onProtocolFailed(deviceId, failed, next) {
+            if (next && next.length > 0)
+                videoGridPage.showToast(
+                    "协议 " + failed + " 失败,已切换到 " + next, "warn")
+            else
+                videoGridPage.showToast(
+                    "协议 " + failed + " 失败,降级链已耗尽", "error")
+        }
+        function onActiveProtocolChanged(deviceId, protocol) {
+            // 静默更新,仅在状态栏或 tile 角标体现
+        }
     }
 
     Connections {
         target: deviceController
         function onDevicesUpdated() {
             requestAllStreams()
+        }
+    }
+
+    // ═══ PiP 浮层 (右下角) ═══
+    Rectangle {
+        id: pipOverlay
+        visible: pipActive
+        width: Math.min(parent.width * 0.28, 360)
+        height: Math.min(parent.height * 0.32, 240)
+        anchors.right: parent.right; anchors.bottom: statusBar.top
+        anchors.margins: 12
+        color: "#0D0F12"; radius: 8
+        border.color: "#00D4AA"; border.width: 1
+        z: 50
+
+        VideoTile {
+            id: pipTile
+            anchors.fill: parent; anchors.margins: 2
+            deviceId: videoGridPage.pipChannelId
+            channelName: "PiP"
+            status: "online"
+            algorithmTag: ""
+            streamUrl: mediaController.resolveStreamUrl(videoGridPage.pipChannelId)
+            active: true
+        }
+        MouseArea {
+            anchors.top: parent.top; anchors.right: parent.right
+            width: 28; height: 28
+            onClicked: mediaController.exitPip()
+            Rectangle { anchors.fill: parent; color: "transparent" }
+            Text {
+                anchors.centerIn: parent
+                text: "✕"; color: "#E8E8E8"; font.pixelSize: 14
+            }
+        }
+    }
+
+    // ═══ Toast 提示 (右下角底部) ═══
+    Rectangle {
+        id: toastPopup
+        visible: toastText.length > 0
+        anchors.bottom: pipActive ? pipOverlay.top : statusBar.top
+        anchors.right: parent.right; anchors.margins: 12
+        height: 36; width: toastText.length * 12 + 32
+        radius: 6; z: 60
+        color: {
+            switch (toastKind) {
+                case "ok":    return "#1A3A2A"
+                case "warn":  return "#3A2A1A"
+                case "error": return "#3A1A2A"
+                default:      return "#141720"
+            }
+        }
+        border.color: {
+            switch (toastKind) {
+                case "ok":    return "#00D4AA"
+                case "warn":  return "#FFB800"
+                case "error": return "#FF3D71"
+                default:      return "#3B82F6"
+            }
+        }
+        border.width: 1
+
+        Text {
+            anchors.fill: parent; anchors.margins: 8
+            text: toastText; color: "#E8E8E8"; font.pixelSize: 11
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+        }
+        Timer {
+            id: toastTimer
+            interval: 3500
+            onTriggered: videoGridPage.toastText = ""
         }
     }
 

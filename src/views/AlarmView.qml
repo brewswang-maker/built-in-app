@@ -84,10 +84,18 @@ Item {
             }
 
             Button {
-                text: "📥 导出CSV"; font.pixelSize: 11
-                background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 30 }
+                text: "📥 导出"; font.pixelSize: 11
+                background: Rectangle { color: "#252830"; radius: 6; width: 64; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: alarmController.exportAlarms("csv")
+                onClicked: {
+                    exportDialog.format = alarmController.supportedExportFormats()[0]
+                    exportDialog.filter = {
+                        "level":  alarmPage.levelFilter,
+                        "type":   alarmPage.typeFilter,
+                        "status": alarmPage.statusFilter
+                    }
+                    exportDialog.open()
+                }
             }
             Button {
                 text: "🔄 刷新"; font.pixelSize: 11
@@ -351,4 +359,199 @@ Item {
     }
 
     Component.onCompleted: alarmController.refreshAlarms(200)
+
+    // ═══ 导出对话框 (规范 P1 #11) ═══
+    Dialog {
+        id: exportDialog
+        modal: true
+        anchors.centerIn: parent
+        width: 460
+        title: "📥 告警导出"
+        closePolicy: Popup.CloseOnEscape
+
+        property string format: "csv"
+        property var filter: ({})
+
+        background: Rectangle { color: "#141720"; radius: 8; border.color: "#3B82F6"; border.width: 1 }
+        header: Rectangle {
+            color: "transparent"
+            implicitHeight: 36
+            RowLayout {
+                anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
+                Text { text: "📥 告警导出"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                Item { Layout.fillWidth: true }
+                Text { text: alarmController.defaultExportDir(); color: "#4A4D58"; font.pixelSize: 9; elide: Text.ElideMiddle; Layout.maximumWidth: 280 }
+            }
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 12
+
+            // 格式选择
+            RowLayout {
+                Layout.fillWidth: true
+                Text { text: "格式"; color: "#8B8FA3"; font.pixelSize: 11; Layout.preferredWidth: 60 }
+                ComboBox {
+                    id: fmtCombo
+                    Layout.fillWidth: true
+                    model: alarmController.supportedExportFormats()
+                    currentIndex: model.indexOf(exportDialog.format)
+                    onActivated: exportDialog.format = model[currentIndex]
+                    background: Rectangle { color: "#252830"; radius: 4 }
+                    contentItem: Text {
+                        text: fmtCombo.model[fmtCombo.currentIndex] + " — " +
+                              (fmtCombo.model[fmtCombo.currentIndex] === "csv"  ? "逗号分隔" :
+                               fmtCombo.model[fmtCombo.currentIndex] === "xlsx" ? "Excel 工作表" :
+                               fmtCombo.model[fmtCombo.currentIndex] === "json" ? "结构化 JSON" :
+                                                                            "可打印报告")
+                        color: "#E8E8E8"; font.pixelSize: 11
+                        verticalAlignment: Text.AlignVCenter; leftPadding: 6
+                    }
+                }
+            }
+
+            // 应用范围说明
+            Text {
+                Layout.fillWidth: true
+                text: "仅导出当前筛选: " +
+                      (alarmPage.levelFilter || "全部级别") + " · " +
+                      (alarmPage.typeFilter || "全部类型") + " · " +
+                      (alarmPage.statusFilter || "全部状态")
+                color: "#8B8FA3"; font.pixelSize: 10; wrapMode: Text.WordWrap
+            }
+
+            // 进度条
+            ColumnLayout {
+                Layout.fillWidth: true; spacing: 4
+                visible: alarmController.exporting
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Text {
+                        text: alarmController.exportProgress >= 0 && alarmController.exportProgress <= 1
+                              ? Math.round(alarmController.exportProgress * 100) + "%"
+                              : "下载中 (chunked)"
+                        color: "#00D4AA"; font.pixelSize: 11; font.bold: true
+                    }
+                    Item { Layout.fillWidth: true }
+                    Text {
+                        text: "格式: " + alarmController.exportFormat
+                        color: "#8B8FA3"; font.pixelSize: 10
+                    }
+                }
+                ProgressBar {
+                    Layout.fillWidth: true; height: 8
+                    from: 0; to: 1
+                    value: alarmController.exportProgress > 0 ? alarmController.exportProgress : 0
+                    background: Rectangle { color: "#252830"; radius: 4 }
+                    contentItem: Item {
+                        Rectangle {
+                            width: parent.parent.visualPosition * parent.width
+                            height: parent.height; radius: 4
+                            color: alarmController.exportProgress >= 1 ? "#00D4AA" : "#3B82F6"
+                            Behavior on width { NumberAnimation { duration: 120 } }
+                        }
+                    }
+                }
+                Text {
+                    text: alarmController.exportFilePath
+                    color: "#4A4D58"; font.pixelSize: 9; elide: Text.ElideMiddle
+                    Layout.fillWidth: true
+                }
+            }
+
+            // 完成后“打开文件”提示
+            Rectangle {
+                Layout.fillWidth: true; visible: exportDoneVisible
+                height: 56; radius: 6; color: "#1A3A2A"; border.color: "#00D4AA"; border.width: 1
+                property bool exportDoneVisible:
+                    !alarmController.exporting &&
+                    alarmController.exportProgress >= 1 &&
+                    alarmController.exportFilePath.length > 0
+                RowLayout {
+                    anchors.fill: parent; anchors.margins: 10; spacing: 8
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 2
+                        Text { text: "✓ 导出完成"; color: "#00D4AA"; font.pixelSize: 12; font.bold: true }
+                        Text {
+                            text: alarmController.exportFilePath
+                            color: "#8B8FA3"; font.pixelSize: 9; elide: Text.ElideMiddle
+                            Layout.fillWidth: true
+                        }
+                    }
+                    Button {
+                        text: "📂 打开文件所在目录"
+                        font.pixelSize: 10
+                        onClicked: Qt.openUrlExternally("file://" + alarmController.exportFilePath)
+                        background: Rectangle { color: "#252830"; radius: 4; width: 130; height: 28 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    }
+                }
+            }
+
+            // 错误提示
+            Rectangle {
+                Layout.fillWidth: true; visible: exportError.length > 0
+                height: 40; radius: 6; color: "#3A1A2A"; border.color: "#FF3D71"; border.width: 1
+                property string exportError: ""
+                Text {
+                    anchors.fill: parent; anchors.margins: 10
+                    text: parent.exportError
+                    color: "#FF3D71"; font.pixelSize: 11; verticalAlignment: Text.AlignVCenter
+                    wrapMode: Text.WordWrap
+                }
+            }
+        }
+
+        footer: RowLayout {
+            Item { Layout.fillWidth: true }
+            Button {
+                text: "取消"; font.pixelSize: 11
+                visible: alarmController.exporting
+                onClicked: { alarmController.cancelExport(); exportDialog.close() }
+                background: Rectangle { color: "#252830"; radius: 4; width: 64; height: 28 }
+                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+            }
+            Button {
+                text: "关闭"; font.pixelSize: 11
+                visible: !alarmController.exporting
+                onClicked: exportDialog.close()
+                background: Rectangle { color: "#252830"; radius: 4; width: 64; height: 28 }
+                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+            }
+            Button {
+                text: alarmController.exporting ? "导出中..." : "开始导出"
+                font.pixelSize: 11; font.bold: true
+                enabled: !alarmController.exporting
+                onClicked: alarmController.exportAlarms(exportDialog.format, exportDialog.filter)
+                background: Rectangle {
+                    color: alarmController.exporting ? "#1A1D23" : "#00D4AA"; radius: 4
+                    width: 84; height: 28
+                }
+                contentItem: Text {
+                    text: parent.text; font.pixelSize: 11
+                    color: alarmController.exporting ? "#8B8FA3" : "#0D0F12"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+    }
+
+    // 导出事件连接
+    Connections {
+        target: alarmController
+        function onExportStarted(format, filePath) {
+            exportDialog.exportError = ""
+        }
+        function onExportSucceeded(format, filePath, bytes) {
+            console.log("Export OK:", format, filePath, "bytes=" + bytes)
+        }
+        function onExportFailed(format, code, message) {
+            exportDialog.exportError = "导出失败 [" + code + "]: " + message
+        }
+        function onExportCancelled() {
+            exportDialog.exportError = "导出已取消"
+        }
+    }
 }

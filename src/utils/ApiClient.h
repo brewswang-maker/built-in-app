@@ -12,6 +12,7 @@ class ApiClient : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString baseUrl READ baseUrl WRITE setBaseUrl NOTIFY baseUrlChanged)
     Q_PROPERTY(int timeoutMs READ timeoutMs WRITE setTimeoutMs NOTIFY timeoutChanged)
+    Q_PROPERTY(QString authToken READ authToken WRITE setAuthToken NOTIFY authTokenChanged)
 
 public:
     explicit ApiClient(QObject* parent = nullptr);
@@ -20,6 +21,8 @@ public:
     void setBaseUrl(const QString& url);
     int timeoutMs() const { return m_timeoutMs; }
     void setTimeoutMs(int ms);
+    QString authToken() const { return m_authToken; }
+    void setAuthToken(const QString& token);
 
     // REST API methods
     void get(const QString& path,
@@ -43,10 +46,23 @@ public:
     // SSE stream
     QNetworkReply* startSse(const QString& path, const QJsonObject& body);
 
+    // Streaming download to a local file. Used for the alarm export
+    // pipeline (server streams xlsx/csv/json/pdf via chunked
+    // Transfer-Encoding). Returns a token (== reply pointer value) that
+    // can be passed to cancelDownload() to abort. Progress is reported
+    // in bytes via @p onProgress(received, total).
+    qint64 downloadToFile(const QString& path,
+                          const QString& filePath,
+                          std::function<void(qint64, qint64)> onProgress,
+                          std::function<void(qint64, const QString&)> onSuccess,
+                          std::function<void(qint64, int, const QString&)> onError);
+    void cancelDownload(qint64 token);
+
 signals:
     void baseUrlChanged();
     void timeoutChanged();
     void errorOccurred(int code, const QString& message);
+    void authTokenChanged();
 
 private slots:
     void onReplyFinished();

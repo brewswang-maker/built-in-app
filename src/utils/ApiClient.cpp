@@ -3,6 +3,9 @@
 #include <QTimer>
 #include <QNetworkReply>
 #include <QSettings>
+#include <QFile>
+#include <QFileInfo>
+#include <QDir>
 
 ApiClient::ApiClient(QObject* parent)
     : QObject(parent)
@@ -23,6 +26,16 @@ void ApiClient::setTimeoutMs(int ms) {
     if (m_timeoutMs != ms) {
         m_timeoutMs = ms;
         emit timeoutChanged();
+    }
+}
+
+void ApiClient::setAuthToken(const QString& token) {
+    if (m_authToken != token) {
+        m_authToken = token;
+        QSettings settings("ShieldBox", "ShieldBox AI");
+        settings.setValue("auth/token", token);
+        settings.sync();
+        emit authTokenChanged();
     }
 }
 
@@ -89,6 +102,94 @@ QNetworkReply* ApiClient::startSse(const QString& path, const QJsonObject& body)
     QNetworkReply* reply = m_manager->post(buildRequest(path),
                                             QJsonDocument(body).toJson());
     return reply;
+}
+
+qint64 ApiClient::downloadToFile(
+    const QString& path,
+    const QString& filePath,
+    std::function<void(qint64, qint64)> onProgress,
+    std::function<void(qint64, const QString&)> onSuccess,
+    std::function<void(qint64, int, const QString&)> onError) {
+    QNetworkRequest req = buildRequest(path);
+    // Don't force a Content-Type on GET; let the server pick.
+    req.setHeader(QNetworkRequest::ContentTypeHeader, QString());
+    QNetworkReply* reply = m_manager->get(req);
+    const qint64 token = reinterpret_cast<qint64>(reply);
+
+    // Make sure the parent directory exists.
+    QFileInfo fi(filePath);
+    QDir().mkpath(fi.absolutePath());
+
+    // Open the destination file in WriteOnly|Truncate so partial files
+    // are overwritten on retry. If open fails we abort the request
+    // immediately so the caller gets a synchronous-style error.
+    QFile* file = new QFile(filePath);
+    if (!file->open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        const QString err = QStringLiteral("open %1 failed: %2")
+                                .arg(filePath, file->errorString());
+        delete file;
+        reply->abort();
+        reply->deleteLater();
+        if (onError) onError(token, -1, err);
+        return token;
+    }
+
+    qint64 bytesReceived = 0;
+
+    // readyRead - drain any data as it arrives so we can stream to
+    // disk without buffering the whole file in RAM.
+    QObject::connect(reply, &QNetworkReply::readyRead, reply, [reply, file, &bytesReceived, onProgress, token]() {
+        if (!file->isOpen()) return;
+        const QByteArray chunk = reply->readAll();
+        if (chunk.isEmpty()) return;
+        file->write(chunk);
+        bytesReceived += chunk.size();
+        // Total comes from Content-Length; chunked responses leave it
+        // at -1 and the UI falls back to indeterminate progress.
+        const qint64 total = reply->header(QNetworkRequest::ContentLengthHeader).toLongLong();
+        if (onProgress) onProgress(bytesReceived, total);
+        Q_UNUSED(token);
+    });
+
+    // downloadProgress - finer-grained, fires on Qt's network thread.
+    QObject::connect(reply, &QNetworkReply::downloadProgress, reply,
+                     [onProgress](qint64 rec, qint64 tot) {
+        if (onProgress) onProgress(rec, tot);
+    });
+
+    // finished - close the file, call success or error callback.
+    QObject::connect(reply, &QNetworkReply::finished, reply,
+                     [this, reply, file, onSuccess, onError, token, filePath]() {
+        // Drain any remaining buffered bytes before reporting success.
+        if (file->isOpen()) {
+            const QByteArray tail = reply->readAll();
+            if (!tail.isEmpty()) file->write(tail);
+            file->close();
+        }
+        if (reply->error() != QNetworkReply::NoError) {
+            const int httpCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            const QString err = reply->errorString();
+            file->remove();
+            delete file;
+            reply->deleteLater();
+            if (onError) onError(token, httpCode, err);
+            emit errorOccurred(httpCode, err);
+            return;
+        }
+        delete file;
+        reply->deleteLater();
+        if (onSuccess) onSuccess(token, filePath);
+    });
+
+    return token;
+}
+
+void ApiClient::cancelDownload(qint64 token) {
+    if (token == 0) return;
+    QNetworkReply* reply = reinterpret_cast<QNetworkReply*>(token);
+    if (!reply) return;
+    if (reply->isRunning()) reply->abort();
+    reply->deleteLater();
 }
 
 void ApiClient::setupReply(QNetworkReply* reply,

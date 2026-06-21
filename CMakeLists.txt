@@ -42,6 +42,7 @@ file(GLOB_RECURSE CONTROLLER_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers
 file(GLOB_RECURSE MODEL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/models/*.cpp)
 file(GLOB_RECURSE UTIL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp)
 file(GLOB_RECURSE BRIDGE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/bridge/*.cpp)
+file(GLOB_RECURSE STREAMING_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming/*.cpp)
 
 qt_add_executable(${PROJECT_NAME}
     app/main.cpp
@@ -50,6 +51,7 @@ qt_add_executable(${PROJECT_NAME}
     ${MODEL_SOURCES}
     ${UTIL_SOURCES}
     ${BRIDGE_SOURCES}
+    ${STREAMING_SOURCES}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

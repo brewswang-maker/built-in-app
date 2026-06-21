@@ -15,6 +15,9 @@ Item {
     property string searchText: ""
     property string statusFilter: ""
     property string typeFilter: ""
+    property string protocolFilter: ""
+    property string sortBy: "createdAt"
+    property string sortOrder: "desc"
     property var selectedDevices: []
     property var currentDetail: null
     property bool showAddDialog: false
@@ -24,6 +27,18 @@ Item {
     property string discoverProtocol: "onvif"
     property var discoveredDevices: []
     property bool discovering: false
+
+    // ── 枚举展示表(规范 16323eda) ──
+    readonly property var statusLabels: ({
+        online: "在线", offline: "离线", error: "故障", maintenance: "维护中",
+        warning: "告警", unknown: "未知"
+    })
+    readonly property var typeLabels: ({
+        camera: "摄像头", sensor: "传感器", gateway: "网关",
+        nvr: "NVR", dvr: "DVR", actuator: "执行器"
+    })
+    readonly property var sortFieldsList: ["name", "ip", "status", "lastSeenAt", "createdAt"]
+    readonly property var sortFieldLabels: ["名称", "IP", "状态", "最近在线", "创建时间"]
 
     // ── 添加设备表单 ──
     property string addName: ""
@@ -36,8 +51,10 @@ Item {
     property int totalDevices: 0
     property int onlineCount: 0
     property int offlineCount: 0
-    property int alarmingCount: 0
+    property int errorCount: 0
     property int maintenanceCount: 0
+    property int warningCount: 0
+    property int unknownCount: 0
     property int totalChannels: 0
     property int gb28181Count: 0
     property int onvifCount: 0
@@ -84,19 +101,24 @@ Item {
         }
     }
 
-    // ── 统计计算 ──
+    // ── 统计计算 (6 状态) ──
     function recalcStats() {
         var devices = deviceController.devices
         totalDevices = devices.length
-        onlineCount = 0; offlineCount = 0; alarmingCount = 0; maintenanceCount = 0
+        onlineCount = 0; offlineCount = 0; errorCount = 0
+        maintenanceCount = 0; warningCount = 0; unknownCount = 0
         totalChannels = 0; gb28181Count = 0; onvifCount = 0; rtspCount = 0; ehomeCount = 0
         for (var i = 0; i < devices.length; i++) {
             var d = devices[i]
-            var status = d.status || "offline"
+            var status = d.status || "unknown"
             if (status === "online") onlineCount++
             else if (status === "offline") offlineCount++
-            else if (status === "alarming") alarmingCount++
+            else if (status === "error") errorCount++
             else if (status === "maintenance") maintenanceCount++
+            else if (status === "warning") warningCount++
+            else if (status === "unknown") unknownCount++
+            // 兼容旧状态名: alarming -> warning
+            else if (status === "alarming") warningCount++
             totalChannels += (d.channelCount || 0)
             var proto = (d.protocol || "").toUpperCase()
             if (proto.indexOf("GB28181") >= 0) gb28181Count++
@@ -116,15 +138,16 @@ Item {
 
     function statusColor(s) {
         if (s === "online") return "#00D4AA"
-        if (s === "alarming") return "#FF3D71"
+        if (s === "offline") return "#4A4D58"
+        if (s === "error") return "#FF3D71"
         if (s === "maintenance") return "#FFB800"
-        return "#4A4D58"
+        if (s === "warning") return "#FF6B35"
+        if (s === "alarming") return "#FF6B35"   // 旧名兼容
+        return "#6B7280"   // unknown
     }
     function statusLabel(s) {
-        if (s === "online") return "在线"
-        if (s === "offline") return "离线"
-        if (s === "alarming") return "告警中"
-        if (s === "maintenance") return "维护中"
+        if (devicesView.statusLabels[s]) return devicesView.statusLabels[s]
+        if (s === "alarming") return "告警"      // 旧名兼容
         return s || "未知"
     }
     function syncLabel(s) {
@@ -179,27 +202,66 @@ Item {
             TextField {
                 id: searchField
                 width: 200; height: 32
-                placeholderText: "搜索设备名称/IP/位置..."
+                placeholderText: "搜索名称/IP/序列号/标签..."
                 placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
                 onTextChanged: devicesView.searchText = text
                 background: Rectangle { color: "#252830"; radius: 6 }
             }
+            // 6 状态选择 (规范 16323eda)
             ComboBox {
                 id: statusCombo; width: 110; height: 32
-                model: ["全部状态", "在线", "离线", "告警中", "维护中"]
+                model: ["全部状态", "在线", "离线", "故障", "维护中", "告警", "未知"]
                 onCurrentIndexChanged: {
-                    var v = ["", "online", "offline", "alarming", "maintenance"]
+                    var v = ["", "online", "offline", "error", "maintenance", "warning", "unknown"]
                     devicesView.statusFilter = v[currentIndex] || ""
                 }
                 background: Rectangle { color: "#252830"; radius: 6 }
                 contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
             }
+            // 6 类型选择 (规范 16323eda)
             ComboBox {
                 id: typeCombo; width: 110; height: 32
-                model: ["全部类型", "IPCamera", "NVR", "DVR", "EdgeBox"]
-                onCurrentIndexChanged: devicesView.typeFilter = currentIndex === 0 ? "" : model[currentIndex]
+                model: ["全部类型", "摄像头", "传感器", "网关", "NVR", "DVR", "执行器"]
+                onCurrentIndexChanged: {
+                    var v = ["", "camera", "sensor", "gateway", "nvr", "dvr", "actuator"]
+                    devicesView.typeFilter = v[currentIndex] || ""
+                }
                 background: Rectangle { color: "#252830"; radius: 6 }
                 contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
+            }
+            // 排序字段 (规范 16323eda: 5 字段)
+            ComboBox {
+                id: sortByCombo; width: 110; height: 32
+                model: devicesView.sortFieldLabels
+                onCurrentIndexChanged: {
+                    if (currentIndex >= 0 && currentIndex < devicesView.sortFieldsList.length) {
+                        devicesView.sortBy = devicesView.sortFieldsList[currentIndex]
+                    }
+                }
+                background: Rectangle { color: "#252830"; radius: 6 }
+                contentItem: Text { text: "排序: " + parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
+            }
+            // 排序方向 (asc / desc)
+            ComboBox {
+                id: sortOrderCombo; width: 90; height: 32
+                model: ["降序", "升序"]
+                onCurrentIndexChanged: devicesView.sortOrder = currentIndex === 0 ? "desc" : "asc"
+                background: Rectangle { color: "#252830"; radius: 6 }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
+            }
+            // 应用筛选按钮
+            Button {
+                text: "应用筛选"; font.pixelSize: 12
+                onClicked: deviceController.refreshDevices(
+                    1, 50,
+                    devicesView.searchText,
+                    devicesView.statusFilter,
+                    devicesView.typeFilter,
+                    devicesView.protocolFilter,
+                    devicesView.sortBy,
+                    devicesView.sortOrder)
+                background: Rectangle { color: "#3B82F6"; radius: 6; width: 80; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
             Item { Layout.fillWidth: true }
             Text { text: "共 " + deviceController.deviceCount + " 台"; font.pixelSize: 11; color: "#8B8FA3" }
@@ -254,16 +316,14 @@ Item {
                 model: [
                     { icon: "📹", label: "总设备", value: totalDevices, color: "#3B82F6" },
                     { icon: "🟢", label: "在线", value: onlineCount, color: "#00D4AA" },
-                    { icon: "🔴", label: "离线", value: offlineCount, color: "#FF3D71" },
-                    { icon: "🚨", label: "告警", value: alarmingCount, color: "#FF6B35" },
+                    { icon: "🔴", label: "离线", value: offlineCount, color: "#4A4D58" },
+                    { icon: "⛔", label: "故障", value: errorCount, color: "#FF3D71" },
                     { icon: "🟡", label: "维护", value: maintenanceCount, color: "#FFB800" },
-                    { icon: "📡", label: "GB28181", value: gb28181Count, color: "#8B5CF6" },
-                    { icon: "🔌", label: "ONVIF", value: onvifCount, color: "#06B6D4" },
-                    { icon: "🔗", label: "RTSP", value: rtspCount, color: "#EC4899" },
-                    { icon: "🏠", label: "EHOME", value: ehomeCount, color: "#F59E0B" }
+                    { icon: "🚨", label: "告警", value: warningCount, color: "#FF6B35" },
+                    { icon: "❓", label: "未知", value: unknownCount, color: "#6B7280" }
                 ]
                 delegate: Rectangle {
-                    width: (statsRow.width - 48) / 9; height: 64; color: "#141720"; radius: 8
+                    width: (statsRow.width - 48) / 7; height: 64; color: "#141720"; radius: 8
                     Column {
                         anchors.fill: parent; anchors.margins: 6; spacing: 2
                         Row { spacing: 3
@@ -392,9 +452,17 @@ Item {
                             Text { text: deviceData.name || deviceData.deviceName || "-"; font.pixelSize: 12; color: "#E8E8E8"; width: 130; elide: Text.ElideMiddle; anchors.verticalCenter: parent.verticalCenter }
                             // IP
                             Text { text: deviceData.ip || deviceData.ipAddress || "-"; font.pixelSize: 11; color: "#3B82F6"; width: 110; anchors.verticalCenter: parent.verticalCenter }
-                            // 类型
+                            // 类型 (6 类型映射 规范 16323eda)
                             Rectangle { width: 60; height: 18; radius: 3; color: "#1A2A3A"; anchors.verticalCenter: parent.verticalCenter
-                                Text { text: deviceData.deviceType || "-"; font.pixelSize: 9; color: "#8B5CF6"; anchors.centerIn: parent } }
+                                property string _rawType: (deviceData.type || deviceData.deviceType || "").toString().toLowerCase()
+                                property string _normalized: {
+                                    if (_rawType === "ipcamera" || _rawType === "ip_cam" || _rawType === "camera") return "camera"
+                                    if (_rawType === "edgebox" || _rawType === "edge_box") return "gateway"
+                                    if (_rawType === "actuator" || _rawType === "io") return "actuator"
+                                    if (devicesView.typeLabels[_rawType]) return _rawType
+                                    return _rawType
+                                }
+                                Text { text: devicesView.typeLabels[parent._normalized] || parent._rawType || "-"; font.pixelSize: 9; color: "#8B5CF6"; anchors.centerIn: parent } }
                             // 协议
                             Text { text: deviceData.protocol || "-"; font.pixelSize: 11; color: "#06B6D4"; width: 65; anchors.verticalCenter: parent.verticalCenter }
                             // 通道数

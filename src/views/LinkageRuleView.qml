@@ -14,9 +14,23 @@ Item {
     property var editingRule: null
     property var rules: []
 
+    // ── 校验错误状态 (规范 82ec775a: 显示给用户的可读错误) ──
+    property string validationError: ""
+    property string validationField: ""
+    property int    validationCode: -1
+
+    // ── 条件树状态 (P1 #5) ──
+    property var conditionTree: ({node_type: "AND", children: []})
+    property bool useTreeMode: false   // true=使用条件树, false=使用下方扁平字段
+
+    // ── 互斥/抑制状态 (P1 #6) ──
+    property string mutexGroup: ""
+    property string suppressAfterRule: ""
+    property bool   suppressLowerPriority: false
+
     // ── 数据收集函数 ──
     function collectRuleData() {
-        // 时间条件
+        // 时间条件 (P1 #8: 顶层 time_cond)
         var days = []
         for (var d = 0; d < dayRepeater.count; d++) {
             var dayItem = dayRepeater.itemAt(d)
@@ -37,31 +51,6 @@ Item {
             if (chItem && chItem.checked) channels.push(channelRepeater.model[c])
         }
 
-        // 条件对象
-        var conditions = {
-            time: {
-                enabled: true,
-                from: timeFromField.text,
-                to: timeToField.text,
-                days: days
-            },
-            space: {
-                location: locationCombo.currentIndex > 0 ? locationCombo.currentText : "",
-                roi: roiCombo.currentIndex > 0 ? roiCombo.currentText : "",
-                group: groupCombo.currentIndex > 0 ? groupCombo.currentText : ""
-            },
-            eventTypes: eventTypes,
-            minSeverity: severityCombo.currentIndex + 1,
-            minConfidence: Math.round(confidenceSlider.value * 100) / 100,
-            sources: { channels: channels },
-            merge: {
-                enabled: mergeEnabledCheck.checked,
-                window: mergeWindowSpin.value,
-                maxCount: mergeMaxSpin.value,
-                dimension: mergeDimensionCombo.currentText
-            }
-        }
-
         // 动作列表 — 遍历 5 个 Tab 的 Column
         var actions = []
         var columns = [clientActionColumn, webActionColumn, appActionColumn, mpActionColumn, sysActionColumn]
@@ -75,63 +64,151 @@ Item {
             }
         }
 
-        return {
+        // time_cond (P1 #8 顶层)
+        var timeCond = {
+            time_start: timeFromField.text,
+            time_end: timeToField.text,
+            weekdays: days
+        }
+        // source_cond (顶层)
+        var sourceCond = {
+            channel_ids: channels,
+            event_types: eventTypes,
+            min_severity: severityCombo.currentIndex + 1,
+            min_confidence: Math.round(confidenceSlider.value * 100) / 100
+        }
+        // spatial_cond (顶层)
+        var spatialCond = {
+            region_id: roiCombo.currentIndex > 0 ? roiCombo.currentText : "",
+            location_id: locationCombo.currentIndex > 0 ? locationCombo.currentText : "",
+            device_group_id: groupCombo.currentIndex > 0 ? groupCombo.currentText : ""
+        }
+        // merge_cond (P1 #7 顶层)
+        var mergeCond = {
+            enabled: mergeEnabledCheck.checked,
+            window_ms: mergeWindowSpin.value,
+            max_merge_count: mergeMaxSpin.value,
+            merge_by: mergeDimensionCombo.currentText
+        }
+
+        var rule = {
             name: ruleNameField.text,
             priority: prioritySpinBox.value,
-            cooldown: cooldownSpinBox.value,
+            cooldown_ms: cooldownSpinBox.value,
             enabled: true,
-            conditions: conditions,
+            time_cond: timeCond,
+            spatial_cond: spatialCond,
+            source_cond: sourceCond,
+            merge_cond: mergeCond,
+            mutex_group: mutexGroup,
+            suppress_after_rule: suppressAfterRule,
+            suppress_lower_priority: suppressLowerPriority,
             actions: actions
         }
+
+        // condition_tree (P1 #5 顶层, 启用树模式时才提交)
+        if (useTreeMode && conditionTree) {
+            rule.condition_tree = conditionTree
+        }
+
+        // 保留原 conditions 供后端兼容 (镜像)
+        rule.conditions = {
+            time: timeCond,
+            space: spatialCond,
+            eventTypes: eventTypes,
+            minSeverity: sourceCond.min_severity,
+            minConfidence: sourceCond.min_confidence,
+            sources: { channels: channels },
+            merge: { enabled: mergeCond.enabled, window: mergeCond.window_ms,
+                     maxCount: mergeCond.max_merge_count, dimension: mergeCond.merge_by }
+        }
+
+        return rule
     }
 
     // ── 回填编辑表单 ──
     function populateForm(ruleData) {
         ruleNameField.text = ruleData.name || ""
         prioritySpinBox.value = ruleData.priority || 50
-        cooldownSpinBox.value = ruleData.cooldown || 5000
+        cooldownSpinBox.value = ruleData.cooldown_ms || ruleData.cooldown || 5000
 
-        var cond = ruleData.conditions || {}
-
-        // 时间
-        var tc = cond.time || {}
-        timeFromField.text = tc.from || "08:00"
-        timeToField.text = tc.to || "20:00"
-        var dayArr = tc.days || []
+        // time_cond (P1 #8 顶层)
+        var tc = ruleData.time_cond || {}
+        if (!tc.time_start && ruleData.conditions && ruleData.conditions.time) {
+            tc = ruleData.conditions.time
+        }
+        timeFromField.text = tc.time_start || tc.from || "08:00"
+        timeToField.text   = tc.time_end   || tc.to   || "20:00"
+        var dayArr = tc.weekdays || tc.days || []
         for (var d = 0; d < dayRepeater.count; d++) {
             var di = dayRepeater.itemAt(d)
             if (di) di.checked = dayArr.indexOf(d + 1) >= 0
         }
 
-        // 空间
-        var sc = cond.space || {}
-        locationCombo.currentIndex = Math.max(0, locationCombo.model.indexOf(sc.location || ""))
-        roiCombo.currentIndex = Math.max(0, roiCombo.model.indexOf(sc.roi || ""))
-        groupCombo.currentIndex = Math.max(0, groupCombo.model.indexOf(sc.group || ""))
+        // spatial_cond
+        var sc = ruleData.spatial_cond || {}
+        if (!sc.location_id && ruleData.conditions && ruleData.conditions.space) sc = ruleData.conditions.space
+        locationCombo.currentIndex = Math.max(0, locationCombo.model.indexOf(sc.location_id || sc.location || ""))
+        roiCombo.currentIndex      = Math.max(0, roiCombo.model.indexOf(sc.region_id || sc.roi || ""))
+        groupCombo.currentIndex    = Math.max(0, groupCombo.model.indexOf(sc.device_group_id || sc.group || ""))
 
-        // 事件类型
-        var evtArr = cond.eventTypes || []
+        // eventTypes
+        var evtArr = []
+        if (ruleData.source_cond && ruleData.source_cond.event_types) {
+            evtArr = ruleData.source_cond.event_types
+        } else if (ruleData.conditions && ruleData.conditions.eventTypes) {
+            evtArr = ruleData.conditions.eventTypes
+        }
         for (var e = 0; e < eventTypeRepeater.count; e++) {
             var ei = eventTypeRepeater.itemAt(e)
             if (ei) ei.checked = evtArr.indexOf(eventTypeRepeater.model[e]) >= 0
         }
 
-        severityCombo.currentIndex = Math.max(0, (cond.minSeverity || 1) - 1)
-        confidenceSlider.value = cond.minConfidence || 0.5
+        var minSev = 1, minConf = 0.5
+        if (ruleData.source_cond) {
+            minSev  = ruleData.source_cond.min_severity || 1
+            minConf = ruleData.source_cond.min_confidence || 0.5
+        } else if (ruleData.conditions) {
+            minSev  = ruleData.conditions.minSeverity || 1
+            minConf = ruleData.conditions.minConfidence || 0.5
+        }
+        severityCombo.currentIndex = Math.max(0, minSev - 1)
+        confidenceSlider.value = minConf
 
-        // 通道
-        var chArr = (cond.sources || {}).channels || []
+        // channels
+        var chArr = []
+        if (ruleData.source_cond && ruleData.source_cond.channel_ids) {
+            chArr = ruleData.source_cond.channel_ids
+        } else if (ruleData.conditions && ruleData.conditions.sources) {
+            chArr = ruleData.conditions.sources.channels || []
+        }
         for (var c = 0; c < channelRepeater.count; c++) {
             var ci = channelRepeater.itemAt(c)
             if (ci) ci.checked = chArr.indexOf(channelRepeater.model[c]) >= 0
         }
 
-        // 合并
-        var mc = cond.merge || {}
+        // merge_cond (P1 #7 顶层)
+        var mc = ruleData.merge_cond || {}
+        if (!mc.enabled && ruleData.conditions && ruleData.conditions.merge) mc = ruleData.conditions.merge
         mergeEnabledCheck.checked = mc.enabled || false
-        mergeWindowSpin.value = mc.window || 10000
-        mergeMaxSpin.value = mc.maxCount || 10
-        mergeDimensionCombo.currentIndex = Math.max(0, mergeDimensionCombo.model.indexOf(mc.dimension || ""))
+        mergeWindowSpin.value    = mc.window_ms || mc.window || 10000
+        mergeMaxSpin.value       = mc.max_merge_count || mc.maxCount || 10
+        mergeDimensionCombo.currentIndex = Math.max(0, mergeDimensionCombo.model.indexOf(mc.merge_by || mc.dimension || ""))
+
+        // 互斥与抑制 (P1 #6)
+        mutexGroup            = ruleData.mutex_group || ""
+        suppressAfterRule     = ruleData.suppress_after_rule || ""
+        suppressLowerPriority = ruleData.suppress_lower_priority === true
+
+        // 条件树 (P1 #5)
+        if (ruleData.condition_tree) {
+            conditionTree = ruleData.condition_tree
+            useTreeMode = true
+        } else {
+            useTreeMode = false
+            // 默认根据现有表单生成一个 AND 根 + 所有 LEAF 的快照
+            conditionTree = buildTreeFromFlat()
+        }
 
         // 动作勾选
         var acts = ruleData.actions || []
@@ -147,6 +224,48 @@ Item {
                 }
             }
         }
+    }
+
+    // ── 从扁平表单生成一个 AND 根 + 所有 LEAF 的快照 (供条件树初始值) ──
+    function buildTreeFromFlat() {
+        var children = []
+        // 事件类型 LEAF
+        for (var e = 0; e < eventTypeRepeater.count; e++) {
+            var ei = eventTypeRepeater.itemAt(e)
+            if (ei && ei.checked) {
+                children.push({
+                    node_type: "LEAF",
+                    leaf_type: "SOURCE",
+                    field: "event_type",
+                    op: "==",
+                    value: eventTypeRepeater.model[e]
+                })
+            }
+        }
+        // 通道 LEAF
+        for (var c = 0; c < channelRepeater.count; c++) {
+            var ci = channelRepeater.itemAt(c)
+            if (ci && ci.checked) {
+                children.push({
+                    node_type: "LEAF",
+                    leaf_type: "SOURCE",
+                    field: "channel_id",
+                    op: "==",
+                    value: channelRepeater.model[c]
+                })
+            }
+        }
+        // 严重度 LEAF
+        if (severityCombo.currentIndex > 0) {
+            children.push({
+                node_type: "LEAF",
+                leaf_type: "SOURCE",
+                field: "min_severity",
+                op: ">=",
+                value: severityCombo.currentIndex + 1
+            })
+        }
+        return { node_type: "AND", children: children }
     }
 
     // ── 重置表单 ──
@@ -177,6 +296,19 @@ Item {
         mergeWindowSpin.value = 10000
         mergeMaxSpin.value = 10
         mergeDimensionCombo.currentIndex = 0
+        // 互斥与抑制 (P1 #6)
+        mutexGroup = ""
+        suppressAfterRule = ""
+        suppressLowerPriority = false
+        mutexGroupField.text = ""
+        suppressAfterCombo.currentIndex = 0
+        suppressLowerSwitch.checked = false
+        // 条件树 (P1 #5)
+        useTreeMode = false
+        conditionTree = { node_type: "AND", children: [] }
+        treeRootEditor.refresh(conditionTree)
+        treeModeSwitch.checked = false
+
         var columns = [clientActionColumn, webActionColumn, appActionColumn, mpActionColumn, sysActionColumn]
         for (var t = 0; t < columns.length; t++) {
             var col = columns[t]
@@ -203,6 +335,13 @@ Item {
         }
         function onRuleDeleted() {
             linkageController.refreshRules()
+        }
+        function onValidationFailed(code, field, message) {
+            // 完整对接严格校验 (P0 #4 + P1 #5/#6/#7/#8)
+            validationError = message || "校验失败"
+            validationField = field || ""
+            validationCode = code || -1
+            errorBanner.visible = true
         }
     }
 
@@ -331,8 +470,59 @@ Item {
                     id: ruleNameField
                     width: parent.width; height: 32; placeholderText: "例: 周界入侵联动"
                     placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 6 }
+                    background: Rectangle {
+                        color: validationField === "name" ? "#3B1A1A" : "#252830"
+                        radius: 6
+                        border.color: validationField === "name" ? "#FF3D71" : "transparent"
+                        border.width: validationField === "name" ? 1 : 0
+                    }
                     text: editingRule ? editingRule.name || "" : ""
+                }
+
+                // 规则 ID (规范 72d2dd9b: 必须字段, 提交时强制非空 + 唯一)
+                Text { text: "规则 ID (唯一标识,提交后不可改)"; font.pixelSize: 11; color: "#8B8FA3" }
+                TextField {
+                    id: ruleIdField
+                    width: parent.width; height: 32
+                    placeholderText: "例: rule_perimeter_001"
+                    placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
+                    background: Rectangle {
+                        color: validationField === "id" || validationField === "rule_id" ? "#3B1A1A" : "#252830"
+                        radius: 6
+                        border.color: (validationField === "id" || validationField === "rule_id") ? "#FF3D71" : "transparent"
+                        border.width: (validationField === "id" || validationField === "rule_id") ? 1 : 0
+                    }
+                    text: editingRule ? (editingRule.id || editingRule.rule_id || "") : ""
+                    readOnly: editingRule !== null   // 编辑模式: ID 锁定防误改
+                }
+
+                // 校验错误条 (规范 82ec775a: 可读错误信息)
+                Rectangle {
+                    id: errorBanner
+                    width: parent.width; height: 36; radius: 6
+                    color: "#3B1A1A"
+                    border.color: "#FF3D71"; border.width: 1
+                    visible: false
+                    Row {
+                        anchors.fill: parent; anchors.margins: 8; spacing: 8
+                        Text { text: "⚠️"; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            Text { text: validationError; font.pixelSize: 11; color: "#FF8080"; font.bold: true }
+                            Text {
+                                text: "字段: " + validationField + "  |  错误码: " + validationCode
+                                font.pixelSize: 9; color: "#8B4A4A"
+                                visible: validationField !== ""
+                            }
+                        }
+                        Item { width: 8 }
+                        Button { text: "✕"; font.pixelSize: 12
+                            background: Rectangle { color: "transparent" }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF8080" }
+                            onClicked: { errorBanner.visible = false; validationError = ""; validationField = ""; validationCode = -1 }
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
                 }
 
                 Row { spacing: 12
@@ -435,7 +625,7 @@ Item {
 
                 // 5. 自动合并
                 GroupBox {
-                    width: parent.width; title: "🔄 自动合并"
+                    width: parent.width; title: "🔄 自动合并 (merge_cond)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -443,18 +633,120 @@ Item {
                         CheckBox { id: mergeEnabledCheck; text: "启用自动合并"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8" } }
                         Row { spacing: 12
                             Column { spacing: 2
-                                Text { text: "合并窗口(ms)"; font.pixelSize: 10; color: "#8B8FA3" }
-                                SpinBox { id: mergeWindowSpin; from: 1000; to: 60000; value: 10000; stepSize: 1000; width: 120 }
+                                Text { text: "合并窗口(ms, 0-60000)"; font.pixelSize: 10; color: "#8B8FA3" }
+                                SpinBox { id: mergeWindowSpin; from: 0; to: 60000; value: 10000; stepSize: 1000; width: 120 }
                             }
                             Column { spacing: 2
-                                Text { text: "最大合并数"; font.pixelSize: 10; color: "#8B8FA3" }
-                                SpinBox { id: mergeMaxSpin; from: 2; to: 100; value: 10; width: 80 }
+                                Text { text: "最大合并数 (0-1000)"; font.pixelSize: 10; color: "#8B8FA3" }
+                                SpinBox { id: mergeMaxSpin; from: 0; to: 1000; value: 10; width: 80 }
                             }
                             Column { spacing: 2
-                                Text { text: "合并维度"; font.pixelSize: 10; color: "#8B8FA3" }
-                                ComboBox { id: mergeDimensionCombo; width: 80; height: 28; model: ["通道","类型","位置"]; background: Rectangle { color: "#252830"; radius: 4 }
+                                Text { text: "合并维度 (channel/type/location)"; font.pixelSize: 10; color: "#8B8FA3" }
+                                ComboBox { id: mergeDimensionCombo; width: 110; height: 28; model: ["","channel","type","location"]; background: Rectangle { color: "#252830"; radius: 4 }
                                     contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
                             }
+                        }
+                    }
+                }
+
+                // 6. 互斥与抑制 (P1 #6)
+                GroupBox {
+                    width: parent.width; title: "🔗 互斥与抑制 (mutex_group / suppress_after / suppress_lower)"
+                    label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
+                    background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
+
+                    Column { spacing: 6; width: parent.width
+                        Text { text: "互斥组 (同组规则同时只触发优先级最高一条, 留空 = 不参与互斥)"; font.pixelSize: 10; color: "#8B8FA3" }
+                        TextField {
+                            id: mutexGroupField
+                            width: parent.width; height: 28
+                            placeholderText: "例: perimeter_alarm_group"
+                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 11
+                            background: Rectangle { color: "#252830"; radius: 4 }
+                            text: linkagePage.mutexGroup
+                            onTextChanged: linkagePage.mutexGroup = text
+                        }
+                        Text { text: "抑制链 (本规则被指定规则触发后抑制)"; font.pixelSize: 10; color: "#8B8FA3" }
+                        ComboBox {
+                            id: suppressAfterCombo
+                            width: parent.width; height: 28
+                            model: [""].concat(linkageController.allRuleIds(editingRule ? (editingRule.id || editingRule.rule_id || "") : ""))
+                            background: Rectangle { color: "#252830"; radius: 4 }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                            currentIndex: Math.max(0, model.indexOf(linkagePage.suppressAfterRule))
+                            onActivated: linkagePage.suppressAfterRule = model[currentIndex]
+                        }
+                        Switch {
+                            id: suppressLowerSwitch
+                            text: "触发后抑制同组低优先级规则"
+                            checked: linkagePage.suppressLowerPriority
+                            onToggled: linkagePage.suppressLowerPriority = checked
+                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 32 }
+                        }
+                    }
+                }
+
+                // 7. 条件树 (P1 #5)
+                GroupBox {
+                    width: parent.width; title: "🌳 条件树 (AND / OR / LEAF, 深度≤3)"
+                    label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
+                    background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
+
+                    Column { spacing: 6; width: parent.width
+                        Row { spacing: 8
+                            Switch {
+                                id: treeModeSwitch
+                                text: "启用条件树 (开后以上面 LEAF 为快照, 后端会优先使用本树)"
+                                checked: linkagePage.useTreeMode
+                                onToggled: linkagePage.useTreeMode = checked
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#8B8FA3"; leftPadding: 32; wrapMode: Text.WordWrap; width: 380 }
+                            }
+                        }
+                        Rectangle {
+                            width: parent.width; height: linkagePage.useTreeMode ? 320 : 0
+                            visible: linkagePage.useTreeMode
+                            color: "#141720"; radius: 4; clip: true
+                            Behavior on height { NumberAnimation { duration: 200 } }
+                            ScrollView {
+                                anchors.fill: parent; clip: true
+                                Column { width: parent.width; spacing: 4; padding: 6
+                                    ConditionNodeEditor {
+                                        id: treeRootEditor
+                                        width: parent.width
+                                        node: linkagePage.conditionTree
+                                        depth: 0
+                                        onNodeChanged: linkagePage.conditionTree = node
+                                    }
+                                }
+                            }
+                        }
+                        Row { spacing: 6
+                            Button { text: "+ 添加 LEAF 子节点"; font.pixelSize: 10
+                                enabled: linkagePage.useTreeMode
+                                onClicked: {
+                                    if (!linkagePage.conditionTree.children) linkagePage.conditionTree.children = []
+                                    linkagePage.conditionTree.children.push({ node_type: "LEAF", leaf_type: "SOURCE", field: "event_type", op: "==", value: "" })
+                                    treeRootEditor.refresh(linkagePage.conditionTree)
+                                }
+                                background: Rectangle { color: enabled ? "#3B82F6" : "#252830"; radius: 4; width: 150; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 10
+                                enabled: linkagePage.useTreeMode
+                                onClicked: {
+                                    if (!linkagePage.conditionTree.children) linkagePage.conditionTree.children = []
+                                    linkagePage.conditionTree.children.push({ node_type: "OR", children: [{ node_type: "LEAF", leaf_type: "SOURCE", field: "event_type", op: "==", value: "" }] })
+                                    treeRootEditor.refresh(linkagePage.conditionTree)
+                                }
+                                background: Rectangle { color: enabled ? "#6C5CE7" : "#252830"; radius: 4; width: 150; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "从上面表单生成快照"; font.pixelSize: 10
+                                enabled: linkagePage.useTreeMode
+                                onClicked: {
+                                    linkagePage.conditionTree = linkagePage.buildTreeFromFlat()
+                                    treeRootEditor.refresh(linkagePage.conditionTree)
+                                }
+                                background: Rectangle { color: enabled ? "#FFB800" : "#252830"; radius: 4; width: 150; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: enabled ? "#0D0F12" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                         }
                     }
                 }
@@ -516,6 +808,7 @@ Item {
 
                             Text { text: "📹 录像与抓图"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
+                            ActionCheckRow { text: "视频录像 (持续N秒)"; icon: "🎞️"; actionType: "CLIENT_RECORD_VIDEO" }
                             ActionCheckRow { text: "指定监控点事件录像"; icon: "🎥"; actionType: "CLIENT_RECORD_EVENT" }
                             ActionCheckRow { text: "添加录像标记 (类型+描述)"; icon: "🔖"; actionType: "CLIENT_ADD_BOOKMARK" }
                             ActionCheckRow { text: "间隔N秒抓图M次"; icon: "📸"; actionType: "CLIENT_CAPTURE_IMAGE" }
@@ -542,10 +835,25 @@ Item {
                     // ─── Web端 ───
                     ScrollView { clip: true
                         Column { id: webActionColumn; width: 412; spacing: 2
+                            Text { text: "💬 基础通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "Web端弹窗通知"; icon: "💬"; actionType: "WEB_POPUP" }
                             ActionCheckRow { text: "发送邮件"; icon: "📧"; actionType: "WEB_EMAIL" }
                             ActionCheckRow { text: "HTTP回调 (WebHook)"; icon: "🔗"; actionType: "WEB_WEBHOOK" }
                             ActionCheckRow { text: "Dashboard嵌入告警"; icon: "📊"; actionType: "WEB_DASHBOARD_ALERT" }
+
+                            Text { text: "📹 视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端弹出实时视频"; icon: "📹"; actionType: "WEB_SHOW_LIVE" }
+                            ActionCheckRow { text: "Web端弹出录像回放"; icon: "📼"; actionType: "WEB_SHOW_PLAYBACK" }
+                            ActionCheckRow { text: "Web端弹出事件图片"; icon: "🖼️"; actionType: "WEB_SHOW_IMAGE" }
+                            ActionCheckRow { text: "Web端事件录像"; icon: "🎥"; actionType: "WEB_RECORD_EVENT" }
+
+                            Text { text: "🔊 音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端播放提示音"; icon: "🔔"; actionType: "WEB_PLAY_TONE" }
+                            ActionCheckRow { text: "Web端语音播报"; icon: "📢"; actionType: "WEB_TTS_BROADCAST" }
+
+                            Text { text: "📸 抓图与通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端抓图"; icon: "📸"; actionType: "WEB_CAPTURE_IMAGE" }
+                            ActionCheckRow { text: "Web端发送短信"; icon: "📱"; actionType: "WEB_SEND_SMS" }
                         }
                     }
 
@@ -572,12 +880,24 @@ Item {
                     // ─── 系统 ───
                     ScrollView { clip: true
                         Column { id: sysActionColumn; width: 412; spacing: 2
+                            Text { text: "🔌 工业协议"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "MQTT消息发布"; icon: "📡"; actionType: "SYS_MQTT_PUBLISH" }
                             ActionCheckRow { text: "Modbus写寄存器"; icon: "🔌"; actionType: "SYS_MODBUS_WRITE" }
                             ActionCheckRow { text: "ONVIF事件触发"; icon: "🔗"; actionType: "SYS_ONVIF_TRIGGER" }
                             ActionCheckRow { text: "继电器开关"; icon: "⚡"; actionType: "SYS_RELAY_SWITCH" }
+
+                            Text { text: "☁️ 上层转发"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "HTTP回调"; icon: "🌐"; actionType: "SYS_HTTP_CALLBACK" }
                             ActionCheckRow { text: "转发到云端"; icon: "☁️"; actionType: "SYS_CLOUD_FORWARD" }
+
+                            // 端到端闭环: 告警→触发推理→回写事件 (规范 a45b219c Hermes v6.0)
+                            Text { text: "🧠 推理/流闭环 (Hermes v6.0)"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "启动推理通道"; icon: "▶️"; actionType: "SYS_START_INFERENCE" }
+                            ActionCheckRow { text: "停止推理通道"; icon: "⏹️"; actionType: "SYS_STOP_INFERENCE" }
+                            ActionCheckRow { text: "启动拉流"; icon: "📥"; actionType: "SYS_START_STREAM" }
+                            ActionCheckRow { text: "停止拉流"; icon: "📤"; actionType: "SYS_STOP_STREAM" }
+                            ActionCheckRow { text: "部署 Pipeline"; icon: "🚀"; actionType: "SYS_DEPLOY_PIPELINE" }
+                            ActionCheckRow { text: "卸载 Pipeline"; icon: "🛬"; actionType: "SYS_UNDEPLOY_PIPELINE" }
                         }
                     }
                 }
@@ -595,14 +915,13 @@ Item {
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
                             var ruleData = collectRuleData()
-                            if (!ruleData.name) {
-                                notificationController.addNotification("错误", "规则名称不能为空", "error")
-                                return
-                            }
+                            ruleData.id = ruleIdField.text
+                            if (!ruleData.id) ruleData.rule_id = ruleIdField.text
+                            // 严格校验 (使用 createRuleChecked / updateRuleChecked, 走 addRuleChecked 路径)
                             if (editingRule) {
-                                linkageController.updateRule(editingRule.id, ruleData)
+                                linkageController.updateRuleChecked(editingRule.id || editingRule.rule_id, ruleData)
                             } else {
-                                linkageController.createRule(ruleData)
+                                linkageController.createRuleChecked(ruleData)
                             }
                         }
                     }
@@ -629,6 +948,156 @@ Item {
         Button { text: "⚙️"; font.pixelSize: 10; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
             background: Rectangle { color: "transparent" }
             contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#3B82F6" }
+        }
+    }
+
+    // ─── 条件树节点编辑器 (P1 #5, 递归) ───
+    // 数据模型: { node_type: "AND"|"OR"|"LEAF", leaf_type, field, op, value, children: [...] }
+    // 支持 AND/OR 嵌套 (深度 ≤ 3); LEAF 节点是叶子
+    component ConditionNodeEditor: Column {
+        id: cne
+        property var node: ({ node_type: "LEAF", field: "event_type", op: "==", value: "" })
+        property int depth: 0
+        signal nodeChanged()
+
+        function refresh(n) {
+            // 强制刷新: 重新赋值 node
+            node = JSON.parse(JSON.stringify(n))
+        }
+        function deleteChild(idx) {
+            if (Array.isArray(node.children)) {
+                node.children.splice(idx, 1)
+                nodeChanged()
+            }
+        }
+        function addChild() {
+            if (!Array.isArray(node.children)) node.children = []
+            node.children.push({ node_type: "LEAF", leaf_type: "SOURCE", field: "event_type", op: "==", value: "" })
+            nodeChanged()
+        }
+        function addOrChild() {
+            if (!Array.isArray(node.children)) node.children = []
+            node.children.push({ node_type: "OR", children: [{ node_type: "LEAF", leaf_type: "SOURCE", field: "event_type", op: "==", value: "" }] })
+            nodeChanged()
+        }
+        function promoteType(t) {
+            node.node_type = t
+            if ((t === "AND" || t === "OR") && !Array.isArray(node.children)) node.children = []
+            nodeChanged()
+        }
+
+        // 节点背景色按类型
+        Rectangle {
+            width: parent ? parent.width : 0
+            height: cneColumn.implicitHeight + 8
+            color: cne.node.node_type === "AND" ? "#1A2A3A" : cne.node.node_type === "OR" ? "#2A1A3A" : "#1A1D23"
+            radius: 4
+            border.color: cne.depth === 0 ? "#FFB800" : (cne.node.node_type === "AND" ? "#3B82F6" : cne.node.node_type === "OR" ? "#6C5CE7" : "#252830")
+            border.width: 1
+
+            Column {
+                id: cneColumn
+                anchors.fill: parent; anchors.margins: 4; spacing: 4
+
+                // 头: 类型选择 + 操作
+                Row { spacing: 6; width: parent.width
+                    Rectangle { width: 8; height: 18; radius: 2; color: cne.depth === 0 ? "#FFB800" : "#3B82F6" }
+                    ComboBox {
+                        id: typeCombo
+                        width: 80; height: 22
+                        model: cne.depth === 0 ? ["AND", "OR"] : ["AND", "OR", "LEAF"]
+                        currentIndex: Math.max(0, model.indexOf(cne.node.node_type || "LEAF"))
+                        onActivated: cne.promoteType(model[currentIndex])
+                        background: Rectangle { color: "#252830"; radius: 3 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
+                    }
+                    Text { text: cne.node.node_type === "LEAF" ? "叶子节点 (depth=" + cne.depth + ")" : "组合节点 (depth=" + cne.depth + ", children=" + (cne.node.children ? cne.node.children.length : 0) + ")"; font.pixelSize: 9; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                    Item { Layout.fillWidth: true }
+                }
+
+                // LEAF 节点: field/op/value 编辑器
+                Column {
+                    visible: cne.node.node_type === "LEAF"
+                    width: parent.width
+                    spacing: 4
+                    Row { spacing: 4
+                        Text { text: "字段:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
+                        ComboBox {
+                            id: fieldCombo; width: 130; height: 24
+                            model: ["event_type", "channel_id", "min_severity", "min_confidence", "region_id", "location_id", "device_group_id", "time"]
+                            currentIndex: Math.max(0, model.indexOf(cne.node.field || ""))
+                            onActivated: { cne.node.field = model[currentIndex]; cne.nodeChanged() }
+                            background: Rectangle { color: "#252830"; radius: 3 }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
+                        }
+                        Text { text: "运算:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
+                        ComboBox {
+                            id: opCombo; width: 70; height: 24
+                            model: ["==", "!=", ">=", "<=", "in", "between"]
+                            currentIndex: Math.max(0, model.indexOf(cne.node.op || "=="))
+                            onActivated: { cne.node.op = model[currentIndex]; cne.nodeChanged() }
+                            background: Rectangle { color: "#252830"; radius: 3 }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
+                        }
+                        Text { text: "值:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 24 }
+                        TextField {
+                            id: valueField; width: 130; height: 24
+                            text: cne.node.value !== undefined ? cne.node.value.toString() : ""
+                            color: "#E8E8E8"; font.pixelSize: 10
+                            background: Rectangle { color: "#252830"; radius: 3 }
+                            onTextChanged: {
+                                var v = text
+                                if (cne.node.field === "min_severity") v = parseInt(text) || 0
+                                else if (cne.node.field === "min_confidence") v = parseFloat(text) || 0
+                                cne.node.value = v
+                                cne.nodeChanged()
+                            }
+                        }
+                    }
+                }
+
+                // AND/OR 节点: children 递归编辑器
+                Column {
+                    visible: cne.node.node_type === "AND" || cne.node.node_type === "OR"
+                    width: parent.width
+                    spacing: 4
+                    Repeater {
+                        model: cne.node.children || []
+                        delegate: Item {
+                            width: parent.width
+                            height: childEditor.implicitHeight + 4
+                            property int childIndex: index
+                            ConditionNodeEditor {
+                                id: childEditor
+                                anchors.left: parent.left; anchors.right: deleteBtn.left; anchors.rightMargin: 4
+                                node: modelData
+                                depth: cne.depth + 1
+                                onNodeChanged: cne.nodeChanged()
+                            }
+                            Button {
+                                id: deleteBtn
+                                anchors.right: parent.right; anchors.top: parent.top
+                                width: 24; height: 24
+                                text: "🗑"; font.pixelSize: 10
+                                background: Rectangle { color: "transparent" }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71" }
+                                onClicked: cne.deleteChild(parent.parent.childIndex)
+                            }
+                        }
+                    }
+                    Row { spacing: 4
+                        Button { text: "+ LEAF"; font.pixelSize: 9
+                            onClicked: cne.addChild()
+                            background: Rectangle { color: "#3B82F6"; radius: 3; width: 60; height: 22 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 9
+                            enabled: cne.depth < 2
+                            onClicked: cne.addOrChild()
+                            background: Rectangle { color: enabled ? "#6C5CE7" : "#252830"; radius: 3; width: 90; height: 22 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 9; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    }
+                }
+            }
         }
     }
 }

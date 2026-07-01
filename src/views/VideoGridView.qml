@@ -16,7 +16,17 @@ Item {
     property bool isPreviewActive: false
 
     // 当前应用的降级链(QML 会话级,支持用户切换)
-    property var protocolChain: ["rtsp", "flv", "ws-flv", "hls", "webrtc"]
+    // [P1-B1 修复 2026-06-28] macOS Qt6 QtMultimedia 基于 AVFoundation, 不支持 RTSP/RTMP/FLV
+    //   (仅原生支持 HLS 和 HTTP 渐进式下载)。首项 rtsp 在 macOS 上总是失败,需绕过。
+    //   检测 Qt.platform.os === "osx" 时, 默认链改为 ["webrtc","ws-flv","hls","flv","rtsp"]
+    //   — webrtc/ws-flv 是 C++ 后端通过 WebRTCStreamProvider 提供的 fallback 路径,
+    //   在 macOS 上可正常播放 (对标海康 iVMS-8700 macOS 版同样默认走 WebRTC)。
+    //   Windows/Linux 上 QtMultimedia 支持更广泛,保持原默认 ["rtsp","flv",...].
+    readonly property var _defaultProtocolChain:
+        Qt.platform.os === "osx"
+            ? ["webrtc", "ws-flv", "hls", "flv", "rtsp"]   // macOS: WebRTC 优先
+            : ["rtsp", "flv", "ws-flv", "hls", "webrtc"];  // 其他: RTSP 优先
+    property var protocolChain: _defaultProtocolChain
     // PiP 状态(由 mediaController 统一管理,这里只读镜像)
     property bool pipActive: mediaController.pipChannelId !== ""
     property string pipChannelId: mediaController.pipChannelId
@@ -84,7 +94,8 @@ Item {
             Text {
                 text: activeSlot >= 0 && activeSlot < deviceController.devices.length ?
                     (deviceController.devices[activeSlot].name || deviceController.devices[activeSlot].device_name || "") : ""
-                font.pixelSize: 13; color: "#3B82F6"
+                // [P2-B3] 通道名 (14px 规范最小)
+                font.pixelSize: 14; color: "#3B82F6"
                 visible: text !== ""
             }
 
@@ -95,7 +106,8 @@ Item {
                 id: previewToggleBtn
                 width: 84; height: 32
                 text: videoGridPage.isPreviewActive ? "停止预览" : "开始预览"
-                font.pixelSize: 12
+                // [P2-B3] "开始/停止预览" Button 文字: 12 → 13 (合规)
+                                font.pixelSize: 13
                 highlighted: videoGridPage.isPreviewActive
                 onClicked: {
                     videoGridPage.isPreviewActive = !videoGridPage.isPreviewActive
@@ -114,7 +126,8 @@ Item {
                 }
                 contentItem: Text {
                     text: previewToggleBtn.text
-                    font.pixelSize: 12
+                    // [P2-B3] "开始/停止预览" Button 文字: 12 → 13 (合规)
+                                    font.pixelSize: 13
                     font.bold: true
                     color: "#0D0F12"
                     horizontalAlignment: Text.AlignHCenter
@@ -130,7 +143,8 @@ Item {
                         id: layoutBtn
                         width: 40; height: 32
                         text: modelData === 1 ? "单" : String(modelData)
-                        font.pixelSize: 12
+                        // [P2-B3] "开始/停止预览" Button 文字: 12 → 13 (合规)
+                                        font.pixelSize: 13
                         highlighted: mediaController.currentLayout === modelData
                         onClicked: {
                             mediaController.currentLayout = modelData
@@ -142,7 +156,8 @@ Item {
                         }
                         contentItem: Text {
                             text: layoutBtn.text
-                            font.pixelSize: 12
+                            // [P2-B3] "开始/停止预览" Button 文字: 12 → 13 (合规)
+                                            font.pixelSize: 13
                             font.bold: layoutBtn.highlighted
                             color: layoutBtn.highlighted ? "#0D0F12" : "#8B8FA3"
                             horizontalAlignment: Text.AlignHCenter

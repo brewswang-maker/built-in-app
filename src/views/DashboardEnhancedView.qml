@@ -181,7 +181,7 @@ Item {
                                     Text {
                                         text: modelData.level
                                         color: modelData.color
-                                        font.pixelSize: 12
+                                        font.pixelSize: 13
                                         Layout.preferredWidth: 36
                                     }
 
@@ -269,7 +269,7 @@ Item {
                                 }
                                 Text {
                                     text: alarmLabel(modelData.type || modelData.alarm_type)
-                                    color: "#E8E8E8"; font.pixelSize: 12
+                                    color: "#E8E8E8"; font.pixelSize: 13
                                     Layout.preferredWidth: 80
                                 }
                                 Rectangle {
@@ -418,7 +418,7 @@ Item {
                                         Layout.fillWidth: true; spacing: 2
                                         Text {
                                             text: modelData.name || modelData.id || modelData.model_id || "Model"
-                                            color: "#E8E8E8"; font.pixelSize: 12; font.bold: true
+                                            color: "#E8E8E8"; font.pixelSize: 13; font.bold: true
                                             elide: Text.ElideRight; Layout.fillWidth: true
                                         }
                                         Text {
@@ -457,7 +457,7 @@ Item {
                                 anchors.centerIn: parent
                                 visible: statisticsController.modelHealthList.length === 0
                                 text: "暂无论型数据, 点击「刷新」加载"
-                                color: "#4A4D58"; font.pixelSize: 12
+                                color: "#4A4D58"; font.pixelSize: 13
                             }
                         }
                     }
@@ -578,7 +578,7 @@ Item {
                                     }
                                     Text {
                                         text: alarmLabel(modelData.alarm_type)
-                                        color: "#E8E8E8"; font.pixelSize: 12
+                                        color: "#E8E8E8"; font.pixelSize: 13
                                         Layout.preferredWidth: 100
                                     }
                                     Text {

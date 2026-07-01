@@ -62,11 +62,40 @@ int AlarmExportFormat::parseToken(const QString& token) {
 AlarmController::AlarmController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api), m_settings("SmartGateWay", "AlarmSettings") {
     // 统一 WS 通道: 订阅 WsMessageRouter.alarmReceived 信号
-    m_router = WsMessageRouter::instance();
-    if (m_router) {
-        QObject::connect(m_router, &WsMessageRouter::alarmReceived,
-                         this, &AlarmController::onUnifiedAlarmReceived);
+    // [P2-B2 修复 2026-06-28] 双 WS 通道整合。
+    //   原设计同时存在 m_router (统一通道) 和 m_ws (独立连接), main.qml:86 会调
+    //   alarmController.connectWebSocket() 启动独立连接,导致同一条告警可能走两个 WS 收到两次。
+    //   修复: 连接统一通道后,默认不再启动独立 WS (默认 m_useUnifiedWs=true 且 connectWebSocket
+    //   被禁用);保留 connectWebSocket() 方法供开发者调试使用 (e.g., 怀疑统一通道问题时回归独立 WS)。
+    //   对标海康 iVMS-8700: 单一通道,所有事件统一分发。
+    if (m_useUnifiedWs) {
+        m_router = WsMessageRouter::instance();
+        if (m_router) {
+            QObject::connect(m_router, &WsMessageRouter::alarmReceived,
+                             this, &AlarmController::onUnifiedAlarmReceived);
+            LOG_INFO("AlarmController", "[P2-B2] Using unified WS channel (recommended), independent connectWebSocket() ignored");
+            return;
+        }
+        LOG_WARN("AlarmController",
+                 "[P2-B2] WsMessageRouter not available, fallback to independent WS");
     }
+
+#ifdef HAS_QT_WEBSOCKETS
+    if (m_ws) {
+        static_cast<QWebSocket*>(m_ws)->close();
+        delete static_cast<QWebSocket*>(m_ws);
+        m_ws = nullptr;
+    }
+    QString wsUrl = m_api->property("baseUrl").toString();
+    wsUrl.replace("http://", "ws://").replace("https://", "wss://");
+    wsUrl += "/api/v1/alarms/stream";
+    auto* ws = new QWebSocket();
+    m_ws = ws;
+    connect(ws, &QWebSocket::textMessageReceived,
+            this, &AlarmController::onWsTextMessage);
+    ws->open(QUrl(wsUrl));
+    LOG_INFO("AlarmController", "[P2-B2] Independent WS channel started (debug mode)");
+#endif
 }
 
 void AlarmController::setUseUnifiedWs(bool v) {

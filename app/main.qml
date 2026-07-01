@@ -24,6 +24,18 @@ ApplicationWindow {
     readonly property color c_warning: "#FFB800"
     readonly property color c_info: "#3B82F6"
 
+    // ═══ 全局字体常量 (P2-B3 2026-06-28: QtQuick.Controls 2 尺寸规范) ═══
+    //   fontSizeTitle: 18 (大标题/Logo)
+    //   fontSizeSection: 14 (菜单项/列表项, 规范最小)
+    //   fontSizeBody: 14 (正文/普通文本)
+    //   fontSizeLabel: 13 (分组标题/次要标签, 紧凑但合规)
+    //   fontSizeCaption: 12 (时间戳/水印/极小提示, 非关键信息可保留)
+    readonly property int fontSizeTitle: 18
+    readonly property int fontSizeSection: 14
+    readonly property int fontSizeBody: 14
+    readonly property int fontSizeLabel: 13
+    readonly property int fontSizeCaption: 12
+
     // ═══ 侧边栏折叠状态 ═══
     property bool sidebarCollapsed: false
     property string searchKeyword: ""
@@ -251,7 +263,7 @@ ApplicationWindow {
                     placeholderText: "搜索功能..."
                     placeholderTextColor: c_text_disabled
                     color: c_text_primary
-                    font.pixelSize: 13
+                    font.pixelSize: root.fontSizeBody  // [P2-B3] 13 → 14
                     background: Rectangle { color: "transparent" }
                     onTextChanged: searchKeyword = text.toLowerCase().trim()
                 }
@@ -297,11 +309,11 @@ ApplicationWindow {
                             width: parent.width
                             height: sidebarCollapsed ? 6 : 24
 
-                            // 展开态: 分组标题文字
+                            // 展开态: 分组标题文字 [P2-B3] 11 → 13 (合规, 保持紧凑)
                             Text {
                                 visible: !sidebarCollapsed
                                 text: modelData.title
-                                font.pixelSize: 11
+                                font.pixelSize: root.fontSizeLabel
                                 font.bold: true
                                 color: c_text_disabled
                                 anchors.left: parent.left
@@ -376,10 +388,11 @@ ApplicationWindow {
                                         }
                                     }
 
+                                    // [P2-B3] 菜单项: 13 → 14 (规范最小)
                                     Text {
                                         visible: !sidebarCollapsed
                                         text: modelData.label
-                                        font.pixelSize: 13
+                                        font.pixelSize: root.fontSizeSection
                                         font.bold: menuItem.isActive
                                         color: menuItem.isActive ? c_accent : c_text_secondary
                                         anchors.verticalCenter: parent.verticalCenter
@@ -441,10 +454,11 @@ ApplicationWindow {
                     }
                 }
 
+                // [P2-B3] "收起菜单" 提示: 12 → 13 (合规)
                 Text {
                     visible: !sidebarCollapsed
                     text: "收起菜单"
-                    font.pixelSize: 12
+                    font.pixelSize: root.fontSizeLabel
                     color: c_text_secondary
                     anchors.verticalCenter: parent.verticalCenter
                 }

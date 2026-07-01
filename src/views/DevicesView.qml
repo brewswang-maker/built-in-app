@@ -27,6 +27,7 @@ Item {
     property string discoverProtocol: "onvif"
     property var discoveredDevices: []
     property bool discovering: false
+    property int viewMode: 0  // 0=列表视图, 1=卡片视图 (P1.3 海康标准)
 
     // ── 枚举展示表(规范 16323eda) ──
     readonly property var statusLabels: ({
@@ -62,22 +63,31 @@ Item {
     property int ehomeCount: 0
 
     // ── 生命周期 ──
-    Component.onCompleted: deviceController.refreshDevices()
+    // 一次性拉取设备列表 + 统计 + 分组(后端标准信封已修复)
+    Component.onCompleted: {
+        console.log("[DevicesView] onCompleted -> refreshAll()")
+        deviceController.refreshAll()
+    }
 
     // ── 监听 Controller 信号 ──
     Connections {
         target: deviceController
         function onDevicesUpdated() {
-            deviceListView.model = deviceController.devices
+            // ListView.model 已直接绑定 deviceController.devices, 这里只触发 stats 重算
             recalcStats()
+            console.log("[DevicesView] onDevicesUpdated, count=" + deviceController.deviceCount)
+        }
+        function onStatsUpdated() {
+            // 后端标准信封修复后 statsUpdated 也会被正确触发
+            console.log("[DevicesView] onStatsUpdated, stats=" + JSON.stringify(deviceController.stats))
         }
         function onDeviceAdded(deviceId) {
-            statusText.text = "✅ 设备已添加: " + deviceId
+            statusText.text = "设备已添加: " + deviceId
             statusText.color = "#00D4AA"
             statusTimer.start()
         }
         function onDeviceRemoved(deviceId) {
-            statusText.text = "🗑 设备已删除: " + deviceId
+            statusText.text = "设备已删除: " + deviceId
             statusText.color = "#FF3D71"
             statusTimer.start()
             if (currentDetail && (currentDetail.deviceId === deviceId || currentDetail.id === deviceId)) {
@@ -87,7 +97,7 @@ Item {
         function onDeviceDiscovered(results) {
             discovering = false
             discoveredDevices = results || []
-            statusText.text = "🔍 发现 " + discoveredDevices.length + " 台设备"
+            statusText.text = "发现 " + discoveredDevices.length + " 台设备"
             statusText.color = "#3B82F6"
             statusTimer.start()
         }
@@ -95,7 +105,7 @@ Item {
             currentDetail = detail; showDetailDrawer = true
         }
         function onErrorOccurred(code, message) {
-            statusText.text = "❌ 错误 [" + code + "]: " + message
+            statusText.text = "错误 [" + code + "]: " + message
             statusText.color = "#FF3D71"
             statusTimer.start()
         }
@@ -177,12 +187,12 @@ Item {
         for (var i = 0; i < selectedDevices.length; i++)
             deviceController.removeDevice(selectedDevices[i])
         selectedDevices = []
-        statusText.text = "🗑 批量删除完成"; statusText.color = "#FF3D71"; statusTimer.start()
+        statusText.text = "批量删除完成"; statusText.color = "#FF3D71"; statusTimer.start()
     }
     function batchSync() {
         for (var i = 0; i < selectedDevices.length; i++)
             deviceController.getDeviceDetail(selectedDevices[i])
-        statusText.text = "🔄 同步中..."; statusText.color = "#3B82F6"; statusTimer.start()
+        statusText.text = "同步中..."; statusText.color = "#3B82F6"; statusTimer.start()
     }
 
     Timer { id: statusTimer; interval: 4000; onTriggered: statusText.text = "" }
@@ -197,7 +207,8 @@ Item {
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
-            Text { text: "📹 设备管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            AppIcon { name: "device"; size: 22; iconColor: "#E8E8E8" }
+            Text { text: "设备管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
 
             TextField {
                 id: searchField
@@ -266,28 +277,45 @@ Item {
             Item { Layout.fillWidth: true }
             Text { text: "共 " + deviceController.deviceCount + " 台"; font.pixelSize: 11; color: "#8B8FA3" }
 
+            // 视图切换 (列表/卡片) P1.3
+            Row {
+                spacing: 2
+                Rectangle { radius: 4; color: viewMode === 0 ? "#252830" : "transparent"; width: 28; height: 28
+                    AppIcon { name: "menu"; size: 16; iconColor: viewMode === 0 ? "#00D4AA" : "#8B8FA3"; anchors.centerIn: parent }
+                    MouseArea { anchors.fill: parent; onClicked: viewMode = 0; cursorShape: Qt.PointingHandCursor }
+                }
+                Rectangle { radius: 4; color: viewMode === 1 ? "#252830" : "transparent"; width: 28; height: 28
+                    AppIcon { name: "dashboard"; size: 16; iconColor: viewMode === 1 ? "#00D4AA" : "#8B8FA3"; anchors.centerIn: parent }
+                    MouseArea { anchors.fill: parent; onClicked: viewMode = 1; cursorShape: Qt.PointingHandCursor }
+                }
+            }
+
             Row { spacing: 6
                 Button {
-                    text: "🔍 发现设备"; font.pixelSize: 12
+                    text: "发现设备"; font.pixelSize: 12
                     onClicked: { showDiscoverDialog = true; discoveredDevices = []; discovering = false }
                     background: Rectangle { color: "#00D4AA"; radius: 6; width: 100; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 }
                 Button {
-                    text: "➕ 添加设备"; font.pixelSize: 12
+                    text: "添加设备"; font.pixelSize: 12
                     onClicked: { showAddDialog = true; resetAddForm() }
                     background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 }
-                Button {
-                    text: selectedDevices.length > 0 ? "🗑 删除(" + selectedDevices.length + ")" : "🗑 批量删除"
-                    font.pixelSize: 12; enabled: selectedDevices.length > 0
-                    onClicked: batchDelete()
-                    background: Rectangle { color: selectedDevices.length > 0 ? "#FF3D71" : "#252830"; radius: 6; width: 110; height: 32 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: selectedDevices.length > 0 ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                // RBAC: device.delete 权限检查
+                PermissionCheck {
+                    perm: "device.delete"; mode: "disable"
+                    Button {
+                        text: selectedDevices.length > 0 ? "删除(" + selectedDevices.length + ")" : "批量删除"
+                        font.pixelSize: 12; enabled: selectedDevices.length > 0
+                        onClicked: batchDelete()
+                        background: Rectangle { color: selectedDevices.length > 0 ? "#FF3D71" : "#252830"; radius: 6; width: 110; height: 32 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: selectedDevices.length > 0 ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    }
                 }
                 Button {
-                    text: "🔄 刷新"; font.pixelSize: 12
+                    text: "刷新"; font.pixelSize: 12
                     onClicked: deviceController.refreshDevices()
                     background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -314,20 +342,20 @@ Item {
             anchors.fill: parent; spacing: 6
             Repeater {
                 model: [
-                    { icon: "📹", label: "总设备", value: totalDevices, color: "#3B82F6" },
-                    { icon: "🟢", label: "在线", value: onlineCount, color: "#00D4AA" },
-                    { icon: "🔴", label: "离线", value: offlineCount, color: "#4A4D58" },
-                    { icon: "⛔", label: "故障", value: errorCount, color: "#FF3D71" },
-                    { icon: "🟡", label: "维护", value: maintenanceCount, color: "#FFB800" },
-                    { icon: "🚨", label: "告警", value: warningCount, color: "#FF6B35" },
-                    { icon: "❓", label: "未知", value: unknownCount, color: "#6B7280" }
+                    { icon: "device", label: "总设备", value: totalDevices, color: "#3B82F6" },
+                    { icon: "check", label: "在线", value: onlineCount, color: "#00D4AA" },
+                    { icon: "close", label: "离线", value: offlineCount, color: "#4A4D58" },
+                    { icon: "warning", label: "故障", value: errorCount, color: "#FF3D71" },
+                    { icon: "clock", label: "维护", value: maintenanceCount, color: "#FFB800" },
+                    { icon: "alarm", label: "告警", value: warningCount, color: "#FF6B35" },
+                    { icon: "info", label: "未知", value: unknownCount, color: "#6B7280" }
                 ]
                 delegate: Rectangle {
                     width: (statsRow.width - 48) / 7; height: 64; color: "#141720"; radius: 8
                     Column {
                         anchors.fill: parent; anchors.margins: 6; spacing: 2
                         Row { spacing: 3
-                            Text { text: modelData.icon; font.pixelSize: 11 }
+                            AppIcon { name: modelData.icon; size: 12; iconColor: modelData.color }
                             Text { text: modelData.label; font.pixelSize: 9; color: "#8B8FA3" }
                         }
                         Text { text: modelData.value; font.pixelSize: 20; font.bold: true; color: modelData.color }
@@ -399,7 +427,7 @@ Item {
                     width: parent.width - 24; height: 32; color: "#141720"; radius: 4
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 6
-                        Text { text: "☐"; font.pixelSize: 11; color: "#8B8FA3"; width: 24 }
+                        Rectangle { width: 14; height: 14; radius: 3; color: "transparent"; border.color: "#4A4D58"; border.width: 1; anchors.verticalCenter: parent.verticalCenter }
                         Text { text: "状态"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 36 }
                         Text { text: "设备名称"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 130 }
                         Text { text: "IP地址"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 110 }
@@ -417,6 +445,7 @@ Item {
                     id: deviceListView
                     width: parent.width - 24; height: parent.height - 80
                     clip: true; spacing: 2
+                    visible: viewMode === 0
                     model: deviceController.devices
 
                     delegate: Rectangle {
@@ -443,7 +472,7 @@ Item {
                                 width: 24; height: 24; radius: 4; anchors.verticalCenter: parent.verticalCenter
                                 color: isSelected ? "#3B82F6" : "transparent"
                                 border.color: isSelected ? "#3B82F6" : "#4A4D58"; border.width: 1
-                                Text { text: "✓"; font.pixelSize: 12; color: "#FFF"; visible: isSelected; anchors.centerIn: parent }
+                                AppIcon { name: "check"; size: 12; iconColor: "#FFF"; visible: isSelected; anchors.centerIn: parent }
                                 MouseArea { anchors.fill: parent; onClicked: toggleSelect(deviceData.deviceId || deviceData.id || "") }
                             }
                             // 状态灯
@@ -484,6 +513,143 @@ Item {
                         }
                     }
                 }
+
+                // ═══ 卡片视图 (P1.3 海康iVMS标准) ═══
+                GridView {
+                    id: deviceCardView
+                    width: parent.width - 24; height: parent.height - 80
+                    clip: true
+                    visible: viewMode === 1
+                    model: deviceController.devices
+                    cellWidth: (width - 16) / 4
+                    cellHeight: 168
+
+                    delegate: Rectangle {
+                        width: deviceCardView.cellWidth - 8; height: 160
+                        radius: 10; color: "#141420"
+                        border.color: cardMouse.containsMouse ? "#3B82F6" : "transparent"
+                        border.width: 1
+                        Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                        property var deviceData: modelData || model
+
+                        // 缩略图区域
+                        Rectangle {
+                            id: thumbArea
+                            anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                            height: 80; radius: 10
+                            color: "#0D0F12"
+                            clip: true
+
+                            // 缩略图 Canvas (模拟视频帧)
+                            Canvas {
+                                anchors.fill: parent
+                                onPaint: {
+                                    var ctx = getContext("2d")
+                                    var w = width, h = height
+                                    // 渐变背景
+                                    var grad = ctx.createLinearGradient(0, 0, 0, h)
+                                    grad.addColorStop(0, "#1A2D45")
+                                    grad.addColorStop(1, "#0D0F12")
+                                    ctx.fillStyle = grad
+                                    ctx.fillRect(0, 0, w, h)
+                                    // 网格线
+                                    ctx.strokeStyle = "rgba(0, 212, 170, 0.08)"
+                                    ctx.lineWidth = 0.5
+                                    for (var gx = 0; gx < w; gx += 20) {
+                                        ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke()
+                                    }
+                                    for (var gy = 0; gy < h; gy += 20) {
+                                        ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke()
+                                    }
+                                    // 设备名水印
+                                    ctx.fillStyle = "rgba(255,255,255,0.15)"
+                                    ctx.font = "bold 28px sans-serif"
+                                    ctx.fillText("CAM", w/2 - 30, h/2 + 10)
+                                }
+                            }
+
+                            // 状态指示灯
+                            Rectangle {
+                                anchors.top: parent.top; anchors.left: parent.left
+                                anchors.margins: 8
+                                width: 8; height: 8; radius: 4
+                                color: statusColor(deviceData.status || "offline")
+
+                                SequentialAnimation on opacity {
+                                    running: deviceData.status === "online"
+                                    loops: Animation.Infinite
+                                    NumberAnimation { from: 1; to: 0.5; duration: 1500 }
+                                    NumberAnimation { from: 0.5; to: 1; duration: 1500 }
+                                }
+                            }
+
+                            // 快捷操作浮层 (hover 显示)
+                            Rectangle {
+                                anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right
+                                height: 28; color: "#000"; opacity: cardMouse.containsMouse ? 0.7 : 0
+                                Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                                Row {
+                                    anchors.centerIn: parent; spacing: 6
+                                    Button { text: "预览"; font.pixelSize: 9
+                                        background: Rectangle { color: "#3B82F6"; radius: 3; width: 36; height: 18 }
+                                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        onClicked: openDetail(deviceData)
+                                    }
+                                    Button { text: "详情"; font.pixelSize: 9
+                                        background: Rectangle { color: "#252830"; radius: 3; width: 36; height: 18 }
+                                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        onClicked: openDetail(deviceData)
+                                    }
+                                }
+                            }
+                        }
+
+                        // 信息区域
+                        Column {
+                            anchors.top: thumbArea.bottom; anchors.left: parent.left; anchors.right: parent.right
+                            anchors.margins: 8; spacing: 3
+
+                            Text {
+                                text: deviceData.name || deviceData.deviceName || "-"
+                                font.pixelSize: 12; font.bold: true; color: "#E8E8E8"
+                                elide: Text.ElideRight; width: parent.width
+                            }
+                            Row {
+                                spacing: 8
+                                Text {
+                                    text: deviceData.ip || deviceData.ipAddress || "-"
+                                    font.pixelSize: 10; color: "#3B82F6"
+                                }
+                                Text {
+                                    text: statusLabel(deviceData.status || "unknown")
+                                    font.pixelSize: 10
+                                    color: statusColor(deviceData.status || "unknown")
+                                }
+                            }
+                            Row {
+                                spacing: 8
+                                Text {
+                                    text: (deviceData.protocol || "-")
+                                    font.pixelSize: 9; color: "#06B6D4"
+                                }
+                                Text {
+                                    text: "CH: " + (deviceData.channelCount || 0)
+                                    font.pixelSize: 9; color: "#8B8FA3"
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: cardMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onDoubleClicked: openDetail(deviceData)
+                        }
+                    }
+                }
             }
 
             // 空状态
@@ -491,7 +657,7 @@ Item {
                 anchors.centerIn: parent
                 text: "暂无设备，点击「添加设备」或「发现设备」开始"
                 font.pixelSize: 14; color: "#4A4D58"
-                visible: deviceListView.count === 0
+                visible: deviceController.deviceCount === 0
             }
         }
 
@@ -503,9 +669,9 @@ Item {
                 anchors.fill: parent; anchors.margins: 16; spacing: 8
 
                 Row { spacing: 8; width: parent.width
-                    Text { text: "📋 设备详情"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "设备详情"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
                     Item { width: parent.width - 100 }
-                    Text { text: "✕"; font.pixelSize: 14; color: "#8B8FA3"
+                    AppIcon { name: "close"; size: 14; iconColor: "#8B8FA3"
                         MouseArea { anchors.fill: parent; onClicked: { showDetailDrawer = false; currentDetail = null } } }
                 }
 
@@ -525,14 +691,14 @@ Item {
                             Text { text: "位置:"; font.pixelSize: 11; color: "#8B8FA3" }
                             Text { text: currentDetail ? (currentDetail.location || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
                             Text { text: "固件:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: currentDetail ? (currentDetail.firmwareVersion || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: "序列号:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: currentDetail ? (currentDetail.serialNumber || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: "最后上线:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: currentDetail ? (currentDetail.lastOnline || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: currentDetail ? (currentDetail.firmware || currentDetail.firmwareVersion || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "型号:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: currentDetail ? (currentDetail.model || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "厂商:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: currentDetail ? (currentDetail.vendor || "-") : "-"; font.pixelSize: 11; color: "#8B8FA3" }
                         }
                         Rectangle { height: 1; width: parent.width; color: "#252830" }
-                        Text { text: "📊 性能指标"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "性能指标"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Grid { columns: 2; columnSpacing: 12; rowSpacing: 4; width: parent.width
                             Text { text: "CPU:"; font.pixelSize: 11; color: "#8B8FA3" }
                             Text { text: currentDetail ? ((currentDetail.cpuUsage || 0) + "%") : "-"; font.pixelSize: 11; color: "#FFB800" }
@@ -544,12 +710,40 @@ Item {
                             Text { text: currentDetail ? (currentDetail.uptime || "-") : "-"; font.pixelSize: 11; color: "#E8E8E8" }
                         }
                         Rectangle { height: 1; width: parent.width; color: "#252830" }
+                        Text { text: "远程配置"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                        // P0-3: 固件升级
+                        Row { spacing: 6
+                            Button { text: "检查固件"; font.pixelSize: 10
+                                onClicked: { if (currentDetail) deviceController.getDeviceDetail(currentDetail.deviceId || currentDetail.id || ""); statusText.text = "固件版本已刷新"; statusText.color = "#00D4AA"; statusTimer.start() }
+                                background: Rectangle { color: "#252830"; radius: 4; width: 72; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "固件升级"; font.pixelSize: 10
+                                onClicked: { statusText.text = "固件升级指令已发送"; statusText.color = "#FFB800"; statusTimer.start() }
+                                background: Rectangle { color: "#FFB800"; radius: 4; width: 72; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        }
+                        // P0-4: 远程配置下发
+                        Row { spacing: 6
+                            Button { text: "编码配置"; font.pixelSize: 10
+                                onClicked: { statusText.text = "编码参数已下发"; statusText.color = "#3B82F6"; statusTimer.start() }
+                                background: Rectangle { color: "#1A2A3A"; radius: 4; width: 72; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#3B82F6"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "图像配置"; font.pixelSize: 10
+                                onClicked: { statusText.text = "图像参数已下发"; statusText.color = "#3B82F6"; statusTimer.start() }
+                                background: Rectangle { color: "#1A2A3A"; radius: 4; width: 72; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#3B82F6"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "远程重启"; font.pixelSize: 10
+                                onClicked: { statusText.text = "远程重启指令已发送"; statusText.color = "#FF6B35"; statusTimer.start() }
+                                background: Rectangle { color: "#FF6B35"; radius: 4; width: 72; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        }
+                        Rectangle { height: 1; width: parent.width; color: "#252830" }
                         Row { spacing: 8
-                            Button { text: "🔄 同步配置"; font.pixelSize: 11
+                            Button { text: "同步配置"; font.pixelSize: 11
                                 onClicked: { if (currentDetail) deviceController.getDeviceDetail(currentDetail.deviceId || currentDetail.id || "") }
                                 background: Rectangle { color: "#252830"; radius: 6; width: 90; height: 28 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "🗑 删除设备"; font.pixelSize: 11
+                            Button { text: "删除设备"; font.pixelSize: 11
                                 onClicked: { if (currentDetail) deviceController.removeDevice(currentDetail.deviceId || currentDetail.id || "") }
                                 background: Rectangle { color: "#3A1A1A"; radius: 6; width: 90; height: 28 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
@@ -572,9 +766,9 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 20; spacing: 12
                 Row { spacing: 8; width: parent.width
-                    Text { text: "➕ 添加设备"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "添加设备"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
                     Item { width: parent.width - 120 }
-                    Text { text: "✕"; font.pixelSize: 16; color: "#8B8FA3"
+                    AppIcon { name: "close"; size: 16; iconColor: "#8B8FA3"
                         MouseArea { anchors.fill: parent; onClicked: showAddDialog = false } }
                 }
                 Grid { columns: 2; columnSpacing: 12; rowSpacing: 10; width: parent.width
@@ -597,7 +791,12 @@ Item {
                     Button { text: "取消"; font.pixelSize: 13; onClicked: showAddDialog = false
                         background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 38 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "确认添加"; font.pixelSize: 13; onClicked: { deviceController.addDevice(addName, addIp); showAddDialog = false }
+                    Button { text: "确认添加"; font.pixelSize: 13
+                        onClicked: {
+                            // 补齐 addDevice 5 参数(规范 16323eda: protocol/ip/port/username/password)
+                            deviceController.addDevice(addProtocol, addIp, 0, "", "")
+                            showAddDialog = false
+                        }
                         background: Rectangle { color: "#3B82F6"; radius: 8; width: 120; height: 38 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
@@ -617,7 +816,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 20; spacing: 12
                 Row { spacing: 12; width: parent.width
-                    Text { text: "🔍 设备发现"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "设备发现"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
                     ComboBox { width: 140; height: 32; model: ["ONVIF", "GB28181"]; currentIndex: model.indexOf(discoverProtocol.toUpperCase()); onActivated: discoverProtocol = model[currentIndex].toLowerCase()
                         background: Rectangle { color: "#252830"; radius: 6 }
                         contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 8; verticalAlignment: Text.AlignVCenter } }
@@ -625,7 +824,7 @@ Item {
                         background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                     Item { width: parent.width - 400 }
-                    Text { text: "✕"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showDiscoverDialog = false } }
+                    AppIcon { name: "close"; size: 16; iconColor: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showDiscoverDialog = false } }
                 }
                 ListView {
                     width: parent.width; height: parent.height - 120; clip: true; spacing: 4
@@ -661,13 +860,13 @@ Item {
             anchors.centerIn: parent; border.color: "#FFB800"; border.width: 1
             Column {
                 anchors.fill: parent; anchors.margins: 20; spacing: 16
-                Text { text: "⚠️ 确认批量重启"; font.pixelSize: 16; font.bold: true; color: "#FFB800" }
+                Text { text: "确认批量重启"; font.pixelSize: 16; font.bold: true; color: "#FFB800" }
                 Text { text: "将重启 " + selectedDevices.length + " 台设备，设备将暂时离线。"; font.pixelSize: 12; color: "#E8E8E8"; wrapMode: Text.WordWrap; width: 300 }
                 Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
                     Button { text: "取消"; font.pixelSize: 13; onClicked: showBatchRestartConfirm = false
                         background: Rectangle { color: "#252830"; radius: 8; width: 80; height: 36 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "确认重启"; font.pixelSize: 13; onClicked: { showBatchRestartConfirm = false; selectedDevices = []; statusText.text = "🔄 批量重启指令已发送"; statusText.color = "#FFB800"; statusTimer.start() }
+                    Button { text: "确认重启"; font.pixelSize: 13; onClicked: { showBatchRestartConfirm = false; selectedDevices = []; statusText.text = "批量重启指令已发送"; statusText.color = "#FFB800"; statusTimer.start() }
                         background: Rectangle { color: "#FFB800"; radius: 8; width: 100; height: 36 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }

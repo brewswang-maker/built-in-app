@@ -15,18 +15,15 @@ Item {
 
     Button {
         anchors.fill: parent
-        text: "🔔"
-        font.pixelSize: 18
         flat: true
         onClicked: bellRoot.clicked()
 
         background: Rectangle { color: "transparent" }
-        contentItem: Text {
-            text: parent.text
-            font.pixelSize: 18
-            color: "#E8E8E8"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
+        contentItem: AppIcon {
+            name: "bell"
+            size: 18
+            iconColor: "#E8E8E8"
+            anchors.centerIn: parent
         }
 
         // Shake animation on new notification

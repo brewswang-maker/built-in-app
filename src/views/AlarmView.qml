@@ -25,15 +25,15 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-            Text { text: "🚨 告警中心"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "告警中心"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
 
             // 筛选器
             ComboBox {
                 id: levelCombo
                 width: 100; height: 30
-                model: ["全部级别", "🔴 严重", "🟡 警告", "🟢 信息"]
+                model: ["全部级别", "严重", "警告", "信息"]
                 onCurrentTextChanged: {
-                    var map = {"全部级别": "", "🔴 严重": "critical", "🟡 警告": "warning", "🟢 信息": "info"}
+                    var map = {"全部级别": "", "严重": "critical", "警告": "warning", "信息": "info"}
                     alarmPage.levelFilter = map[currentText] || ""
                 }
                 background: Rectangle { color: "#252830"; radius: 6 }
@@ -84,7 +84,7 @@ Item {
             }
 
             Button {
-                text: "📥 导出"; font.pixelSize: 11
+                text: "导出"; font.pixelSize: 11
                 background: Rectangle { color: "#252830"; radius: 6; width: 64; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
@@ -98,7 +98,7 @@ Item {
                 }
             }
             Button {
-                text: "🔄 刷新"; font.pixelSize: 11
+                text: "刷新"; font.pixelSize: 11
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 56; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: alarmController.refreshAlarms(200)
@@ -129,20 +129,20 @@ Item {
                             else alarmPage.selectedAlarms = []
                         }
                     }
-                    Text { text: "级别"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 50 }
-                    Text { text: "类型"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 80 }
-                    Text { text: "通道"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 90 }
-                    Text { text: "时间"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 70 }
-                    Text { text: "置信度"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 50 }
-                    Text { text: "状态"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 60 }
-                    Text { text: "操作"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 70 }
+                    Text { text: "级别"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
+                    Text { text: "类型"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 80 }
+                    Text { text: "通道"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 90 }
+                    Text { text: "时间"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 70 }
+                    Text { text: "置信度"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
+                    Text { text: "状态"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 60 }
+                    Text { text: "操作"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 70 }
                 }
             }
 
             ListView {
                 id: alarmList
                 anchors.top: listHeader.bottom; anchors.bottom: parent.bottom
-                width: parent.width; spacing: 1; clip: true
+                width: parent.width; spacing: 4; clip: true
                 model: alarmController.alarms
 
                 // WebSocket 实时推送 (新告警自动插入顶部)
@@ -171,29 +171,29 @@ Item {
                             }
                         }
                         Rectangle { width: 6; height: 6; radius: 3; color: lvlColor; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: modelData.level === "critical" ? "严重" : modelData.level === "warning" ? "警告" : "信息"; font.pixelSize: 10; color: lvlColor; width: 40 }
-                        Text { text: modelData.alarm_type || "—"; font.pixelSize: 10; color: "#E8E8E8"; width: 80 }
-                        Text { text: modelData.channel_id || modelData.location || "—"; font.pixelSize: 10; color: "#8B8FA3"; width: 90; elide: Text.ElideRight }
-                        Text { text: (modelData.timestamp || "").substring(11, 19); font.pixelSize: 10; color: "#4A4D58"; width: 70 }
-                        Text { text: modelData.confidence ? (modelData.confidence * 100).toFixed(0) + "%" : "—"; font.pixelSize: 10; color: "#00D4AA"; width: 50 }
+                        Text { text: modelData.level === "critical" ? "严重" : modelData.level === "warning" ? "警告" : "信息"; font.pixelSize: 12; color: lvlColor; width: 40 }
+                        Text { text: modelData.alarm_type || "—"; font.pixelSize: 12; color: "#E8E8E8"; width: 80 }
+                        Text { text: modelData.channel_id || modelData.location || "—"; font.pixelSize: 12; color: "#8B8FA3"; width: 90; elide: Text.ElideRight }
+                        Text { text: (modelData.timestamp || "").substring(11, 19); font.pixelSize: 12; color: "#4A4D58"; width: 70 }
+                        Text { text: modelData.confidence ? (modelData.confidence * 100).toFixed(0) + "%" : "—"; font.pixelSize: 12; color: "#00D4AA"; width: 50 }
                         Rectangle { width: 52; height: 18; radius: 3; color: "#1A1D23"
                             Text { text: modelData.status === "confirmed" ? "已确认" : modelData.status === "false_alarm" ? "误报" : modelData.status === "muted" ? "已静音" : "未处理"
-                                font.pixelSize: 9; color: modelData.status === "unhandled" ? "#FFB800" : "#8B8FA3"; anchors.centerIn: parent }
+                                font.pixelSize: 11; color: modelData.status === "unhandled" ? "#FFB800" : "#8B8FA3"; anchors.centerIn: parent }
                         }
                         Row { spacing: 2
-                            Button { width: 30; height: 24; text: "✅"; font.pixelSize: 10
+                            Button { width: 32; height: 26; text: "ç¡®è®¤"; font.pixelSize: 11
                                 background: Rectangle { color: "#1A2A1A"; radius: 3 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: alarmController.confirmAlarm(modelData.alarm_id)
                             }
-                            Button { width: 30; height: 24; text: "❌"; font.pixelSize: 10
+                            Button { width: 32; height: 26; text: "è¯¯æ\u008a¥"; font.pixelSize: 11
                                 background: Rectangle { color: "#2A1A1A"; radius: 3 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: alarmController.markFalseAlarm(modelData.alarm_id)
                             }
-                            Button { width: 30; height: 24; text: "📋"; font.pixelSize: 10
+                            Button { width: 32; height: 26; text: "è¯¦æ\u0083\u0085"; font.pixelSize: 11
                                 background: Rectangle { color: "#1A1D23"; radius: 3 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: { detailPanel.alarm = modelData; detailPanel.visible = true }
                             }
                         }
@@ -217,12 +217,12 @@ Item {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8; visible: parent.visible
 
                 Row { width: parent.width; spacing: 8
-                    Text { text: "📋 告警详情"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "告警详情"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
                     Item { width: 10 }
                     Rectangle { width: 8; height: 8; radius: 4; color: detailPanel.alarm.level === "critical" ? "#FF3D71" : "#FF6B35"; anchors.verticalCenter: parent.verticalCenter }
                     Text { text: detailPanel.alarm.alarm_type || ""; font.pixelSize: 12; color: "#FF6B35" }
                     Item { Layout.fillWidth: true }
-                    Button { text: "✕"; font.pixelSize: 12; flat: true
+                    Button { text: "X"; font.pixelSize: 12; flat: true
                         background: Rectangle { color: "transparent" }
                         contentItem: Text { text: parent.text; color: "#8B8FA3" }
                         onClicked: detailPanel.visible = false
@@ -232,7 +232,7 @@ Item {
                 // 截图
                 Rectangle { width: parent.width; height: 150; radius: 6; color: "#0D0F12"
                     Image { anchors.fill: parent; source: detailPanel.alarm.snapshotUrl || ""; fillMode: Image.PreserveAspectCrop; asynchronous: true }
-                    Text { text: "📸 快照"; color: "#4A4D58"; font.pixelSize: 12; anchors.centerIn: parent; visible: !detailPanel.alarm.snapshotUrl }
+                    Text { text: "快照"; color: "#4A4D58"; font.pixelSize: 12; anchors.centerIn: parent; visible: !detailPanel.alarm.snapshotUrl }
                 }
 
                 // 详情
@@ -252,7 +252,7 @@ Item {
                 Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                 // 统计饼图 (Canvas)
-                Text { text: "📊 今日告警分布"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                Text { text: "今日告警分布"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
 
                 Canvas {
                     width: parent.width; height: 120
@@ -295,11 +295,11 @@ Item {
 
                 // 处置按钮
                 Row { spacing: 8; anchors.horizontalCenter: parent.horizontalCenter
-                    Button { text: "✅ 确认"; background: Rectangle { color: "#00D4AA"; radius: 6; width: 70; height: 32 }
+                    Button { text: "确认"; background: Rectangle { color: "#00D4AA"; radius: 6; width: 70; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: { alarmController.confirmAlarm(detailPanel.alarm.alarm_id); detailPanel.visible = false }
                     }
-                    Button { text: "❌ 误报"; background: Rectangle { color: "#FF6B35"; radius: 6; width: 70; height: 32 }
+                    Button { text: "误报"; background: Rectangle { color: "#FF6B35"; radius: 6; width: 70; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: { alarmController.markFalseAlarm(detailPanel.alarm.alarm_id); detailPanel.visible = false }
                     }
@@ -322,12 +322,12 @@ Item {
 
             Text { text: "已选 " + selectedAlarms.length + " 条告警"; font.pixelSize: 13; color: "#E8E8E8"; font.bold: true }
             Item { Layout.fillWidth: true }
-            Button { text: "✅ 批量确认"; font.pixelSize: 12
+            Button { text: "批量确认"; font.pixelSize: 12
                 background: Rectangle { color: "#00D4AA"; radius: 6; width: 90; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { alarmController.batchConfirm(selectedAlarms); selectedAlarms = [] }
             }
-            Button { text: "❌ 批量误报"; font.pixelSize: 12
+            Button { text: "批量误报"; font.pixelSize: 12
                 background: Rectangle { color: "#FF6B35"; radius: 6; width: 90; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: { alarmController.batchFalseAlarm(selectedAlarms); selectedAlarms = [] }
@@ -366,7 +366,7 @@ Item {
         modal: true
         anchors.centerIn: parent
         width: 460
-        title: "📥 告警导出"
+        title: "告警导出"
         closePolicy: Popup.CloseOnEscape
 
         property string format: "csv"
@@ -378,9 +378,9 @@ Item {
             implicitHeight: 36
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
-                Text { text: "📥 告警导出"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                Text { text: "告警导出"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                 Item { Layout.fillWidth: true }
-                Text { text: alarmController.defaultExportDir(); color: "#4A4D58"; font.pixelSize: 9; elide: Text.ElideMiddle; Layout.maximumWidth: 280 }
+                Text { text: alarmController.defaultExportDir(); color: "#4A4D58"; font.pixelSize: 11; elide: Text.ElideMiddle; Layout.maximumWidth: 280 }
             }
         }
 
@@ -417,7 +417,7 @@ Item {
                       (alarmPage.levelFilter || "全部级别") + " · " +
                       (alarmPage.typeFilter || "全部类型") + " · " +
                       (alarmPage.statusFilter || "全部状态")
-                color: "#8B8FA3"; font.pixelSize: 10; wrapMode: Text.WordWrap
+                color: "#8B8FA3"; font.pixelSize: 11; wrapMode: Text.WordWrap
             }
 
             // 进度条
@@ -436,7 +436,7 @@ Item {
                     Item { Layout.fillWidth: true }
                     Text {
                         text: "格式: " + alarmController.exportFormat
-                        color: "#8B8FA3"; font.pixelSize: 10
+                        color: "#8B8FA3"; font.pixelSize: 11
                     }
                 }
                 ProgressBar {
@@ -455,7 +455,7 @@ Item {
                 }
                 Text {
                     text: alarmController.exportFilePath
-                    color: "#4A4D58"; font.pixelSize: 9; elide: Text.ElideMiddle
+                    color: "#4A4D58"; font.pixelSize: 11; elide: Text.ElideMiddle
                     Layout.fillWidth: true
                 }
             }
@@ -472,19 +472,19 @@ Item {
                     anchors.fill: parent; anchors.margins: 10; spacing: 8
                     ColumnLayout {
                         Layout.fillWidth: true; spacing: 2
-                        Text { text: "✓ 导出完成"; color: "#00D4AA"; font.pixelSize: 12; font.bold: true }
+                        Text { text: "导出完成"; color: "#00D4AA"; font.pixelSize: 12; font.bold: true }
                         Text {
                             text: alarmController.exportFilePath
-                            color: "#8B8FA3"; font.pixelSize: 9; elide: Text.ElideMiddle
+                            color: "#8B8FA3"; font.pixelSize: 11; elide: Text.ElideMiddle
                             Layout.fillWidth: true
                         }
                     }
                     Button {
-                        text: "📂 打开文件所在目录"
-                        font.pixelSize: 10
+                        text: "打开文件所在目录"
+                        font.pixelSize: 11
                         onClicked: Qt.openUrlExternally("file://" + alarmController.exportFilePath)
                         background: Rectangle { color: "#252830"; radius: 4; width: 130; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                 }
             }

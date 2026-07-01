@@ -21,14 +21,14 @@ Item {
 
     Connections {
         target: configController
-        function onAlgorithmListUpdated() { /* refresh model list from configController.algorithmList */ }
+        function onAlgorithmsUpdated() { /* refresh model list from configController.algorithms */ }
         function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
     }
 
     Timer { id: statusTimer; interval: 3000; onTriggered: statusMsg = "" }
 
     function activeSlotCount() {
-        var list = configController.algorithmList; var count = 0
+        var list = configController.algorithms || []; var count = 0
         for (var i = 0; i < list.length; i++) {
             if (list[i].status === "active" || list[i].status === "loaded") count++
         }
@@ -36,7 +36,7 @@ Item {
     }
 
     function totalStorage() {
-        var list = configController.algorithmList; var total = 0
+        var list = configController.algorithms || []; var total = 0
         for (var i = 0; i < list.length; i++) total += (list[i].size || 0)
         return total.toFixed(1)
     }
@@ -51,7 +51,7 @@ Item {
     }
 
     function getModelByAlgoId(algoId) {
-        var list = configController.algorithmList
+        var list = configController.algorithms || []
         for (var i = 0; i < list.length; i++) {
             if (list[i].algoId === algoId) return list[i]
         }
@@ -110,7 +110,7 @@ Item {
                     delegate: Rectangle {
                         property int slotIdx: index + 1
                         property var slotModel: {
-                            var list = configController.algorithmList
+                            var list = configController.algorithms || []
                             for (var i = 0; i < list.length; i++) {
                                 if (list[i].slot === slotIdx) return list[i]
                             }
@@ -149,22 +149,22 @@ Item {
             Row {
                 spacing: 40; width: parent.width
 
-                Column { spacing: 4
+                Column { id: compareCol1; spacing: 4
                     property var m1: getModelByAlgoId(selectedModels[0])
-                    Text { text: m1 ? (m1.name || m1.algoId) : "N/A"; font.pixelSize: 12; font.bold: true; color: "#3B82F6" }
-                    Text { text: "FPS: " + (m1 ? (m1.fps || 0) : 0); font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Latency: " + (m1 ? (m1.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Precision: " + (m1 ? (m1.precision || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
-                    Text { text: "Size: " + (m1 ? (m1.size || 0) : 0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: compareCol1.m1 ? (compareCol1.m1.name || compareCol1.m1.algoId) : "N/A"; font.pixelSize: 12; font.bold: true; color: "#3B82F6" }
+                    Text { text: "FPS: " + (compareCol1.m1 ? (compareCol1.m1.fps || 0) : 0); font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "Latency: " + (compareCol1.m1 ? (compareCol1.m1.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "Precision: " + (compareCol1.m1 ? (compareCol1.m1.precision || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
+                    Text { text: "Size: " + (compareCol1.m1 ? (compareCol1.m1.size || 0) : 0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
                 }
 
-                Column { spacing: 4
+                Column { id: compareCol2; spacing: 4
                     property var m2: getModelByAlgoId(selectedModels[1])
-                    Text { text: m2 ? (m2.name || m2.algoId) : "N/A"; font.pixelSize: 12; font.bold: true; color: "#FFB800" }
-                    Text { text: "FPS: " + (m2 ? (m2.fps || 0) : 0); font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Latency: " + (m2 ? (m2.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Precision: " + (m2 ? (m2.precision || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
-                    Text { text: "Size: " + (m2 ? (m2.size || 0) : 0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: compareCol2.m2 ? (compareCol2.m2.name || compareCol2.m2.algoId) : "N/A"; font.pixelSize: 12; font.bold: true; color: "#FFB800" }
+                    Text { text: "FPS: " + (compareCol2.m2 ? (compareCol2.m2.fps || 0) : 0); font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "Latency: " + (compareCol2.m2 ? (compareCol2.m2.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
+                    Text { text: "Precision: " + (compareCol2.m2 ? (compareCol2.m2.precision || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
+                    Text { text: "Size: " + (compareCol2.m2 ? (compareCol2.m2.size || 0) : 0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
                 }
             }
         }
@@ -186,7 +186,7 @@ Item {
             ListView {
                 width: parent.width - 24; height: parent.height - 40; clip: true; spacing: 4
 
-                model: configController.algorithmList
+                model: configController.algorithms
 
                 delegate: Rectangle {
                     width: ListView.view.width; height: 56; color: "#141720"; radius: 6

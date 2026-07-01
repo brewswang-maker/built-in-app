@@ -4,11 +4,10 @@ import QtMultimedia
 
 Item {
     id: root
-    anchors.fill: parent
 
-    property alias deviceId: deviceIdText.text
-    property alias channelName: channelLabel.text
-    property alias streamUrl: streamUrlText.text
+    property string deviceId: ""
+    property string channelName: ""
+    property string streamUrl: ""
     property alias status: statusIndicator.status
     property string fps: "0"
     property string algorithmTag: ""
@@ -27,53 +26,83 @@ Item {
 
         MediaPlayer {
             id: mediaPlayer
-            source: streamUrlText.text.length > 0 ? streamUrlText.text : ""
+            source: root.streamUrl.length > 0 ? root.streamUrl : ""
             videoOutput: videoOutput
+            autoPlay: true
             onErrorOccurred: function(error, errorString) {
-                console.warn("MediaPlayer error:", errorString)
+                console.warn("MediaPlayer[" + root.deviceId + "] ERROR:", error, errorString)
             }
         }
 
         VideoOutput {
             id: videoOutput
             anchors.fill: parent
-            visible: streamUrlText.text.length > 0
+            visible: root.streamUrl.length > 0
+            // Connection established via MediaPlayer.videoOutput above
         }
 
-        Text {
-            text: "📹 " + (channelName || "未连接")
-            color: "#4A4D58"
-            font.pixelSize: 16
+        Row {
+            spacing: 6
             anchors.centerIn: parent
-            visible: streamUrlText.text.length === 0
+            visible: root.streamUrl.length === 0
+            AppIcon { name: "camera"; size: 18; iconColor: "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
+            Text {
+                text: channelName || "未连接"
+                color: "#4A4D58"
+                font.pixelSize: 16
+                anchors.verticalCenter: parent.verticalCenter
+            }
         }
     }
 
-    // Detection boxes overlay
+    // P1-1: AI Detection overlay (color-coded + confidence)
     Repeater {
         model: root.detectionBoxes
 
-        Rectangle {
+        Item {
             required property var modelData
             x: modelData.x * root.width
             y: modelData.y * root.height
             width: modelData.width * root.width
             height: modelData.height * root.height
-            color: "transparent"
-            border.color: "#FF6B35"
-            border.width: 2
-            radius: 2
 
+            // Detection box border with class-based color
             Rectangle {
-                color: "#FF6B35"
+                anchors.fill: parent
+                color: "transparent"
+                border.color: modelData.color || "#FF6B35"
+                border.width: 2
                 radius: 2
-                implicitWidth: labelBgText.implicitWidth + 4
-                implicitHeight: labelBgText.implicitHeight + 2
+                // Smooth fade for detection updates
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+            }
+
+            // Corner accent marks (professional style like Hikvision)
+            Rectangle { width: 8; height: 2; color: modelData.color || "#FF6B35"; anchors.top: parent.top; anchors.left: parent.left }
+            Rectangle { width: 2; height: 8; color: modelData.color || "#FF6B35"; anchors.top: parent.top; anchors.left: parent.left }
+            Rectangle { width: 8; height: 2; color: modelData.color || "#FF6B35"; anchors.top: parent.top; anchors.right: parent.right }
+            Rectangle { width: 2; height: 8; color: modelData.color || "#FF6B35"; anchors.top: parent.top; anchors.right: parent.right }
+            Rectangle { width: 8; height: 2; color: modelData.color || "#FF6B35"; anchors.bottom: parent.bottom; anchors.left: parent.left }
+            Rectangle { width: 2; height: 8; color: modelData.color || "#FF6B35"; anchors.bottom: parent.bottom; anchors.left: parent.left }
+            Rectangle { width: 8; height: 2; color: modelData.color || "#FF6B35"; anchors.bottom: parent.bottom; anchors.right: parent.right }
+            Rectangle { width: 2; height: 8; color: modelData.color || "#FF6B35"; anchors.bottom: parent.bottom; anchors.right: parent.right }
+
+            // Label + confidence badge
+            Rectangle {
+                color: modelData.color || "#FF6B35"
+                radius: 2
+                width: labelText.implicitWidth + 12
+                height: 16
+                anchors.bottom: parent.top
+                anchors.left: parent.left
+                anchors.bottomMargin: 1
+
                 Text {
-                    id: labelBgText
-                    text: modelData.label || ""
+                    id: labelText
+                    text: (modelData.label || "unknown") + " " + Math.round((modelData.confidence || 0) * 100) + "%"
                     color: "#FFFFFF"
-                    font.pixelSize: 10
+                    font.pixelSize: 9
+                    font.bold: true
                     font.family: "PingFang SC"
                     anchors.centerIn: parent
                 }
@@ -158,13 +187,9 @@ Item {
         }
     }
 
-    // Hidden: device ID and stream URL
-    Text { id: deviceIdText; visible: false }
-    Text { id: streamUrlText; visible: false }
-
-    // Auto-play when URL is set
+    // Auto-play/stop when URL changes
     onStreamUrlChanged: {
-        if (streamUrlText.text.length > 0) {
+        if (root.streamUrl.length > 0) {
             mediaPlayer.play()
         } else {
             mediaPlayer.stop()

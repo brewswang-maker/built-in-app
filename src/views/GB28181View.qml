@@ -61,25 +61,25 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
-            Text { text: "📡 GB28181 设备管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "GB28181 设备管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
 
             Button {
-                text: "🔍 设备搜索"
+                text: "设备搜索"
                 font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: deviceController.discoverDevices("gb28181")
             }
             Button {
-                text: "➕ 手动添加"
+                text: "手动添加"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: addDevicePopup.open()
             }
             Button {
-                text: "🔄 刷新目录"
+                text: "刷新目录"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -148,7 +148,7 @@ Item {
                 }
 
                 Button {
-                    text: "💾 保存配置"
+                    text: "保存配置"
                     width: parent.width - 24
                     background: Rectangle { color: "#00D4AA"; radius: 6; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -163,7 +163,7 @@ Item {
 
                 Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
 
-                Text { text: "📡 SIP 信令监控"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                Text { text: "SIP 信令监控"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
                     id: sipLogView
@@ -175,7 +175,7 @@ Item {
                         Row {
                             spacing: 6
                             Text { text: model.time; font.pixelSize: 9; color: "#4A4D58"; width: 50 }
-                            Text { text: model.msg; font.pixelSize: 10; color: model.msg.charAt(0) === '←' ? "#3B82F6" : "#00D4AA"; width: 140 }
+                            Text { text: model.msg; font.pixelSize: 10; color: false ? "#3B82F6" : "#00D4AA"; width: 140 }
                             Text { text: model.status; font.pixelSize: 9; color: "#FFB800" }
                         }
                     }
@@ -279,7 +279,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "🔗 级联拓扑"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "级联拓扑"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 Canvas {
                     id: topoCanvas
@@ -351,7 +351,7 @@ Item {
 
         Column {
             anchors.fill: parent; anchors.margins: 16; spacing: 10
-            Text { text: "➕ 添加GB28181设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+            Text { text: "添加GB28181设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
             TextField { id: addIp; width: 320; placeholderText: "设备IP地址"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
             TextField { id: addPort; width: 320; text: "5060"; placeholderText: "SIP端口"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }

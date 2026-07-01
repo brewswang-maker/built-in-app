@@ -27,8 +27,14 @@
         <file alias="AuditCenterView.qml">../src/views/AuditCenterView.qml</file>
         <file alias="SceneManageView.qml">../src/views/SceneManageView.qml</file>
         <file alias="LinkageRuleView.qml">../src/views/LinkageRuleView.qml</file>
+        <file alias="LinkageConditionNode.qml">../src/views/LinkageConditionNode.qml</file>
         <file alias="LinkageAlarmPopup.qml">../src/views/LinkageAlarmPopup.qml</file>
         <file alias="NotificationPopup.qml">../src/views/NotificationPopup.qml</file>
         <file alias="NotificationBell.qml">../src/views/components/NotificationBell.qml</file>
+        <file alias="AppIcon.qml">../src/views/components/AppIcon.qml</file>
+        <file alias="PermissionCheck.qml">../src/views/components/PermissionCheck.qml</file>
+        <file alias="ReActTraceView.qml">../src/views/components/ReActTraceView.qml</file>
+        <file alias="HeatmapOverlay.qml">../src/views/components/HeatmapOverlay.qml</file>
+        <file alias="CardPanel.qml">../src/views/components/CardPanel.qml</file>
     </qresource>
 </RCC>

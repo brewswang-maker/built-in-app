@@ -1,6 +1,7 @@
 #include "MediaController.h"
 #include "utils/ApiClient.h"
 #include "streaming/StreamingDegradationChain.h"
+#include "streaming/WebRTCStreamProvider.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -15,6 +16,8 @@
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QJsonDocument>
+#include <QDebug>
+#include <QTimer>
 
 namespace {
 // Playback rate menu shown in the speed selector.
@@ -27,7 +30,13 @@ const char* kDefaultSnapshotPrefix = "snapshot";
 MediaController::MediaController(ApiClient* api, QObject* parent)
     : QObject(parent),
       m_api(api),
-      m_degradation(new StreamingDegradationChainController(this)) {}
+      m_degradation(new StreamingDegradationChainController(this)),
+      m_webrtcProvider(new WebRTCStreamProvider(this)) {
+    // P0-1: 默认禁用 WebRTC 探测,因为 Qt MediaPlayer 不支持 webrtc://
+    // (macOS AVFoundation/Windows WMF/Linux gstreamer 均未原生支持)。
+    // 启用需集成 libdatachannel 或 QtWebEngine(超出本任务范围)。
+    m_webrtcProvider->setEnabled(false);
+}
 
 void MediaController::setLayout(int grid) {
     if (m_currentLayout != grid && (grid == 1 || grid == 4 || grid == 9 || grid == 16)) {
@@ -37,66 +46,214 @@ void MediaController::setLayout(int grid) {
 }
 
 void MediaController::startStream(const QString& deviceId, const QString& channelId) {
-    // Preserve the legacy behaviour: single RTSP URL, but also seed
-    // the degradation controller so QML tiles can subscribe.
-    QJsonObject body;
-    body["device_id"] = deviceId;
-    body["channel_id"] = channelId;
-    body["protocol"] = "RTSP";
-    m_api->post("/api/v1/zlm/channel/urls", body,
-        [this, deviceId](QJsonObject resp) {
-            handleStreamUrlsResponse(deviceId, resp);
-        },
-        [this](int code, QString msg) {
-            emit errorOccurred(code, msg);
-        });
+    // Fetch real stream URLs from GET /api/v1/zlm/streams
+    // The stream_id follows the pattern: gb_{channelId}
+    fetchStreamUrlsFromZlm(deviceId, channelId);
 }
 
 void MediaController::startStreamWithProtocols(
     const QString& deviceId, const QString& channelId,
     const QStringList& protocols) {
+    // Set up the degradation chain for this device, then fetch real URLs
     const QStringList chain = StreamingDegradationChain::normalize(protocols);
-    QJsonArray arr;
-    for (const QString& p : chain) arr.append(p);
-
-    QJsonObject body;
-    body["device_id"] = deviceId;
-    body["channel_id"] = channelId;
-    body["protocols"] = arr;
-    body["chain"] = QStringList(chain).join(',');
-
     m_degradation->setChain(deviceId, chain);
+    fetchStreamUrlsFromZlm(deviceId, channelId);
+}
 
-    m_api->post("/api/v1/zlm/channel/urls", body,
-        [this, deviceId](QJsonObject resp) {
-            handleStreamUrlsResponse(deviceId, resp);
+// =====================================================================
+// applyZlmStreamUrls — extract URLs from a ZLM stream JSON entry
+// and populate the degradation chain + streamUrls map.
+//
+// P0-1: 同步提取 webrtc_url 字段。如果后端已启用 WebRTC, 该字段
+// 包含 webrtc://host:port/index/api/webrtc?app=live&stream=<id> URL。
+// Qt MediaPlayer 不能播放 webrtc://,降级策略:
+//   1. 如果 m_webrtcProvider->isEnabled() == true,调用探测;
+//   2. 探测成功 -> 用 webrtc URL(后续 QML 可选处理);
+//   3. 探测失败 / 禁用 -> 走原 HLS/FLV/RTSP 优先级,保持兼容。
+// =====================================================================
+void MediaController::applyZlmStreamUrls(const QString& deviceId,
+                                         const QJsonObject& streamObj) {
+    const QString rtspUrl   = streamObj.value("rtsp_url").toString();
+    const QString flvUrl    = streamObj.value("flv_url").toString();
+    const QString hlsUrl    = streamObj.value("hls_url").toString();
+    // P0-1: ZLM 在 enable_webrtc=true 时返回 webrtc_url 字段
+    const QString webrtcUrl = streamObj.value("webrtc_url").toString();
+
+    QVariantMap urlMap;
+    if (!rtspUrl.isEmpty())   urlMap.insert(QStringLiteral("rtsp"), rtspUrl);
+    if (!flvUrl.isEmpty())    urlMap.insert(QStringLiteral("flv"), flvUrl);
+    if (!hlsUrl.isEmpty())    urlMap.insert(QStringLiteral("hls"), hlsUrl);
+    if (!webrtcUrl.isEmpty()) urlMap.insert(QStringLiteral("webrtc"), webrtcUrl);
+    if (!urlMap.isEmpty())
+        m_degradation->setUrls(deviceId, urlMap);
+
+    // Pick the best URL for the platform.
+    // macOS AVFoundation: HLS native, cannot play RTSP or HTTP-FLV.
+    QString bestUrl;
+#ifdef Q_OS_MACOS
+    if (!hlsUrl.isEmpty())       bestUrl = hlsUrl;
+    else if (!flvUrl.isEmpty())  bestUrl = flvUrl;
+    else                          bestUrl = rtspUrl;
+#else
+    if (!rtspUrl.isEmpty())      bestUrl = rtspUrl;
+    else if (!flvUrl.isEmpty())  bestUrl = flvUrl;
+    else                          bestUrl = hlsUrl;
+#endif
+
+    // P0-1: 当 bestUrl 为空且只有 webrtcUrl 可用时,尝试用 WebRTCStreamProvider 探测
+    //        如果服务不可达,降级链会继续推送到下一个协议
+    if (bestUrl.isEmpty() && !webrtcUrl.isEmpty() && m_webrtcProvider->isEnabled()) {
+        qDebug() << "[MediaController] P0-1: best URL is webrtc, requesting probe for"
+                 << deviceId;
+        m_webrtcProvider->requestWebRtcUrl(QString(), 0, webrtcUrl);
+        // 注意: 实际探测是异步的;在此期间 QML 会拿到空 URL,
+        // 降级链会推到下一个有可用 URL 的协议。
+        // 探测完成后,如果服务可用,会在 webRtcResolved 中重新设置 m_streamUrls。
+    }
+
+    if (!bestUrl.isEmpty()) {
+        qDebug() << "[MediaController] applyZlmStreamUrls:" << deviceId
+                 << "->" << bestUrl
+                 << "(webrtc:" << (!webrtcUrl.isEmpty()) << ")";
+        m_streamUrls.insert(deviceId, bestUrl);
+        emit streamUrlsUpdated();
+        emit streamStarted(deviceId, bestUrl);
+    } else if (webrtcUrl.isEmpty()) {
+        qDebug() << "[MediaController] WARNING: no usable URL in stream object for" << deviceId;
+    } else {
+        qDebug() << "[MediaController] P0-1: only webrtc URL available, waiting for probe" << deviceId;
+    }
+}
+
+// =====================================================================
+// pollZlmForStream — poll GET /api/v1/zlm/streams until the target
+// stream registers in ZLM.  Each attempt is 500 ms apart.
+// =====================================================================
+void MediaController::pollZlmForStream(const QString& deviceId,
+                                       const QString& streamId,
+                                       int remaining) {
+    if (remaining <= 0) {
+        qDebug() << "[MediaController] Polling exhausted for" << deviceId
+                 << "(streamId=" << streamId << ")";
+        return;
+    }
+
+    QTimer::singleShot(500, this, [this, deviceId, streamId, remaining]() {
+        m_api->get("/api/v1/zlm/streams",
+            [this, deviceId, streamId, remaining](QJsonObject resp) {
+                QJsonObject data = ApiClient::unwrapData(resp);
+                QJsonArray streams = data.value("streams").toArray();
+
+                const QString exactStreamId = QStringLiteral("gb_%1").arg(streamId);
+                const QString idSuffix11 = streamId.length() >= 11
+                    ? streamId.right(11) : streamId;
+
+                for (const QJsonValue& item : streams) {
+                    QJsonObject s = item.toObject();
+                    const QString sid = s.value("stream_id").toString();
+                    if (sid == exactStreamId || sid == streamId ||
+                        sid.endsWith(idSuffix11)) {
+                        qDebug() << "[MediaController] Stream registered after polling:"
+                                 << sid << "->" << deviceId
+                                 << "(" << (16 - remaining) << "attempts)";
+                        applyZlmStreamUrls(deviceId, s);
+                        return;
+                    }
+                }
+
+                // Not found yet, keep polling
+                pollZlmForStream(deviceId, streamId, remaining - 1);
+            },
+            [this, deviceId, streamId, remaining](int code, QString msg) {
+                qDebug() << "[MediaController] Poll error for" << deviceId
+                         << ":" << code << "-> retry";
+                pollZlmForStream(deviceId, streamId, remaining - 1);
+            });
+    });
+}
+
+// =====================================================================
+// triggerStreamStart — full start flow aligned with Web MiniPlayer.vue:
+//   1. Check if stream already exists in ZLM (quick, no side effects)
+//   2. If not, POST /streams/:id/start to trigger GB28181 SIP INVITE
+//   3. Poll ZLM stream list until the stream registers
+// =====================================================================
+void MediaController::triggerStreamStart(const QString& deviceId,
+                                         const QString& channelId) {
+    const QString streamId = channelId.isEmpty() ? deviceId : channelId;
+
+    qDebug() << "[MediaController] triggerStreamStart: deviceId=" << deviceId
+             << "streamId=" << streamId;
+
+    // Step 1: Check if stream already exists in ZLM
+    m_api->get("/api/v1/zlm/streams",
+        [this, deviceId, streamId](QJsonObject resp) {
+            QJsonObject data = ApiClient::unwrapData(resp);
+            QJsonArray streams = data.value("streams").toArray();
+
+            const QString exactStreamId = QStringLiteral("gb_%1").arg(streamId);
+            const QString idSuffix11 = streamId.length() >= 11
+                ? streamId.right(11) : streamId;
+
+            for (const QJsonValue& item : streams) {
+                QJsonObject s = item.toObject();
+                const QString sid = s.value("stream_id").toString();
+                if (sid == exactStreamId || sid == streamId ||
+                    sid.endsWith(idSuffix11)) {
+                    qDebug() << "[MediaController] Stream already exists:" << sid
+                             << "-> skipping /start";
+                    applyZlmStreamUrls(deviceId, s);
+                    return;
+                }
+            }
+
+            // Step 2: Not in ZLM → trigger SIP INVITE via POST /start
+            qDebug() << "[MediaController] Stream not in ZLM, triggering"
+                     << "POST /api/v1/streams/" << streamId << "/start";
+            QJsonObject body;
+            body["stream_type"] = QStringLiteral("main");
+
+            m_api->post(QString("/api/v1/streams/%1/start").arg(streamId), body,
+                [this, deviceId, streamId](QJsonObject resp) {
+                    QJsonObject data = ApiClient::unwrapData(resp);
+                    bool zlmReady = data.value("zlmReady").toBool();
+                    qDebug() << "[MediaController] /start done for" << deviceId
+                             << "zlmReady=" << zlmReady;
+                    // Step 3: Poll ZLM streams until the stream registers.
+                    // If /start already reported zlmReady, use fewer polls.
+                    pollZlmForStream(deviceId, streamId, zlmReady ? 8 : 16);
+                },
+                [this, deviceId, streamId](int code, QString msg) {
+                    qDebug() << "[MediaController] /start failed for" << deviceId
+                             << ":" << code << msg
+                             << "-> polling ZLM as fallback";
+                    // /start may fail if another client already started
+                    // the stream. Poll ZLM anyway.
+                    pollZlmForStream(deviceId, streamId, 16);
+                });
         },
-        [this](int code, QString msg) {
-            emit errorOccurred(code, msg);
+        [this, deviceId, streamId](int code, QString msg) {
+            qDebug() << "[MediaController] zlm/streams GET failed,"
+                     << "trying /start directly for" << deviceId;
+            QJsonObject body;
+            body["stream_type"] = QStringLiteral("main");
+            m_api->post(QString("/api/v1/streams/%1/start").arg(streamId), body,
+                [this, deviceId, streamId](QJsonObject) {
+                    pollZlmForStream(deviceId, streamId, 16);
+                },
+                [this](int code, QString msg) {
+                    emit errorOccurred(code, msg);
+                });
         });
 }
 
-void MediaController::handleStreamUrlsResponse(const QString& deviceId,
-                                               const QJsonObject& resp) {
-    // Legacy single-URL response ("url" + optional "session_id").
-    const QString legacyUrl = resp.value("url").toString();
-    QVariantMap urls;
-    if (const QJsonValue v = resp.value("urls"); v.isObject()) {
-        urls = v.toObject().toVariantMap();
-    }
-    if (urls.isEmpty() && !legacyUrl.isEmpty())
-        urls.insert(QStringLiteral("rtsp"), legacyUrl);
-
-    if (!urls.isEmpty())
-        m_degradation->setUrls(deviceId, urls);
-
-    m_streamUrls.insert(deviceId, legacyUrl.isEmpty()
-                                     ? m_degradation->activeUrl(deviceId)
-                                     : legacyUrl);
-    emit streamUrlsUpdated();
-
-    const QString active = m_degradation->activeUrl(deviceId);
-    emit streamStarted(deviceId, active.isEmpty() ? legacyUrl : active);
+// =====================================================================
+// fetchStreamUrlsFromZlm — legacy entry point, now delegates to
+// triggerStreamStart for the full start + poll flow.
+// =====================================================================
+void MediaController::fetchStreamUrlsFromZlm(const QString& deviceId,
+                                             const QString& channelId) {
+    triggerStreamStart(deviceId, channelId);
 }
 
 void MediaController::stopStream(const QString& sessionId) {
@@ -107,6 +264,39 @@ void MediaController::stopStream(const QString& sessionId) {
         [this](int code, QString msg) {
             emit errorOccurred(code, msg);
         });
+}
+
+void MediaController::stopAllStreams() {
+    m_streamUrls.clear();
+    emit streamUrlsUpdated();
+}
+
+void MediaController::refreshAllStreamUrls(const QVariantList& deviceIds) {
+    // For each device, trigger the full stream start flow:
+    //   check ZLM → POST /start (SIP INVITE) → poll ZLM for URLs
+    //
+    // This replaces the old approach that only called GET /api/v1/zlm/streams
+    // (read-only, never triggering SIP INVITE). On cold start with 0 active
+    // streams, that approach returned empty URLs indefinitely.
+    //
+    // Each device's triggerStreamStart runs independently and async.
+    // The UI updates progressively as each stream comes alive.
+    qDebug() << "[MediaController] refreshAllStreamUrls:"
+             << deviceIds.size() << "devices";
+
+    for (const QVariant& v : deviceIds) {
+        const QString devId = v.toString();
+        if (devId.isEmpty()) continue;
+
+        // Ensure a default degradation chain is set
+        const QStringList existingChain = m_degradation->chain(devId);
+        if (existingChain.isEmpty()) {
+            m_degradation->setChain(devId,
+                {"rtsp", "flv", "ws-flv", "hls", "webrtc"});
+        }
+
+        triggerStreamStart(devId, devId);
+    }
 }
 
 void MediaController::ptzControl(const QString& deviceId,
@@ -263,10 +453,14 @@ void MediaController::stopRecording(const QString& channelId) {
 }
 
 void MediaController::refreshStreams() {
-    m_api->getList("/api/v1/zlm/streams",
-        [this](QJsonArray arr) {
+    // Use get() instead of getList() because the response is an object
+    // with a nested streams array, not a top-level array.
+    m_api->get("/api/v1/zlm/streams",
+        [this](QJsonObject resp) {
+            QJsonObject data = ApiClient::unwrapData(resp);
+            QJsonArray streams = data.value("streams").toArray();
             m_channels.clear();
-            for (const auto& item : arr)
+            for (const auto& item : streams)
                 m_channels.append(item.toVariant().toMap());
             emit channelsUpdated();
         },
@@ -382,4 +576,10 @@ QVariantList MediaController::supportedPlaybackRates() const {
     QVariantList out;
     for (float r : kSupportedRates) out.append(r);
     return out;
+}
+
+// P1-1: AI Detection overlay — receive detection results from WebSocket
+void MediaController::updateDetections(const QString& deviceId, const QVariantList& boxes) {
+    m_detections[deviceId] = boxes;
+    emit detectionsUpdated();
 }

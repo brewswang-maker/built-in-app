@@ -5,8 +5,11 @@
 #include <QHash>
 #include <QStringList>
 
+// Q_PROPERTY 需要 StreamingDegradationChainController 完整定义(moc 会调用 QMetaType::fromType)
+#include "streaming/StreamingDegradationChain.h"
+
 class ApiClient;
-class StreamingDegradationChainController;
+class WebRTCStreamProvider;  // P0-1: 前向声明避免循环包含
 
 /**
  * @brief MediaController
@@ -31,6 +34,8 @@ class MediaController : public QObject {
                WRITE setPipOpacity NOTIFY pipChanged)
     Q_PROPERTY(float playbackRate READ playbackRate
                WRITE setPlaybackRate NOTIFY playbackRateChanged)
+    // P1-1: AI detection overlay data (deviceId -> detection boxes array)
+    Q_PROPERTY(QVariantMap detections READ detections NOTIFY detectionsUpdated)
 
 public:
     explicit MediaController(ApiClient* api, QObject* parent = nullptr);
@@ -47,6 +52,7 @@ public:
     void setPipOpacity(float opacity);
     float playbackRate() const { return m_playbackRate; }
     void setPlaybackRate(float rate);
+    QVariantMap detections() const { return m_detections; }
 
     Q_INVOKABLE void startStream(const QString& deviceId, const QString& channelId);
     /// Variant that requests a server-side degradation chain. The
@@ -57,6 +63,13 @@ public:
         const QStringList& protocols);
 
     Q_INVOKABLE void stopStream(const QString& sessionId);
+    /// Clears all cached stream URLs and notifies QML so every
+    /// VideoTile reverts to its placeholder state.
+    Q_INVOKABLE void stopAllStreams();
+    /// Fetches ALL active streams from ZLM and maps them to the given
+    /// device IDs by index position. This bypasses the GB28181
+    /// device_id/channel_id mismatch problem entirely.
+    Q_INVOKABLE void refreshAllStreamUrls(const QVariantList& deviceIds);
     Q_INVOKABLE void ptzControl(const QString& deviceId,
                                 const QString& command, float speed);
     Q_INVOKABLE void snapshot(const QString& channelId);
@@ -92,6 +105,8 @@ public:
     Q_INVOKABLE float normalizePlaybackRate(float rate) const;
     /// Returns the list of supported playback rates for the UI.
     Q_INVOKABLE QVariantList supportedPlaybackRates() const;
+    /// P1-1: Receive detection results from WebSocket and update QML tiles
+    Q_INVOKABLE void updateDetections(const QString& deviceId, const QVariantList& boxes);
 
 signals:
     void layoutChanged();
@@ -106,10 +121,24 @@ signals:
     void snapshotSaved(const QString& channelId, const QString& filePath);
     void snapshotFailed(const QString& channelId,
                         int code, const QString& message);
+    void detectionsUpdated();
 
 private:
-    void handleStreamUrlsResponse(const QString& deviceId,
-                                  const QJsonObject& resp);
+    // Legacy single-query path (now delegates to triggerStreamStart)
+    void fetchStreamUrlsFromZlm(const QString& deviceId,
+                                  const QString& channelId);
+    // Triggers GB28181 SIP INVITE via POST /streams/:id/start, then polls
+    // GET /api/v1/zlm/streams until the stream registers in ZLM.
+    void triggerStreamStart(const QString& deviceId,
+                            const QString& channelId);
+    // Polls ZLM stream list for streamId, up to `remaining` attempts
+    // (500 ms apart). Extracts absolute URLs when found.
+    void pollZlmForStream(const QString& deviceId,
+                          const QString& streamId, int remaining);
+    // Extracts rtsp/flv/hls URLs from a ZLM stream JSON object and
+    // applies them to the degradation chain + streamUrls map.
+    void applyZlmStreamUrls(const QString& deviceId,
+                            const QJsonObject& streamObj);
     static QString defaultSnapshotDir();
     static QString timestampedFileName(const QString& channelId,
                                        const QString& hint = {});
@@ -120,7 +149,10 @@ private:
     bool m_recording = false;
     QVariantMap m_streamUrls;
     StreamingDegradationChainController* m_degradation = nullptr;
+    // P0-1: WebRTC 探测器,默认禁用(Qt MediaPlayer 不支持 webrtc://)
+    WebRTCStreamProvider* m_webrtcProvider = nullptr;
     QString m_pipChannelId;
     float m_pipOpacity = 0.85f;
     float m_playbackRate = 1.0f;
+    QVariantMap m_detections; // deviceId -> [{x,y,width,height,label,confidence,color}, ...]
 };

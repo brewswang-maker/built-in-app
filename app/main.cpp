@@ -55,8 +55,10 @@ int main(int argc, char *argv[]) {
 
     // ── API Client (连接本地box-sdk) ──
     ApiClient apiClient;
-    apiClient.setBaseUrl("http://localhost:8080");
-    apiClient.setTimeoutMs(5000);
+    // Use 127.0.0.1 instead of localhost to avoid macOS IPv6 (::1)
+    // resolution delays that cause Qt HTTP transfer timeouts.
+    apiClient.setBaseUrl("http://127.0.0.1:18080");
+    apiClient.setTimeoutMs(10000);
 
     // ── 统一 WebSocket 消息路由(规范 b4ced019 / 700c35a7) ──
     // 全应用共用单条长连接,按 9 type 路由给各 Controller

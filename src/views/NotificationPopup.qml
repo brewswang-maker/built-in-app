@@ -42,7 +42,7 @@ Popup {
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
 
-                Text { text: "🔔 通知"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "通知"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
                 Rectangle {
                     visible: unreadCount > 0; width: 24; height: 18; radius: 9; color: "#FF3D71"
                     Text { text: unreadCount > 99 ? "99+" : unreadCount; font.pixelSize: 9; color: "#FFF"; font.bold: true; anchors.centerIn: parent }
@@ -58,7 +58,7 @@ Popup {
                     }
                 }
                 Button {
-                    text: "✕"; font.pixelSize: 14
+                    text: "X"; font.pixelSize: 14
                     background: Rectangle { color: "transparent" }
                     contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#8B8FA3" }
                     onClicked: notifPopup.close()
@@ -100,7 +100,7 @@ Popup {
                         width: 32; height: 32; radius: 6
                         color: nData.level === "critical" ? "#2A0A10" : nData.level === "warning" ? "#2A2A0A" : "#0A1A2A"
                         Text {
-                            text: nData.type === "alarm" ? "⚠️" : nData.type === "system" ? "🔧" : "📋"
+                            text: nData.type === "alarm" ? "!" : nData.type === "system" ? "S" : "i"
                             font.pixelSize: 14; anchors.centerIn: parent
                         }
                     }
@@ -125,14 +125,14 @@ Popup {
                     Column {
                         spacing: 2
                         Button {
-                            text: "✓"; font.pixelSize: 10
+                            text: "OK"; font.pixelSize: 10
                             visible: nData.status === "unhandled"
                             background: Rectangle { color: "#00D4AA"; radius: 3; width: 22; height: 18 }
                             contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: alarmController.confirmAlarm(nData.id || "")
                         }
                         Button {
-                            text: "✕"; font.pixelSize: 10
+                            text: "X"; font.pixelSize: 10
                             visible: nData.status === "unhandled"
                             background: Rectangle { color: "#FF3D71"; radius: 3; width: 22; height: 18 }
                             contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -148,7 +148,7 @@ Popup {
             Layout.fillWidth: true; height: 36; color: "#1A1D23"; radius: 12
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
-                Text { text: "查看全部 →"; font.pixelSize: 11; color: "#3B82F6"
+                Text { text: "查看全部 "; font.pixelSize: 11; color: "#3B82F6"
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor }
                 }
                 Item { Layout.fillWidth: true }

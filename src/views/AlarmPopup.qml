@@ -18,20 +18,66 @@ Popup {
     property int autoCloseSeconds: 15
     property bool isPaused: false
 
+    // ═══ P2.2: 优先级色编码 ═══
+    readonly property color priorityColor: {
+        var lv = (currentAlarm.level || "").toLowerCase()
+        if (lv === "critical" || currentAlarm.level === "紧急") return "#FF3D71"  // 红
+        if (lv === "high" || currentAlarm.level === "高") return "#FF6B35"       // 橙
+        if (lv === "medium" || currentAlarm.level === "中") return "#FFB800"      // 黄
+        return "#8B8FA3"                                                              // 灰(低)
+    }
+    readonly property bool isCritical: {
+        var lv = (currentAlarm.level || "").toLowerCase()
+        return lv === "critical" || currentAlarm.level === "紧急"
+    }
+    property real autoCloseProgress: 1.0  // 1.00.0
+
     signal confirmed(string alarmId)
     signal falseAlarm(string alarmId)
     signal silenced(string alarmId)
     signal replayRequested(string alarmId)
 
+    // ═══ P2.2: 滑入/滑出动画 ═══
+    enter: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 0.0; to: 1.0; duration: 250; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "scale"; from: 0.85; to: 1.0; duration: 250; easing.type: Easing.OutBack }
+        }
+    }
+    exit: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 1.0; to: 0.0; duration: 200; easing.type: Easing.InCubic }
+            NumberAnimation { property: "scale"; from: 1.0; to: 0.9; duration: 200; easing.type: Easing.InCubic }
+        }
+    }
+
     function showAlarm(alarm) {
         currentAlarm = alarm
+        autoCloseSeconds = 15
+        autoCloseProgress = 1.0
         alarmPopup.open()
         autoCloseTimer.restart()
     }
 
     background: Rectangle {
-        color: "#141720"; radius: 12
-        border.color: "#FF3D71"; border.width: 2
+        color: "#141420"; radius: 12
+        border.color: alarmPopup.priorityColor; border.width: 2
+
+        // P2.2: 高危告警边缘闪烁
+        Rectangle {
+            anchors.fill: parent
+            radius: 12
+            color: "transparent"
+            border.color: alarmPopup.priorityColor
+            border.width: 3
+            opacity: 0
+            SequentialAnimation on opacity {
+                running: alarmPopup.isCritical && alarmPopup.visible
+                loops: Animation.Infinite
+                NumberAnimation { from: 0; to: 0.4; duration: 400 }
+                NumberAnimation { from: 0.4; to: 0; duration: 400 }
+            }
+        }
     }
 
     Component.onCompleted: {
@@ -53,46 +99,64 @@ Popup {
         }
     }
 
-    // ── 自动关闭倒计时 ──
+    // ── 自动关闭倒计时 + 进度条 ═══
     Timer {
         id: autoCloseTimer
-        interval: 1000; repeat: true; running: false
+        interval: 100; repeat: true; running: false
+        property real totalMs: 15000
+        property real elapsedMs: 0
         onTriggered: {
             if (!isPaused) {
-                autoCloseSeconds--
+                elapsedMs += 100
+                autoCloseProgress = Math.max(0, 1.0 - elapsedMs / totalMs)
+                autoCloseSeconds = Math.ceil(autoCloseProgress * 15)
                 countdownText.text = autoCloseSeconds + "s"
-                if (autoCloseSeconds <= 0) {
+                if (autoCloseProgress <= 0) {
                     stop()
                     alarmPopup.close()
                 }
             }
+        }
+        onRunningChanged: {
+            if (running) { elapsedMs = 0; autoCloseProgress = 1.0 }
         }
     }
 
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-        // ── 头部 ──
+        // ── 头部 (P2.2: 优先级色编码) ──
         Rectangle {
-            Layout.fillWidth: true; height: 40; color: "#1A0A10"; radius: 6
+            Layout.fillWidth: true; height: 40
+            color: Qt.rgba(
+                alarmPopup.priorityColor.r * 0.1,
+                alarmPopup.priorityColor.g * 0.04,
+                alarmPopup.priorityColor.b * 0.06,
+                1.0
+            )
+            radius: 6
 
             RowLayout {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
 
-                Rectangle { width: 10; height: 10; radius: 5; color: "#FF3D71"
-                    SequentialAnimation on opacity { loops: Animation.Infinite; NumberAnimation { from: 1; to: 0.3; duration: 600 } NumberAnimation { from: 0.3; to: 1; duration: 600 } }
+                Rectangle { width: 10; height: 10; radius: 5; color: alarmPopup.priorityColor
+                    SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 1; to: alarmPopup.isCritical ? 0.1 : 0.4; duration: alarmPopup.isCritical ? 300 : 600 }
+                        NumberAnimation { from: alarmPopup.isCritical ? 0.1 : 0.4; to: 1; duration: alarmPopup.isCritical ? 300 : 600 }
+                    }
                 }
-                Text { text: "⚠️ 新告警"; font.pixelSize: 14; font.bold: true; color: "#FF3D71" }
+                Text { text: alarmPopup.isCritical ? "紧急告警" : "新告警"; font.pixelSize: 14; font.bold: true; color: alarmPopup.priorityColor }
                 Item { Layout.fillWidth: true }
                 Text { id: countdownText; text: "15s"; font.pixelSize: 12; color: "#FFB800" }
                 Button {
-                    text: isPaused ? "▶" : "⏸"; font.pixelSize: 12
+                    text: isPaused ? ">" : "||"; font.pixelSize: 12
                     background: Rectangle { color: "#252830"; radius: 4; width: 24; height: 24 }
                     contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: isPaused = !isPaused
                 }
                 Button {
-                    text: "✕"; font.pixelSize: 14
+                    text: "X"; font.pixelSize: 14
                     background: Rectangle { color: "transparent"; radius: 4; width: 24; height: 24 }
                     contentItem: Text { text: parent.text; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: alarmPopup.close()
@@ -197,7 +261,7 @@ Popup {
                     Row {
                         width: parent.width; height: 26; spacing: 4
                         Button {
-                            text: "⏮"; font.pixelSize: 10; width: 30; height: 22
+                            text: "|<"; font.pixelSize: 10; width: 30; height: 22
                             background: Rectangle { color: "#252830"; radius: 3 }
                             contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: alarmPopup.replayRequested(currentAlarm.id || "")
@@ -205,13 +269,13 @@ Popup {
                         Text { text: "0:00 / 0:03"; font.pixelSize: 9; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                         Item { width: 10 }
                         Button {
-                            text: "📷 截图"; font.pixelSize: 9; height: 22
+                            text: "截图"; font.pixelSize: 9; height: 22
                             background: Rectangle { color: "#252830"; radius: 3; width: 42 }
                             contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 9; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: mediaController.snapshot(currentAlarm.channelId || "")
                         }
                         Button {
-                            text: "🔊 对讲"; font.pixelSize: 9; height: 22
+                            text: "对讲"; font.pixelSize: 9; height: 22
                             background: Rectangle { color: "#252830"; radius: 3; width: 42 }
                             contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 9; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
@@ -252,7 +316,7 @@ Popup {
                         Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                         // AI研判
-                        Text { text: "🧠 AI研判"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "AI研判"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Column { spacing: 2; width: parent.width
                             Text { text: currentAlarm.aiVerdict || "检测到人员越界，非动物/树枝触发"; font.pixelSize: 10; color: "#8B8FA3"; wrapMode: Text.WordWrap; width: parent.width }
                             Text { text: "建议: " + (currentAlarm.suggestion || "立即派人现场确认"); font.pixelSize: 10; color: "#FFB800"; wrapMode: Text.WordWrap; width: parent.width }
@@ -261,7 +325,7 @@ Popup {
                         Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                         // 关联告警
-                        Text { text: "🔗 关联告警 (" + (currentAlarm.relatedCount || 2) + ")"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "关联告警 (" + (currentAlarm.relatedCount || 2) + ")"; font.pixelSize: 11; color: "#8B8FA3" }
                         Repeater {
                             model: Math.min(currentAlarm.relatedCount || 0, 3)
                             delegate: Text {
@@ -272,14 +336,14 @@ Popup {
 
                         // 联动状态
                         Rectangle { height: 1; color: "#252830"; width: parent.width }
-                        Text { text: "⚡ 联动状态"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "联动状态"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Column { spacing: 2; width: parent.width
                             Row { spacing: 4
-                                Text { text: currentAlarm.linkageStatus === "executed" ? "✅" : "⏳"; font.pixelSize: 10 }
+                                Rectangle { width: 10; height: 10; radius: 5; color: currentAlarm.linkageStatus === "executed" ? "#00D4AA" : "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
                                 Text { text: "录像已触发"; font.pixelSize: 10; color: "#8B8FA3" }
                             }
                             Row { spacing: 4
-                                Text { text: currentAlarm.linkageSnapshot === "done" ? "✅" : "⏳"; font.pixelSize: 10 }
+                                Rectangle { width: 10; height: 10; radius: 5; color: currentAlarm.linkageSnapshot === "done" ? "#00D4AA" : "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
                                 Text { text: "抓图已执行"; font.pixelSize: 10; color: "#8B8FA3" }
                             }
                         }
@@ -296,7 +360,7 @@ Popup {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12; spacing: 8
 
                 Button {
-                    text: "✅ 确认"; font.pixelSize: 12
+                    text: "确认"; font.pixelSize: 12
                     background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
@@ -306,7 +370,7 @@ Popup {
                     }
                 }
                 Button {
-                    text: "❌ 误报"; font.pixelSize: 12
+                    text: "误报"; font.pixelSize: 12
                     background: Rectangle { color: "#FFB800"; radius: 6; width: 80; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
@@ -316,7 +380,7 @@ Popup {
                     }
                 }
                 Button {
-                    text: "🔇 静音"; font.pixelSize: 12
+                    text: "静音"; font.pixelSize: 12
                     background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
@@ -325,17 +389,32 @@ Popup {
                     }
                 }
                 Button {
-                    text: "🔄 回放"; font.pixelSize: 12
+                    text: "回放"; font.pixelSize: 12
                     background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: alarmPopup.replayRequested(currentAlarm.id || "")
                 }
                 Item { Layout.fillWidth: true }
                 Text {
-                    text: "详情 →"
+                    text: "详情 "
                     font.pixelSize: 11; color: "#3B82F6"
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: alarmPopup.close() }
                 }
+            }
+        }
+
+        // ═══ P2.2: 自动关闭进度条 ═══
+        Rectangle {
+            Layout.fillWidth: true; height: 3; radius: 1
+            color: "#252830"
+            Layout.topMargin: 2
+
+            Rectangle {
+                anchors.top: parent.top; anchors.left: parent.left
+                height: 3; radius: 1
+                width: parent.width * alarmPopup.autoCloseProgress
+                color: alarmPopup.priorityColor
+                Behavior on width { NumberAnimation { duration: 100 } }
             }
         }
     }

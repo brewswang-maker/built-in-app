@@ -69,7 +69,21 @@ void ApiClient::getList(const QString& path,
         }
         QByteArray data = reply->readAll();
         QJsonDocument doc = QJsonDocument::fromJson(data);
-        if (onSuccess) onSuccess(doc.array());
+        // 兼容两种后端响应格式:
+        // 1) 裸数组: [{...}, {...}]
+        // 2) 信封包装: {code:0, data:{items:[...]/alarms:[...]/...}}
+        if (doc.isArray()) {
+            if (onSuccess) onSuccess(doc.array());
+        } else if (doc.isObject()) {
+            // 信封格式: 先解包 data, 再按常见 key 查找数组
+            QJsonObject obj = doc.object();
+            QJsonArray arr = extractArray(obj, {"items", "alarms", "data",
+                "logs", "rules", "events", "models", "list", "pipelines",
+                "history", "records"});
+            if (onSuccess) onSuccess(arr);
+        } else {
+            if (onSuccess) onSuccess(QJsonArray());
+        }
     });
 }
 
@@ -221,4 +235,36 @@ void ApiClient::setupReply(QNetworkReply* reply,
 
 void ApiClient::onReplyFinished() {
     // Slot for QNetworkReply finished signal — handled per-reply in setupReply
+}
+
+// =====================================================================
+// 响应解包工具实现
+// =====================================================================
+
+QJsonObject ApiClient::unwrapData(const QJsonObject& obj) {
+    // 后端标准响应: { code:0, message:"success", data:{...}, timestamp:N }
+    // 如果顶层有 data 字段且是 object, 返回 data 内层对象
+    // 否则返回原始 obj (兼容无包装/非标准响应)
+    if (obj.contains("data") && obj.value("data").isObject()) {
+        return obj.value("data").toObject();
+    }
+    return obj;
+}
+
+QJsonArray ApiClient::extractArray(const QJsonObject& obj, const QStringList& keys) {
+    // 1. 先解包 data 信封
+    QJsonObject data = unwrapData(obj);
+    // 2. 在解包后的 data 对象中按优先级查找数组
+    for (const auto& key : keys) {
+        if (data.contains(key) && data.value(key).isArray()) {
+            return data.value(key).toArray();
+        }
+    }
+    // 3. 回退: 直接从顶层查找(兼容无信封包装的响应)
+    for (const auto& key : keys) {
+        if (obj.contains(key) && obj.value(key).isArray()) {
+            return obj.value(key).toArray();
+        }
+    }
+    return {};
 }

@@ -21,7 +21,7 @@ Item {
 
     Connections {
         target: mediaController
-        function onStreamsUpdated() { recalcBandwidth() }
+        function onChannelsUpdated() { recalcBandwidth() }
         function onStreamStopped(channelId) { statusMsg = "Stopped: " + channelId; statusTimer.start() }
         function onStreamStarted(channelId) { statusMsg = "Started: " + channelId; statusTimer.start() }
         function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
@@ -36,7 +36,7 @@ Item {
     }
 
     function recalcBandwidth() {
-        var streams = mediaController.streams
+        var streams = mediaController.channels
         var total = 0
         for (var i = 0; i < streams.length; i++) {
             total += (streams[i].bitrate || 0)
@@ -89,7 +89,7 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
             Text { text: "Stream Mgmt"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-            Text { text: "Active: " + mediaController.activeStreams; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
+            Text { text: "Active: " + mediaController.channels.length; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
             Text { text: "BW: " + totalBitrate.toFixed(1) + "/" + maxBandwidth + " Mbps"; font.pixelSize: 11; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
             Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
@@ -208,13 +208,13 @@ Item {
                         Text { text: "Server Stats"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Row { spacing: 8
                             Text { text: "Active streams:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: mediaController.activeStreams; font.pixelSize: 11; color: "#00D4AA"; font.bold: true } }
+                            Text { text: mediaController.channels.length; font.pixelSize: 11; color: "#00D4AA"; font.bold: true } }
                         Row { spacing: 8
                             Text { text: "Total bandwidth:"; font.pixelSize: 11; color: "#8B8FA3" }
                             Text { text: totalBitrate.toFixed(1) + " Mbps"; font.pixelSize: 11; color: "#E8E8E8" } }
                         Row { spacing: 8
                             Text { text: "Avg bitrate:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: (mediaController.activeStreams > 0 ? (totalBitrate / mediaController.activeStreams).toFixed(1) : "0") + " Mbps"; font.pixelSize: 11; color: "#E8E8E8" } }
+                            Text { text: (mediaController.channels.length > 0 ? (totalBitrate / mediaController.channels.length).toFixed(1) : "0") + " Mbps"; font.pixelSize: 11; color: "#E8E8E8" } }
                         Row { spacing: 8
                             Text { text: "BW utilization:"; font.pixelSize: 11; color: "#8B8FA3" }
                             Text { text: (totalBitrate / maxBandwidth * 100).toFixed(1) + "%"; font.pixelSize: 11; color: totalBitrate / maxBandwidth > 0.8 ? "#FF3D71" : "#00D4AA" } }
@@ -236,7 +236,7 @@ Item {
                 ListView {
                     width: parent.width - 24; height: parent.height - 40; clip: true; spacing: 4
 
-                    model: currentTab === 0 ? mediaController.streams : []
+                    model: currentTab === 0 ? mediaController.channels : []
 
                     delegate: Rectangle {
                         width: ListView.view.width; height: 64; color: "#141720"; radius: 6
@@ -296,10 +296,10 @@ Item {
 
                 // Empty state
                 Text {
-                    anchors.centerIn: parent
+                    anchors.horizontalCenter: parent.horizontalCenter
                     text: currentTab === 0 ? "No active streams" : "No history records"
                     font.pixelSize: 13; color: "#4A4D58"
-                    visible: mediaController.streams.length === 0 && currentTab === 0
+                    visible: mediaController.channels.length === 0 && currentTab === 0
                 }
             }
         }

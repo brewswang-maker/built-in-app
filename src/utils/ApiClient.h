@@ -24,6 +24,12 @@ public:
     QString authToken() const { return m_authToken; }
     void setAuthToken(const QString& token);
 
+    // ── 响应解包工具 (后端标准信封: {code, message, data, timestamp}) ──
+    /** 解包 {code,message,data} 信封, 返回 data 对象(无包装时返回原始 obj) */
+    static QJsonObject unwrapData(const QJsonObject& obj);
+    /** 从信封中提取数组: 先解包 data, 再按 keys 优先级查找 */
+    static QJsonArray extractArray(const QJsonObject& obj, const QStringList& keys);
+
     // REST API methods
     void get(const QString& path,
              std::function<void(QJsonObject)> onSuccess,
@@ -75,7 +81,7 @@ private:
     QNetworkRequest buildRequest(const QString& path) const;
 
     QNetworkAccessManager* m_manager;
-    QString m_baseUrl = "http://localhost:18080";
-    int m_timeoutMs = 5000;
+    QString m_baseUrl = "http://127.0.0.1:18080";
+    int m_timeoutMs = 10000;
     QString m_authToken;
 };

@@ -63,7 +63,7 @@ Item {
                     // 安全评分
                     KPICard {
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        icon: "🛡️"
+                        icon: ""
                         label: "安全评分"
                         value: statisticsController.securityScore.toString()
                         unit: "/100"
@@ -76,7 +76,7 @@ Item {
                     // 在线率
                     KPICard {
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        icon: "📡"
+                        icon: ""
                         label: "设备在线率"
                         value: statisticsController.deviceOnlineRate.toFixed(1)
                         unit: "%"
@@ -88,13 +88,13 @@ Item {
                     // 今日告警
                     KPICard {
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        icon: "🚨"
+                        icon: ""
                         label: "今日告警"
                         value: statisticsController.todayAlarms.toString()
                         unit: "起"
                         color: "#FF3D71"
                         trendText: statisticsController.dashboard.alarm_trend !== undefined ?
-                                   (statisticsController.dashboard.alarm_trend >= 0 ? "↑ " : "↓ ") +
+                                   (statisticsController.dashboard.alarm_trend >= 0 ? "+" : "-") +
                                    Math.abs(statisticsController.dashboard.alarm_trend).toFixed(1) + "%" : ""
                         trendUp: statisticsController.dashboard.alarm_trend < 0
                     }
@@ -102,7 +102,7 @@ Item {
                     // 在线设备数
                     KPICard {
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        icon: "📹"
+                        icon: ""
                         label: "在线设备"
                         value: statisticsController.dashboard.online_devices || 0
                         unit: "台"
@@ -113,7 +113,7 @@ Item {
                     // 活跃算法
                     KPICard {
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        icon: "🧠"
+                        icon: ""
                         label: "活跃算法"
                         value: statusController.activeModels || 0
                         unit: "个"
@@ -124,7 +124,7 @@ Item {
                     // 告警处置率
                     KPICard {
                         Layout.fillWidth: true; Layout.fillHeight: true
-                        icon: "✅"
+                        icon: ""
                         label: "告警处置率"
                         value: statisticsController.dashboard.handle_rate ?
                                statisticsController.dashboard.handle_rate.toFixed(0) : "--"
@@ -152,7 +152,7 @@ Item {
                         spacing: 8
 
                         RowLayout {
-                            Text { text: "🎯 告警分级分布"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "告警分级分布"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: statisticsController.alarmLevelDist.total ?
@@ -221,7 +221,7 @@ Item {
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "📈 24小时告警趋势"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "24小时告警趋势"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: statisticsController.hourlyTrend.length + " 段"
@@ -247,7 +247,7 @@ Item {
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "🏷️ 告警类型 Top"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "告警类型 Top"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text { text: "实时"; color: "#8B8FA3"; font.pixelSize: 11 }
                         }
@@ -311,7 +311,7 @@ Item {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 6
                         RowLayout {
-                            Text { text: "🧠 AI 推理指标"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "AI 推理指标"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text { text: "实时"; color: "#8B8FA3"; font.pixelSize: 11 }
                         }
@@ -361,7 +361,7 @@ Item {
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
                         RowLayout {
-                            Text { text: "📊 实时 TPS (60s)"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "实时 TPS (60s)"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: statisticsController.aiTps > 0 ?
@@ -384,7 +384,7 @@ Item {
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
                         RowLayout {
-                            Text { text: "🩺 模型健康度"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "模型健康度"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Button {
                                 text: "刷新"; font.pixelSize: 10
@@ -482,7 +482,7 @@ Item {
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "⚠️ 风险区域"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "风险区域"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text { text: statisticsController.riskZones.length + " 个高危"
                                    color: "#FF3D71"; font.pixelSize: 11 }
@@ -542,7 +542,7 @@ Item {
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "🕒 最近事件"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "最近事件"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Button {
                                 text: "刷新"

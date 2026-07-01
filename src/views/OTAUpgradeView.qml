@@ -40,17 +40,17 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
-            Text { text: "🔄 系统升级"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "系统升级"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
             Button {
-                text: "🔍 检查更新"
+                text: "检查更新"
                 font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: otaController.checkUpdate()
             }
             Button {
-                text: "📁 本地升级"
+                text: "本地升级"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -72,7 +72,7 @@ Item {
 
             RowLayout {
                 width: parent.width
-                Text { text: "⬆️ 升级中..."; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
+                Text { text: "升级中..."; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                 Item { Layout.fillWidth: true }
                 Text { text: Math.round(otaController.upgradeProgress) + "%"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true }
             }
@@ -110,7 +110,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 16; spacing: 12
 
-                Text { text: "📋 版本信息"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "版本信息"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 Grid {
                     columns: 2; spacing: 8; width: parent.width - 32
@@ -126,7 +126,7 @@ Item {
 
                 // 可用更新
                 Text {
-                    text: otaController.updateAvailable ? "🆕 可用更新" : "✅ 已是最新版本"
+                    text: otaController.updateAvailable ? "🆕 可用更新" : "已是最新版本"
                     font.pixelSize: 14; font.bold: true
                     color: otaController.updateAvailable ? "#E8E8E8" : "#00D4AA"
                 }
@@ -147,7 +147,7 @@ Item {
                 Row {
                     spacing: 8; visible: otaController.updateAvailable
                     Button {
-                        text: "⬇️ 下载并安装"
+                        text: "下载并安装"
                         enabled: !otaController.upgrading
                         background: Rectangle { color: otaController.upgrading ? "#4A4D58" : "#00D4AA"; radius: 6; width: 140; height: 36 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -165,7 +165,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "📜 升级历史"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "升级历史"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
                     id: historyListView

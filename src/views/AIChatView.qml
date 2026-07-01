@@ -9,16 +9,20 @@ import QtQuick.Layouts 1.15
 Item {
     id: aiChatPage
 
+    // ── ReAct 面板展开状态 ──
+    property bool showReactPanel: false
+
     // ═══ 顶栏 ═══
     Rectangle {
         id: topBar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 48; color: "#141720"; radius: 8
+        height: 48; color: "#141420"; radius: 8
 
         RowLayout {
             anchors.fill: parent; anchors.margins: 12; spacing: 12
 
-            Text { text: "🤖 AI 安全助手"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            AppIcon { name: "ai"; size: 22; iconColor: "#00D4AA" }
+            Text { text: "AI 安全助手"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Rectangle { width: 8; height: 8; radius: 4; color: aiController.isThinking ? "#FFB800" : "#00D4AA"
                 SequentialAnimation on opacity { running: aiController.isThinking; loops: Animation.Infinite
                     NumberAnimation { from: 1; to: 0.3; duration: 600 }
@@ -29,12 +33,59 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Text { text: "对话: " + aiController.conversations.length + "条"; font.pixelSize: 11; color: "#4A4D58" }
-            Button { text: "🗑️ 清空"; font.pixelSize: 11
-                background: Rectangle { color: "#252830"; radius: 6; width: 50; height: 28 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: aiController.clearConversations()
+            Text { text: "对话: " + aiController.conversations.length + "条"; font.pixelSize: 12; color: "#4A4D58" }
+
+            // ReAct 面板切换按钮
+            Button {
+                Layout.preferredWidth: 100; Layout.preferredHeight: 28
+                font.pixelSize: 11
+                background: Rectangle {
+                    color: aiChatPage.showReactPanel ? "#6C5CE7" : "#252830"
+                    radius: 6
+                    border.color: aiController.thoughtSteps.length > 0 ? "#6C5CE7" : "transparent"
+                    border.width: 1
+                }
+                contentItem: Row {
+                    spacing: 4
+                    anchors.centerIn: parent
+                    AppIcon { name: "brain"; size: 14; iconColor: aiChatPage.showReactPanel ? "#FFF" : "#8B8FA3" }
+                    Text {
+                        text: "ReAct 回放"; font.pixelSize: 11
+                        color: aiChatPage.showReactPanel ? "#FFF" : "#8B8FA3"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+                onClicked: aiChatPage.showReactPanel = !aiChatPage.showReactPanel
             }
+
+            Button {
+                Layout.preferredWidth: 28; Layout.preferredHeight: 28
+                flat: true
+                background: Rectangle { color: "#252830"; radius: 6 }
+                contentItem: AppIcon { name: "delete"; size: 16; iconColor: "#8B8FA3" }
+                ToolTip.text: "清空对话"
+                ToolTip.visible: hovered
+                onClicked: aiController.clearConversation()
+            }
+        }
+    }
+
+    // ═══ ReAct 推理回放面板 (右侧可折叠) ═══
+    Rectangle {
+        id: reactPanelContainer
+        anchors.top: topBar.bottom
+        anchors.bottom: inputBar.top
+        anchors.right: parent.right
+        width: aiChatPage.showReactPanel ? parent.width * 0.38 : 0
+        color: "transparent"
+        visible: width > 0
+        clip: true
+
+        Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+        ReActTraceView {
+            anchors.fill: parent
+            anchors.margins: 4
         }
     }
 
@@ -42,7 +93,8 @@ Item {
     ListView {
         id: chatList
         anchors.top: topBar.bottom; anchors.bottom: quickBar.top
-        anchors.left: parent.left; anchors.right: parent.right
+        anchors.left: parent.left
+        anchors.right: aiChatPage.showReactPanel ? reactPanelContainer.left : parent.right
         anchors.margins: 8; spacing: 6; clip: true
         model: aiController.conversations
 
@@ -98,9 +150,9 @@ Item {
                         anchors.fill: parent; anchors.margins: 10; spacing: 4
 
                         Row { spacing: 6
-                            Text { text: "🧠"; font.pixelSize: 13 }
+                            AppIcon { name: "brain"; size: 13; iconColor: "#6C5CE7" }
                             Text { text: modelData.agent_name || "Agent 思考中"; font.pixelSize: 12; color: "#6C5CE7"; font.bold: true }
-                            Text { text: modelData.agent_role || ""; font.pixelSize: 10; color: "#4A4D58" }
+                            Text { text: modelData.agent_role || ""; font.pixelSize: 11; color: "#4A4D58" }
                         }
                         Text { text: modelData.content || ""; font.pixelSize: 12; color: "#A29BFE"; wrapMode: Text.Wrap; width: parent.width; lineHeight: 1.3 }
 
@@ -110,7 +162,7 @@ Item {
                                 model: (modelData.steps || [])
                                 delegate: Rectangle {
                                     width: 20; height: 20; radius: 10; color: "#6C5CE7"
-                                    Text { text: index + 1; font.pixelSize: 9; color: "#FFF"; anchors.centerIn: parent }
+                                    Text { text: index + 1; font.pixelSize: 11; color: "#FFF"; anchors.centerIn: parent }
                                 }
                             }
                         }
@@ -133,10 +185,10 @@ Item {
                         anchors.fill: parent; anchors.margins: 10; spacing: 4
 
                         Row { spacing: 6
-                            Text { text: "🔧"; font.pixelSize: 13 }
+                            AppIcon { name: "tool"; size: 13; iconColor: "#FFB800" }
                             Text { text: "工具调用: " + (modelData.tool_name || ""); font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                         }
-                        Text { text: "参数: " + (modelData.tool_params || ""); font.pixelSize: 11; color: "#FFEAA7"; wrapMode: Text.Wrap; width: parent.width }
+                        Text { text: "参数: " + (modelData.tool_params || ""); font.pixelSize: 12; color: "#FFEAA7"; wrapMode: Text.Wrap; width: parent.width }
                     }
                 }
 
@@ -151,11 +203,11 @@ Item {
                         anchors.fill: parent; anchors.margins: 10; spacing: 4
 
                         Row { spacing: 6
-                            Text { text: "📊"; font.pixelSize: 13 }
+                            AppIcon { name: "statistics"; size: 13; iconColor: "#00D4AA" }
                             Text { text: modelData.tool_name || "工具结果"; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
-                            Text { text: modelData.success ? "✅" : "❌"; font.pixelSize: 12 }
+                            Rectangle { width: 10; height: 10; radius: 5; color: modelData.success ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
                         }
-                        Text { text: modelData.content || ""; font.pixelSize: 11; color: "#55EFC4"; wrapMode: Text.Wrap; width: parent.width; maximumLineCount: 5; elide: Text.ElideRight }
+                        Text { text: modelData.content || ""; font.pixelSize: 12; color: "#55EFC4"; wrapMode: Text.Wrap; width: parent.width; maximumLineCount: 5; elide: Text.ElideRight }
                     }
                 }
 
@@ -171,7 +223,7 @@ Item {
                         anchors.fill: parent; anchors.margins: 10; spacing: 6
 
                         Row { spacing: 6
-                            Text { text: "🤖"; font.pixelSize: 14 }
+                            AppIcon { name: "ai"; size: 14; iconColor: "#3B82F6" }
                             Text { text: "AI助手"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true }
                         }
 
@@ -198,18 +250,18 @@ Item {
 
         Repeater {
             model: [
-                { text: "📊 今日安全报告", msg: "请生成今日安全报告，包含告警统计、设备状态和安全评分" },
-                { text: "🚨 最近告警", msg: "列出最近10条告警，按严重程度排序" },
-                { text: "📹 设备状态", msg: "查看所有摄像头在线状态和码率信息" },
-                { text: "🛡️ 风险评估", msg: "分析当前厂区的安全风险点和薄弱区域" },
-                { text: "📈 趋势分析", msg: "对比本周和上周的告警趋势，给出改进建议" },
-                { text: "🧩 算法优化", msg: "分析当前算法准确率，给出优化建议" }
+                { text: "今日安全报告", msg: "请生成今日安全报告，包含告警统计、设备状态和安全评分" },
+                { text: "最近告警", msg: "列出最近10条告警，按严重程度排序" },
+                { text: "设备状态", msg: "查看所有摄像头在线状态和码率信息" },
+                { text: "风险评估", msg: "分析当前厂区的安全风险点和薄弱区域" },
+                { text: "趋势分析", msg: "对比本周和上周的告警趋势，给出改进建议" },
+                { text: "算法优化", msg: "分析当前算法准确率，给出优化建议" }
             ]
 
             delegate: Button {
-                text: modelData.text; font.pixelSize: 11
-                background: Rectangle { color: "#1A1D23"; radius: 16; width: implicitWidth + 20; height: 30; border.color: "#3B82F6"; border.width: 1 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#3B82F6"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                text: modelData.text; font.pixelSize: 12
+                background: Rectangle { color: "#1A1D23"; radius: 16; width: implicitWidth + 20; height: 32; border.color: "#3B82F6"; border.width: 1 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#3B82F6"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: aiController.sendMessage(modelData.msg)
             }
         }
@@ -227,7 +279,7 @@ Item {
             // 语音输入按钮
             Button {
                 Layout.preferredWidth: 36; Layout.fillHeight: true
-                text: "🎤"; font.pixelSize: 16; enabled: false
+                text: "语音"; font.pixelSize: 10; enabled: false
                 background: Rectangle { color: "#252830"; radius: 8 }
                 contentItem: Text { text: parent.text; font.pixelSize: 16; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 ToolTip.visible: pressed; ToolTip.text: "语音输入即将上线"

@@ -14,10 +14,8 @@ void StreamingController::refreshStreams() {
     setLoading(true);
     m_api->get("/api/v1/streams",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("streams").toArray();
-            if (arr.isEmpty() && obj.value("data").isArray())
-                arr = obj.value("data").toArray();
+            // 后端响应: {code,message,data:{items:[...]/streams:[...]/data:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "streams", "data"});
             m_streams.clear();
             for (const auto& v : arr) m_streams.append(v.toVariant().toMap());
             emit streamsUpdated();
@@ -32,7 +30,8 @@ void StreamingController::refreshStreams() {
 void StreamingController::refreshZlmStatus() {
     m_api->get("/api/v1/zlm/status",
         [this](QJsonObject obj) {
-            m_zlmStatus = obj.toVariantMap();
+            // 后端响应: {code,message,data:{...zlm 状态字段...}}
+            m_zlmStatus = ApiClient::unwrapData(obj).toVariantMap();
             emit zlmStatusUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -41,7 +40,8 @@ void StreamingController::refreshZlmStatus() {
 void StreamingController::refreshStreamHealth() {
     m_api->get("/api/v1/media/health",
         [this](QJsonObject obj) {
-            m_streamHealth = obj.toVariantMap();
+            // 后端响应: {code,message,data:{...health 字段...}}
+            m_streamHealth = ApiClient::unwrapData(obj).toVariantMap();
             emit streamHealthUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -91,8 +91,10 @@ void StreamingController::takeSnapshot(const QString& channelId) {
     m_api->post(QString("/api/v1/channels/%1/snapshot").arg(channelId),
                 QJsonObject(),
         [this, channelId](QJsonObject obj) {
-            QString url = obj.value("url").toString();
-            if (url.isEmpty()) url = obj.value("snapshot_url").toString();
+            // 后端响应: {code,message,data:{url/snapshot_url}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString url = data.value("url").toString();
+            if (url.isEmpty()) url = data.value("snapshot_url").toString();
             emit snapshotTaken(channelId, url);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -122,7 +124,9 @@ void StreamingController::addProxy(const QString& srcUrl, const QString& dstKey)
 void StreamingController::getStreamUrls(const QString& streamId) {
     m_api->get(QString("/api/v1/streams/%1/multi-urls").arg(streamId),
         [this, streamId](QJsonObject obj) {
-            emit urlsReceived(streamId, obj.toVariantMap());
+            // 后端响应: {code,message,data:{rtsp,hls,webrtc,flv,...}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            emit urlsReceived(streamId, data.toVariantMap());
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

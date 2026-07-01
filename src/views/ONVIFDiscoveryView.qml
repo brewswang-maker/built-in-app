@@ -37,11 +37,11 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
-            Text { text: "🔌 ONVIF 设备发现"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "ONVIF 设备发现"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
 
             Button {
-                text: scanning ? "⏹ 停止扫描" : "🔍 开始扫描"
+                text: scanning ? "停止扫描" : "开始扫描"
                 font.pixelSize: 12
                 background: Rectangle { color: scanning ? "#FF3D71" : "#3B82F6"; radius: 6; width: 120; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -54,7 +54,7 @@ Item {
                 }
             }
             Button {
-                text: "➕ 手动添加"
+                text: "手动添加"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -76,7 +76,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "📡 网络扫描"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "网络扫描"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 // 雷达扫描动画
                 Canvas {
@@ -110,16 +110,21 @@ Item {
                         ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.stroke()
                         ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke()
 
-                        // 扫描扇形
+                        // 扫描扇形 (Qt Canvas 不支持 createConicGradient, 用径向渐变模拟)
                         if (scanAnim.running) {
-                            var grad = ctx.createConicGradient(angle * Math.PI / 180 - Math.PI/2, cx, cy)
-                            grad.addColorStop(0, "rgba(0,212,170,0.3)")
-                            grad.addColorStop(0.12, "rgba(0,212,170,0.0)")
-                            grad.addColorStop(1, "rgba(0,212,170,0.0)")
-                            ctx.fillStyle = grad
-                            ctx.beginPath()
-                            ctx.arc(cx, cy, r, 0, 2 * Math.PI)
-                            ctx.fill()
+                            var a0 = angle * Math.PI / 180 - Math.PI/2
+                            var sweepSteps = 12
+                            for (var ss = 0; ss < sweepSteps; ss++) {
+                                var alpha = (1 - ss / sweepSteps) * 0.25
+                                var a1 = a0 - (ss + 1) * 0.05
+                                var a2 = a0 - ss * 0.05
+                                ctx.fillStyle = "rgba(0,212,170," + alpha + ")"
+                                ctx.beginPath()
+                                ctx.moveTo(cx, cy)
+                                ctx.arc(cx, cy, r, a1, a2)
+                                ctx.closePath()
+                                ctx.fill()
+                            }
                         }
 
                         // 设备标记 — 从controller数据绘制
@@ -244,7 +249,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "🔧 SOAP 调试器"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "SOAP 调试器"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 ComboBox {
                     id: soapMethodCombo
@@ -268,7 +273,7 @@ Item {
                 }
 
                 Button {
-                    text: "▶ 发送请求"
+                    text: "发送请求"
                     width: parent.width - 24
                     background: Rectangle { color: "#3B82F6"; radius: 6; height: 32 }
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -305,7 +310,7 @@ Item {
 
         Column {
             anchors.fill: parent; anchors.margins: 16; spacing: 10
-            Text { text: "➕ 添加ONVIF设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+            Text { text: "添加ONVIF设备"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
             TextField { id: onvifIp; width: 320; placeholderText: "设备IP地址"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
             TextField { id: onvifPort; width: 320; text: "80"; placeholderText: "ONVIF端口"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }

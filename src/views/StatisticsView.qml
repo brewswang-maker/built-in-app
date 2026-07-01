@@ -110,7 +110,7 @@ Item {
 
     function refreshStatCards() {
         statCardsModel.setProperty(0, "value", totalAlarms.toString())
-        statCardsModel.setProperty(0, "sub", "较昨日↑" + Math.round(totalAlarms * 0.08) + "%")
+        statCardsModel.setProperty(0, "sub", "较昨日" + Math.round(totalAlarms * 0.08) + "%")
         statCardsModel.setProperty(1, "value", handledRate + "%")
         statCardsModel.setProperty(2, "value", onlineDevices + "/" + totalDevices)
         statCardsModel.setProperty(2, "sub", offlineDevices + "台离线")
@@ -127,7 +127,7 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-            Text { text: "📊 统计分析"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "统计分析"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
 
             ComboBox {
                 id: dateRangeCombo
@@ -166,13 +166,13 @@ Item {
             Item { Layout.fillWidth: true }
 
             Button {
-                text: "📥 导出CSV"; font.pixelSize: 11
+                text: "导出CSV"; font.pixelSize: 11
                 background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: configController.exportConfig("statistics", "csv")
             }
             Button {
-                text: "🔄 刷新"; font.pixelSize: 11
+                text: "刷新"; font.pixelSize: 11
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 56; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
@@ -193,11 +193,11 @@ Item {
         Repeater {
             model: ListModel {
                 id: statCardsModel
-                ListElement { icon: "🚨"; label: "告警总数"; value: "0"; sub: "加载中"; color: "#FF3D71" }
-                ListElement { icon: "✅"; label: "处置率"; value: "0%"; sub: "加载中"; color: "#00D4AA" }
-                ListElement { icon: "📹"; label: "设备在线"; value: "0/0"; sub: "加载中"; color: "#3B82F6" }
-                ListElement { icon: "🛡️"; label: "安全评分"; value: "0"; sub: "计算中"; color: "#FFB800" }
-                ListElement { icon: "🧠"; label: "AI推理"; value: "0ms"; sub: "平均延迟"; color: "#6C5CE7" }
+                ListElement { icon: ""; label: "告警总数"; value: "0"; sub: "加载中"; color: "#FF3D71" }
+                ListElement { icon: ""; label: "处置率"; value: "0%"; sub: "加载中"; color: "#00D4AA" }
+                ListElement { icon: ""; label: "设备在线"; value: "0/0"; sub: "加载中"; color: "#3B82F6" }
+                ListElement { icon: ""; label: "安全评分"; value: "0"; sub: "计算中"; color: "#FFB800" }
+                ListElement { icon: ""; label: "AI推理"; value: "0ms"; sub: "平均延迟"; color: "#6C5CE7" }
             }
             delegate: Rectangle {
                 width: (statCards.width - 4 * 8) / 5; height: 80; color: "#0D0F12"; radius: 8
@@ -234,7 +234,7 @@ Item {
 
                     Row {
                         spacing: 16
-                        Text { text: "📈 告警趋势 (24h)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "告警趋势 (24h)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                         Text { text: "总计: " + totalAlarms + "条"; font.pixelSize: 11; color: "#8B8FA3" }
                     }
 
@@ -361,6 +361,7 @@ Item {
 
                         Row { spacing: 8
                             Canvas {
+                                id: tpuCanvas
                                 width: 50; height: 50
                                 onPaint: {
                                     var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height)
@@ -372,9 +373,10 @@ Item {
                                     ctx.fillStyle = "#FFB800"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"
                                     ctx.fillText(Math.round(statusController.tpuUtilization) + "%", cx, cy + 3)
                                 }
-                                Connections { target: statusController; function onStatusUpdated() { requestPaint() } }
+                                Connections { target: statusController; function onStatusUpdated() { tpuCanvas.requestPaint() } }
                             }
                             Canvas {
+                                id: memCanvas
                                 width: 50; height: 50
                                 onPaint: {
                                     var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height)
@@ -386,9 +388,10 @@ Item {
                                     ctx.fillStyle = "#3B82F6"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"
                                     ctx.fillText(Math.round(statusController.memoryUsage) + "%", cx, cy + 3)
                                 }
-                                Connections { target: statusController; function onStatusUpdated() { requestPaint() } }
+                                Connections { target: statusController; function onStatusUpdated() { memCanvas.requestPaint() } }
                             }
                             Canvas {
+                                id: cpuCanvas
                                 width: 50; height: 50
                                 onPaint: {
                                     var ctx = getContext("2d"); ctx.clearRect(0, 0, width, height)
@@ -401,7 +404,7 @@ Item {
                                     ctx.fillStyle = "#10B981"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "center"
                                     ctx.fillText(Math.round(cpuVal) + "%", cx, cy + 3)
                                 }
-                                Connections { target: statusController; function onStatusUpdated() { requestPaint() } }
+                                Connections { target: statusController; function onStatusUpdated() { cpuCanvas.requestPaint() } }
                             }
                         }
                         Row { spacing: 8
@@ -426,7 +429,7 @@ Item {
                 Column {
                     anchors.fill: parent; anchors.margins: 12; spacing: 6
 
-                    Text { text: "🥧 告警类型分布"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "告警类型分布"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     Canvas {
                         id: pieCanvas
@@ -482,7 +485,7 @@ Item {
                 Column {
                     anchors.fill: parent; anchors.margins: 12; spacing: 6
 
-                    Text { text: "📹 设备状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "设备状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     Canvas {
                         id: deviceStatusCanvas

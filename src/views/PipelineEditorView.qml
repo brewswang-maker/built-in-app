@@ -16,6 +16,112 @@ Item {
     property var pipelineConnections: []
     property var selectedNodeData: null
 
+    // ═══ P1.5: DAG 拖拽式增强 ═══
+    // 撤销/重做栈 (深度≥20)
+    property var undoStack: []
+    property var redoStack: []
+    readonly property int maxUndoDepth: 30
+    // 连线拖拽状态
+    property bool isConnecting: false
+    property int connectFromIndex: -1
+    property real connectMouseX: 0
+    property real connectMouseY: 0
+    // 剪贴板
+    property var clipboardNode: null
+
+    // ── 撤销/重做 ──
+    function snapshotState() {
+        var snap = JSON.parse(JSON.stringify({
+            nodes: pipelineNodes,
+            connections: pipelineConnections
+        }))
+        undoStack.push(snap)
+        if (undoStack.length > maxUndoDepth) undoStack.shift()
+        redoStack = []
+    }
+    function undo() {
+        if (undoStack.length === 0) return
+        var current = JSON.parse(JSON.stringify({ nodes: pipelineNodes, connections: pipelineConnections }))
+        redoStack.push(current)
+        var prev = undoStack.pop()
+        pipelineNodes = prev.nodes
+        pipelineConnections = prev.connections
+        nodeRepeater.model = pipelineNodes
+        connectionCanvas.requestPaint()
+        updateStatusBar()
+    }
+    function redo() {
+        if (redoStack.length === 0) return
+        var current = JSON.parse(JSON.stringify({ nodes: pipelineNodes, connections: pipelineConnections }))
+        undoStack.push(current)
+        var next = redoStack.pop()
+        pipelineNodes = next.nodes
+        pipelineConnections = next.connections
+        nodeRepeater.model = pipelineNodes
+        connectionCanvas.requestPaint()
+        updateStatusBar()
+    }
+
+    // ── 端口连线创建 ──
+    function createConnection(fromIdx, toIdx) {
+        if (fromIdx === toIdx) return false
+        if (!pipelineNodes[fromIdx].hasOutput || !pipelineNodes[toIdx].hasInput) return false
+        // 去重
+        for (var i = 0; i < pipelineConnections.length; i++) {
+            if (pipelineConnections[i].from === fromIdx && pipelineConnections[i].to === toIdx) return false
+        }
+        snapshotState()
+        pipelineConnections.push({ from: fromIdx, to: toIdx })
+        pipelineConnectionsChanged()
+        connectionCanvas.requestPaint()
+        updateStatusBar()
+        return true
+    }
+
+    // ── 删除选中节点 ──
+    function deleteSelectedNode() {
+        if (!selectedNodeData) return
+        var idx = pipelineNodes.indexOf(selectedNodeData)
+        if (idx < 0) return
+        snapshotState()
+        // 删除关联连接
+        var newConns = []
+        for (var i = 0; i < pipelineConnections.length; i++) {
+            var c = pipelineConnections[i]
+            if (c.from !== idx && c.to !== idx) {
+                // 调整索引
+                if (c.from > idx) c.from--
+                if (c.to > idx) c.to--
+                newConns.push(c)
+            }
+        }
+        pipelineConnections = newConns
+        pipelineNodes.splice(idx, 1)
+        pipelineNodesChanged()
+        nodeRepeater.model = pipelineNodes
+        connectionCanvas.requestPaint()
+        selectedNodeData = null
+        updateStatusBar()
+    }
+
+    // ── 复制/粘贴 ──
+    function copySelectedNode() {
+        if (!selectedNodeData) return
+        clipboardNode = JSON.parse(JSON.stringify(selectedNodeData))
+    }
+    function pasteNode() {
+        if (!clipboardNode) return
+        snapshotState()
+        var newNode = JSON.parse(JSON.stringify(clipboardNode))
+        newNode.x = (newNode.x || 0) + 40
+        newNode.y = (newNode.y || 0) + 40
+        newNode.selected = false
+        pipelineNodes.push(newNode)
+        pipelineNodesChanged()
+        nodeRepeater.model = pipelineNodes
+        updateStatusBar()
+    }
+
     Component.onCompleted: {
         pipelineController.refreshPipelines()
     }
@@ -84,8 +190,9 @@ Item {
             anchors.rightMargin: 16
             spacing: 12
 
+            AppIcon { name: "pipeline"; size: 22; iconColor: "#E8E8E8"; Layout.preferredWidth: 24; Layout.preferredHeight: 24 }
             Text {
-                text: "🔗 Pipeline Editor"
+                text: "Pipeline Editor"
                 font.pixelSize: 16
                 font.bold: true
                 color: "#E8E8E8"
@@ -122,7 +229,7 @@ Item {
             }
 
             Button {
-                text: "▶ 运行"
+                text: "运行"
                 font.pixelSize: 12
                 background: Rectangle { color: "#00D4AA"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -132,7 +239,7 @@ Item {
                 }
             }
             Button {
-                text: "⏹ 停止"
+                text: "停止"
                 font.pixelSize: 12
                 background: Rectangle { color: "#FF3D71"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -142,7 +249,7 @@ Item {
                 }
             }
             Button {
-                text: "💾 保存"
+                text: "保存"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -157,14 +264,14 @@ Item {
                 }
             }
             Button {
-                text: "➕ 新建"
+                text: "新建"
                 font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFFFFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: createPipelineDialog.open()
             }
             Button {
-                text: "🗑 删除"
+                text: "删除"
                 font.pixelSize: 12
                 background: Rectangle { color: "#FF3D71"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -238,26 +345,26 @@ Item {
         id: addNodeMenu
         y: toolbar.height
 
-        MenuItem { text: "📹 视频源 (RTSP/GB28181)"; onTriggered: addPipelineNode("source") }
-        MenuItem { text: "🧠 AI推理 (BModel)"; onTriggered: addPipelineNode("inference") }
-        MenuItem { text: "🔄 目标追踪"; onTriggered: addPipelineNode("tracker") }
-        MenuItem { text: "📐 区域过滤"; onTriggered: addPipelineNode("region_filter") }
-        MenuItem { text: "🚨 告警触发"; onTriggered: addPipelineNode("alert") }
-        MenuItem { text: "📊 数据聚合"; onTriggered: addPipelineNode("aggregator") }
-        MenuItem { text: "📤 输出 (录像/推流/回调)"; onTriggered: addPipelineNode("output") }
-        MenuItem { text: "🖼️ 画面叠加 (OSD)"; onTriggered: addPipelineNode("overlay") }
+        MenuItem { text: "视频源 (RTSP/GB28181)"; onTriggered: addPipelineNode("source") }
+        MenuItem { text: "AI推理 (BModel)"; onTriggered: addPipelineNode("inference") }
+        MenuItem { text: "目标追踪"; onTriggered: addPipelineNode("tracker") }
+        MenuItem { text: "区域过滤"; onTriggered: addPipelineNode("region_filter") }
+        MenuItem { text: "告警触发"; onTriggered: addPipelineNode("alert") }
+        MenuItem { text: "数据聚合"; onTriggered: addPipelineNode("aggregator") }
+        MenuItem { text: "输出 (录像/推流/回调)"; onTriggered: addPipelineNode("output") }
+        MenuItem { text: "画面叠加 (OSD)"; onTriggered: addPipelineNode("overlay") }
     }
 
     function addPipelineNode(type) {
         var templates = {
-            source:        { icon: "📹", color: "#3B82F6", hasInput: false, hasOutput: true },
-            inference:     { icon: "🧠", color: "#8B5CF6", hasInput: true,  hasOutput: true },
-            tracker:       { icon: "🔄", color: "#06B6D4", hasInput: true,  hasOutput: true },
-            region_filter: { icon: "📐", color: "#10B981", hasInput: true,  hasOutput: true },
-            alert:         { icon: "🚨", color: "#EF4444", hasInput: true,  hasOutput: false },
-            aggregator:    { icon: "📊", color: "#F59E0B", hasInput: true,  hasOutput: true },
-            output:        { icon: "📤", color: "#EC4899", hasInput: true,  hasOutput: false },
-            overlay:       { icon: "🖼️", color: "#6366F1", hasInput: true,  hasOutput: true }
+            source:        { icon: "", color: "#3B82F6", hasInput: false, hasOutput: true },
+            inference:     { icon: "", color: "#8B5CF6", hasInput: true,  hasOutput: true },
+            tracker:       { icon: "", color: "#06B6D4", hasInput: true,  hasOutput: true },
+            region_filter: { icon: "", color: "#10B981", hasInput: true,  hasOutput: true },
+            alert:         { icon: "", color: "#EF4444", hasInput: true,  hasOutput: false },
+            aggregator:    { icon: "", color: "#F59E0B", hasInput: true,  hasOutput: true },
+            output:        { icon: "", color: "#EC4899", hasInput: true,  hasOutput: false },
+            overlay:       { icon: "", color: "#6366F1", hasInput: true,  hasOutput: true }
         }
         var t = templates[type] || templates.source
         var newNode = {
@@ -297,14 +404,14 @@ Item {
 
             Repeater {
                 model: [
-                    { icon: "📹", name: "视频源",   type: "source",        color: "#3B82F6" },
-                    { icon: "🧠", name: "AI推理",   type: "inference",     color: "#8B5CF6" },
-                    { icon: "🔄", name: "目标追踪", type: "tracker",       color: "#06B6D4" },
-                    { icon: "📐", name: "区域过滤", type: "region_filter", color: "#10B981" },
-                    { icon: "🚨", name: "告警触发", type: "alert",         color: "#EF4444" },
-                    { icon: "📊", name: "数据聚合", type: "aggregator",    color: "#F59E0B" },
-                    { icon: "📤", name: "输出",     type: "output",        color: "#EC4899" },
-                    { icon: "🖼️", name: "画面叠加", type: "overlay",      color: "#6366F1" }
+                    { icon: "", name: "视频源",   type: "source",        color: "#3B82F6" },
+                    { icon: "", name: "AI推理",   type: "inference",     color: "#8B5CF6" },
+                    { icon: "", name: "目标追踪", type: "tracker",       color: "#06B6D4" },
+                    { icon: "", name: "区域过滤", type: "region_filter", color: "#10B981" },
+                    { icon: "", name: "告警触发", type: "alert",         color: "#EF4444" },
+                    { icon: "", name: "数据聚合", type: "aggregator",    color: "#F59E0B" },
+                    { icon: "", name: "输出",     type: "output",        color: "#EC4899" },
+                    { icon: "", name: "画面叠加", type: "overlay",      color: "#6366F1" }
                 ]
 
                 delegate: Rectangle {
@@ -323,7 +430,7 @@ Item {
                             radius: 4
                             color: modelData.color
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: modelData.icon; font.pixelSize: 14; anchors.centerIn: parent }
+                            Text { text: modelData.name ? modelData.name.charAt(0) : ""; font.pixelSize: 12; font.bold: true; color: "#FFF"; anchors.centerIn: parent }
                         }
                         Text {
                             text: modelData.name
@@ -344,6 +451,43 @@ Item {
         }
     }
 
+    // ── P1.5: 右键菜单 ──
+    Menu {
+        id: canvasContextMenu
+
+        MenuItem {
+            text: "添加节点"
+            onTriggered: addNodeMenu.popup()
+        }
+        MenuItem {
+            text: "复制选中节点"
+            enabled: selectedNodeData !== null
+            onTriggered: copySelectedNode()
+        }
+        MenuItem {
+            text: "粘贴节点"
+            enabled: clipboardNode !== null
+            onTriggered: pasteNode()
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "删除选中节点"
+            enabled: selectedNodeData !== null
+            onTriggered: deleteSelectedNode()
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "撤销 (Ctrl+Z)"
+            enabled: undoStack.length > 0
+            onTriggered: undo()
+        }
+        MenuItem {
+            text: "重做 (Ctrl+Y)"
+            enabled: redoStack.length > 0
+            onTriggered: redo()
+        }
+    }
+
     // ── 中间画布 ──
     Rectangle {
         id: canvasArea
@@ -352,6 +496,41 @@ Item {
         anchors.right: propPanel.left
         anchors.bottom: statusBar.top
         color: "#0D0F12"
+
+        // 右键菜单 + 键盘快捷键
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.RightButton
+            onClicked: {
+                if (mouse.button === Qt.RightButton) {
+                    canvasContextMenu.x = mouse.x
+                    canvasContextMenu.y = mouse.y
+                    canvasContextMenu.open()
+                }
+            }
+        }
+
+        // 键盘快捷键
+        Shortcut {
+            sequences: [StandardKey.Undo]
+            onActivated: undo()
+        }
+        Shortcut {
+            sequences: [StandardKey.Redo]
+            onActivated: redo()
+        }
+        Shortcut {
+            sequence: StandardKey.Delete
+            onActivated: deleteSelectedNode()
+        }
+        Shortcut {
+            sequence: "Ctrl+C"
+            onActivated: copySelectedNode()
+        }
+        Shortcut {
+            sequence: "Ctrl+V"
+            onActivated: pasteNode()
+        }
 
         // 网格背景
         Canvas {
@@ -400,6 +579,30 @@ Item {
             }
         }
 
+        // 临时连线层 (拖拽连线时)
+        Canvas {
+            id: tempConnectionCanvas
+            anchors.fill: parent
+            z: 10
+            onPaint: {
+                var ctx = getContext("2d")
+                ctx.clearRect(0, 0, width, height)
+                if (!isConnecting || connectFromIndex < 0) return
+                var fromNode = pipelineNodes[connectFromIndex]
+                if (!fromNode) return
+                var fx = fromNode.x + 180
+                var fy = fromNode.y + 40
+                ctx.strokeStyle = "#FFB800"
+                ctx.lineWidth = 2
+                ctx.setLineDash([5, 3])
+                ctx.beginPath()
+                ctx.moveTo(fx, fy)
+                ctx.bezierCurveTo(fx + 60, fy, connectMouseX - 60, connectMouseY, connectMouseX, connectMouseY)
+                ctx.stroke()
+                ctx.setLineDash([])
+            }
+        }
+
         // 节点Repeater
         Repeater {
             id: nodeRepeater
@@ -415,6 +618,7 @@ Item {
                 border.color: modelData.selected ? "#00D4AA" : "#252830"
                 border.width: modelData.selected ? 2 : 1
                 radius: 8
+                z: active ? 20 : 5
 
                 // 标题栏
                 Rectangle {
@@ -434,7 +638,7 @@ Item {
                     }
 
                     Text {
-                        text: modelData.icon + " " + modelData.name
+                        text: modelData.name || ""
                         font.pixelSize: 12
                         font.bold: true
                         color: "#FFFFFF"
@@ -464,20 +668,62 @@ Item {
                     color: "#FFB800"
                 }
 
-                // 输入端口
+                // 输入端口 (接受连线)
                 Rectangle {
                     x: -6; y: parent.height / 2 - 6
                     width: 12; height: 12; radius: 6
-                    color: modelData.hasInput ? "#00D4AA" : "#252830"
+                    color: modelData.hasInput ? (isConnecting && connectFromIndex >= 0 ? "#00D4AA" : "#00D4AA") : "#252830"
                     border.color: "#3A3D48"
+                    scale: inputPortMA.containsMouse ? 1.5 : 1.0
+                    Behavior on scale { NumberAnimation { duration: 100 } }
+
+                    MouseArea {
+                        id: inputPortMA
+                        anchors.fill: parent
+                        anchors.margins: -8
+                        hoverEnabled: true
+                        enabled: modelData.hasInput && isConnecting
+                        onClicked: {
+                            if (isConnecting && connectFromIndex >= 0 && connectFromIndex !== index) {
+                                createConnection(connectFromIndex, index)
+                            }
+                            isConnecting = false
+                            connectFromIndex = -1
+                            tempConnectionCanvas.requestPaint()
+                        }
+                    }
                 }
 
-                // 输出端口
+                // 输出端口 (拖拽连线起点)
                 Rectangle {
                     x: parent.width - 6; y: parent.height / 2 - 6
                     width: 12; height: 12; radius: 6
-                    color: modelData.hasOutput ? "#3B82F6" : "#252830"
+                    color: modelData.hasOutput ? (isConnecting && connectFromIndex === index ? "#FFB800" : "#3B82F6") : "#252830"
                     border.color: "#3A3D48"
+                    scale: outputPortMA.containsMouse || outputPortMA.pressed ? 1.5 : 1.0
+                    Behavior on scale { NumberAnimation { duration: 100 } }
+
+                    MouseArea {
+                        id: outputPortMA
+                        anchors.fill: parent
+                        anchors.margins: -8
+                        hoverEnabled: true
+                        enabled: modelData.hasOutput
+                        onPressed: {
+                            isConnecting = true
+                            connectFromIndex = index
+                            connectMouseX = mouseX + parent.x + 6
+                            connectMouseY = mouseY + parent.y + 6
+                            tempConnectionCanvas.requestPaint()
+                        }
+                        onPositionChanged: {
+                            if (isConnecting) {
+                                connectMouseX = mouseX + parent.x + 6
+                                connectMouseY = mouseY + parent.y + 6
+                                tempConnectionCanvas.requestPaint()
+                            }
+                        }
+                    }
                 }
 
                 // 拖拽

@@ -47,9 +47,9 @@ Item {
                 }
 
                 Column {
-                    spacing: 2; anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2; Layout.alignment: Qt.AlignVCenter
                     Text {
-                        text: "活跃模型: " + algorithmController.activeModels + "/" + algorithmController.models.length
+                        text: "活跃模型: " + algorithmController.activeModels + "/" + (algorithmController.models || []).length
                         font.pixelSize: 13; color: "#E8E8E8"; font.bold: true
                     }
                     Text {
@@ -61,19 +61,19 @@ Item {
                 Rectangle { width: 1; height: 40; color: "#252830" }
 
                 Column {
-                    spacing: 2; anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2; Layout.alignment: Qt.AlignVCenter
                     Text { text: "算法总数"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: algorithmController.algorithms.length + ""; font.pixelSize: 16; font.bold: true; color: "#00D4AA" }
+                    Text { text: (algorithmController.algorithms || []).length + ""; font.pixelSize: 16; font.bold: true; color: "#00D4AA" }
                 }
 
                 Column {
-                    spacing: 2; anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2; Layout.alignment: Qt.AlignVCenter
                     Text { text: "模型总数"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: algorithmController.models.length + ""; font.pixelSize: 16; font.bold: true; color: "#3B82F6" }
+                    Text { text: (algorithmController.models || []).length + ""; font.pixelSize: 16; font.bold: true; color: "#3B82F6" }
                 }
 
                 Column {
-                    spacing: 2; anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2; Layout.alignment: Qt.AlignVCenter
                     Text { text: "加载状态"; font.pixelSize: 11; color: "#8B8FA3" }
                     Text { text: algorithmController.loading ? "加载中..." : "就绪"; font.pixelSize: 16; font.bold: true; color: algorithmController.loading ? "#FFB800" : "#00D4AA" }
                 }
@@ -91,21 +91,21 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.margins: 8; spacing: 8
 
-            Text { text: "🎯 场景预设"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+            Text { text: "场景预设"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
             Repeater {
                 model: [
-                    { name: "🏭 厂区周界", icon: "🏭", desc: "周界入侵+绊线+人员检测",
+                    { name: "厂区周界", icon: "shield", desc: "周界入侵+绊线+人员检测",
                       algos: ["shield.algo.perimeter.intrusion", "shield.algo.object.person"], confidence: 0.6, confirmFrames: 3 },
-                    { name: "🔥 仓储防火", icon: "🔥", desc: "烟火+温度异常+安全帽",
+                    { name: "仓储防火", icon: "alarm", desc: "烟火+温度异常+安全帽",
                       algos: ["shield.algo.fire.fire_smoke", "shield.algo.safety.helmet"], confidence: 0.5, confirmFrames: 2 },
-                    { name: "🏗️ 施工安全", icon: "🏗️", desc: "安全帽+反光衣+区域入侵",
+                    { name: "施工安全", icon: "shield", desc: "安全帽+反光衣+区域入侵",
                       algos: ["shield.algo.safety.helmet", "shield.algo.safety.uniform", "shield.algo.perimeter.intrusion"], confidence: 0.55, confirmFrames: 3 },
-                    { name: "🅿️ 停车管理", icon: "🅿️", desc: "车牌识别+违停检测",
+                    { name: "停车管理", icon: "channel", desc: "车牌识别+违停检测",
                       algos: ["shield.algo.traffic.lpr", "shield.algo.traffic.parking_violation"], confidence: 0.7, confirmFrames: 2 },
-                    { name: "👥 人流统计", icon: "👥", desc: "人群密度+计数+聚集",
+                    { name: "人流统计", icon: "user", desc: "人群密度+计数+聚集",
                       algos: ["shield.algo.object.person", "shield.algo.attribute.crowd_count"], confidence: 0.5, confirmFrames: 5 },
-                    { name: "🔐 门禁安防", icon: "🔐", desc: "人脸识别+陌生人告警",
+                    { name: "门禁安防", icon: "lock", desc: "人脸识别+陌生人告警",
                       algos: ["shield.algo.face.detect", "shield.algo.object.person"], confidence: 0.8, confirmFrames: 1 }
                 ]
 
@@ -120,7 +120,11 @@ Item {
                     }
                     contentItem: Column {
                         spacing: 1; anchors.centerIn: parent
-                        Text { text: modelData.icon + " " + modelData.name; font.pixelSize: 11; color: activePreset === index ? "#00D4AA" : "#E8E8E8"; font.bold: activePreset === index; horizontalAlignment: Text.AlignHCenter }
+                        Row {
+                            spacing: 4; anchors.horizontalCenter: parent.horizontalCenter
+                            AppIcon { name: modelData.icon; size: 14; iconColor: activePreset === index ? "#00D4AA" : "#8B8FA3" }
+                            Text { text: modelData.name; font.pixelSize: 11; color: activePreset === index ? "#00D4AA" : "#E8E8E8"; font.bold: activePreset === index }
+                        }
                         Text { text: modelData.desc; font.pixelSize: 8; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; width: 110 }
                     }
                 }
@@ -139,6 +143,31 @@ Item {
         configSlider.value = preset.confidence
         confirmSpin.value = preset.confirmFrames
         console.log("Apply preset:", preset.name, "confidence:", preset.confidence)
+    }
+
+    // P3.3: 算法分类筛选标签 (对标海康分类体系)
+    property string algoCategory: "all"
+    readonly property var algoCategories: [
+        { id: "all",        name: "全部",   color: "#8B8FA3" },
+        { id: "perimeter", name: "周界",   color: "#FF3D71" },
+        { id: "behavior",  name: "行为",   color: "#FFB800" },
+        { id: "safety",    name: "安全",   color: "#10B981" },
+        { id: "traffic",   name: "交通",   color: "#06B6D4" },
+        { id: "face",      name: "人脸",   color: "#8B5CF6" },
+        { id: "fire",      name: "消防",   color: "#EF4444" }
+    ]
+
+    function algoCategoryFilter(a) {
+        if (algoCategory === "all") return true
+        var id = (a.id || "").toLowerCase()
+        var cat = (a.category || "").toLowerCase()
+        if (algoCategory === "perimeter") return id.indexOf("perimeter") >= 0 || id.indexOf("intrusion") >= 0
+        if (algoCategory === "behavior") return id.indexOf("behavior") >= 0 || id.indexOf("fight") >= 0 || id.indexOf("fall") >= 0 || id.indexOf("crowd") >= 0
+        if (algoCategory === "safety") return id.indexOf("safety") >= 0 || id.indexOf("helmet") >= 0 || id.indexOf("uniform") >= 0 || id.indexOf("ppe") >= 0
+        if (algoCategory === "traffic") return id.indexOf("traffic") >= 0 || id.indexOf("lpr") >= 0 || id.indexOf("vehicle") >= 0 || id.indexOf("parking") >= 0
+        if (algoCategory === "face") return id.indexOf("face") >= 0
+        if (algoCategory === "fire") return id.indexOf("fire") >= 0 || id.indexOf("smoke") >= 0
+        return cat === algoCategory
     }
 
     RowLayout {
@@ -161,15 +190,34 @@ Item {
                         text: "已装模型"; font.pixelSize: 12
                         highlighted: algoTabBar.currentIndex === 0
                         background: Rectangle { color: parent.highlighted ? "#1A1D23" : "transparent"; radius: 6 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: parent.parent.highlighted ? "#00D4AA" : "#8B8FA3"; font.bold: parent.parent.highlighted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: parent.highlighted ? "#00D4AA" : "#8B8FA3"; font.bold: parent.highlighted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: algoTabBar.currentIndex = 0
                     }
                     Button {
                         text: "全部算法"; font.pixelSize: 12
                         highlighted: algoTabBar.currentIndex === 1
                         background: Rectangle { color: parent.highlighted ? "#1A1D23" : "transparent"; radius: 6 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: parent.parent.highlighted ? "#00D4AA" : "#8B8FA3"; font.bold: parent.parent.highlighted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: parent.highlighted ? "#00D4AA" : "#8B8FA3"; font.bold: parent.highlighted; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: algoTabBar.currentIndex = 1
+                    }
+                }
+
+                // P3.3: 分类标签条
+                ScrollView {
+                    width: parent.width - 24; height: 30; clip: true
+                    Row {
+                        spacing: 4
+                        Repeater {
+                            model: algoCategories
+                            delegate: Rectangle {
+                                width: catText.implicitWidth + 20; height: 24; radius: 12
+                                color: algoCategory === modelData.id ? modelData.color : "#252830"
+                                border.width: 1
+                                border.color: algoCategory === modelData.id ? modelData.color : "transparent"
+                                Text { id: catText; text: modelData.name; font.pixelSize: 11; color: algoCategory === modelData.id ? "#FFF" : "#8B8FA3"; font.bold: algoCategory === modelData.id; anchors.centerIn: parent }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: algoCategory = modelData.id }
+                            }
+                        }
                     }
                 }
 
@@ -221,7 +269,7 @@ Item {
                                 Row {
                                     spacing: 4
                                     Button {
-                                        text: (algoData.status === "active" || algoData.status === "loaded") ? "⏹ 停止" : "▶ 启动"
+                                        text: (algoData.status === "active" || algoData.status === "loaded") ? "停止" : "启动"
                                         font.pixelSize: 9
                                         onClicked: {
                                             if (algoData.status === "active" || algoData.status === "loaded")
@@ -235,7 +283,7 @@ Item {
                                         contentItem: Text { text: parent.text; font.pixelSize: 9; color: (algoData.status === "active" || algoData.status === "loaded") ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     }
                                     Button {
-                                        text: "⚙ 配置"; font.pixelSize: 9
+                                        text: "配置"; font.pixelSize: 9
                                         onClicked: {
                                             currentAlgoId = algoData.model_id || algoData.id || ""
                                             currentAlgo = algoData
@@ -265,7 +313,7 @@ Item {
                                 Rectangle {
                                     width: 40; height: 40; color: "#1A1D23"; radius: 8
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Text { text: algoData.enabled ? "🟢" : "⚪"; font.pixelSize: 14; anchors.centerIn: parent }
+                                    Rectangle { width: 14; height: 14; radius: 7; color: algoData.enabled ? "#00D4AA" : "#4A4D58"; anchors.centerIn: parent }
                                 }
 
                                 Column {
@@ -417,7 +465,7 @@ Item {
 
                         Row {
                             spacing: 12
-                            Text { text: "📊 实时推理性能"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                            Text { text: "实时推理性能"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                             Text { text: "TPU(%)"; font.pixelSize: 10; color: "#00D4AA" }
                         }
 
@@ -495,7 +543,7 @@ Item {
                     width: 256; spacing: 10
 
                     Text {
-                        text: "⚙️ 推理参数" + (currentAlgoId ? " — " + (currentAlgo ? (currentAlgo.name_zh || currentAlgo.name || currentAlgoId) : currentAlgoId) : "")
+                        text: "推理参数" + (currentAlgoId ? " — " + (currentAlgo ? (currentAlgo.name_zh || currentAlgo.name || currentAlgoId) : currentAlgoId) : "")
                         font.pixelSize: 14; font.bold: true; color: "#E8E8E8"
                         wrapMode: Text.WordWrap; width: parent.width
                     }
@@ -550,7 +598,7 @@ Item {
                     // ROI设置
                     Text { text: "ROI 区域设置"; font.pixelSize: 11; color: "#8B8FA3" }
                     Button {
-                        text: "🖊 绘制ROI区域"
+                        text: "绘制ROI区域"
                         width: parent.width
                         background: Rectangle { color: "#8B5CF6"; radius: 6; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -558,7 +606,7 @@ Item {
 
                     // 告警配置
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
-                    Text { text: "🚨 告警配置"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "告警配置"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     Text { text: "告警级别"; font.pixelSize: 11; color: "#8B8FA3" }
                     ComboBox { id: alarmLevelCombo; width: parent.width; model: ["低", "中", "高", "紧急"]; currentIndex: 2; background: Rectangle { color: "#252830"; radius: 4 } }
@@ -571,7 +619,7 @@ Item {
 
                     // 保存按钮
                     Button {
-                        text: "💾 保存配置"
+                        text: "保存配置"
                         width: parent.width
                         onClicked: {
                             if (currentAlgoId.length === 0) {
@@ -601,7 +649,7 @@ Item {
 
                     // 刷新按钮
                     Button {
-                        text: "🔄 刷新数据"
+                        text: "刷新数据"
                         width: parent.width
                         onClicked: algorithmController.refreshAll()
                         background: Rectangle { color: "#252830"; radius: 8; height: 36 }

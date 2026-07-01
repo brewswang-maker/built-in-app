@@ -6,13 +6,14 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
-import QtMultimedia 5.15
+import QtMultimedia
 
 Item {
     id: videoGridPage
 
     property int activeSlot: -1
     property bool isFullscreen: false
+    property bool isPreviewActive: false
 
     // 当前应用的降级链(QML 会话级,支持用户切换)
     property var protocolChain: ["rtsp", "flv", "ws-flv", "hls", "webrtc"]
@@ -28,12 +29,12 @@ Item {
     // Helper: get device ID for a slot index
     function slotDeviceId(slot) {
         if (slot >= 0 && slot < deviceController.devices.length)
-            return deviceController.devices[slot].device_id || ""
+            return deviceController.devices[slot].id || deviceController.devices[slot].device_id || ""
         return ""
     }
     function slotChannelId(slot) {
         if (slot >= 0 && slot < deviceController.devices.length)
-            return deviceController.devices[slot].channel_id || deviceController.devices[slot].device_id || ""
+            return deviceController.devices[slot].id || deviceController.devices[slot].device_id || ""
         return ""
     }
 
@@ -46,11 +47,19 @@ Item {
         }
     }
 
-    // Request streams for all visible slots
+    // Request streams for all visible slots via single batch API call.
+    // Uses refreshAllStreamUrls which maps streams to devices by index
+    // position, bypassing the GB28181 device_id/channel_id mismatch.
     function requestAllStreams() {
-        var count = mediaController.currentLayout
-        for (var i = 0; i < count; i++)
-            requestStream(i)
+        var devIds = []
+        var count = Math.min(mediaController.currentLayout, deviceController.devices.length)
+        for (var i = 0; i < count; i++) {
+            var id = deviceController.devices[i].id || deviceController.devices[i].device_id || ""
+            if (id.length > 0)
+                devIds.push(id)
+        }
+        if (devIds.length > 0)
+            mediaController.refreshAllStreamUrls(devIds)
     }
 
     // 通用 Toast 提示
@@ -64,33 +73,81 @@ Item {
     Rectangle {
         id: toolbar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 48; color: "#141720"; radius: 8
+        height: 48; color: "#141420"; radius: 8
 
         RowLayout {
             anchors.fill: parent; anchors.margins: 8; spacing: 8
 
-            Text { text: "📹 视频预览"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "视频预览"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
 
             // 通道名
             Text {
                 text: activeSlot >= 0 && activeSlot < deviceController.devices.length ?
-                    deviceController.devices[activeSlot].device_name || "" : ""
+                    (deviceController.devices[activeSlot].name || deviceController.devices[activeSlot].device_name || "") : ""
                 font.pixelSize: 13; color: "#3B82F6"
                 visible: text !== ""
             }
 
             Item { Layout.fillWidth: true }
 
+            // 预览开关
+            Button {
+                id: previewToggleBtn
+                width: 84; height: 32
+                text: videoGridPage.isPreviewActive ? "停止预览" : "开始预览"
+                font.pixelSize: 12
+                highlighted: videoGridPage.isPreviewActive
+                onClicked: {
+                    videoGridPage.isPreviewActive = !videoGridPage.isPreviewActive
+                    if (videoGridPage.isPreviewActive) {
+                        videoGridPage.requestAllStreams()
+                        videoGridPage.showToast("预览已开启", "ok")
+                    } else {
+                        mediaController.stopAllStreams()
+                        videoGridPage.showToast("预览已停止", "info")
+                    }
+                }
+                background: Rectangle {
+                    color: previewToggleBtn.highlighted ? "#FF3D71" : "#00D4AA"
+                    radius: 4
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                }
+                contentItem: Text {
+                    text: previewToggleBtn.text
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: "#0D0F12"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
             // 宫格切换
             Row { spacing: 4
                 Repeater {
                     model: [1, 4, 9, 16]
                     delegate: Button {
-                        width: 40; height: 32; text: modelData === 1 ? "单" : modelData + ""
-                        font.pixelSize: 12; highlighted: mediaController.currentLayout === modelData
-                        onClicked: mediaController.setLayout(modelData)
-                        background: Rectangle { color: parent.highlighted ? "#00D4AA" : "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: parent.highlighted ? "#0D0F12" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        id: layoutBtn
+                        width: 40; height: 32
+                        text: modelData === 1 ? "单" : String(modelData)
+                        font.pixelSize: 12
+                        highlighted: mediaController.currentLayout === modelData
+                        onClicked: {
+                            mediaController.currentLayout = modelData
+                        }
+                        background: Rectangle {
+                            color: layoutBtn.highlighted ? "#00D4AA" : "#252830"
+                            radius: 4
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                        contentItem: Text {
+                            text: layoutBtn.text
+                            font.pixelSize: 12
+                            font.bold: layoutBtn.highlighted
+                            color: layoutBtn.highlighted ? "#0D0F12" : "#8B8FA3"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
                     }
                 }
             }
@@ -153,7 +210,7 @@ Item {
             // PiP 开关
             Button {
                 id: pipButton
-                text: pipActive ? "🪟 退出画中画" : "🪟 画中画"
+                text: pipActive ? "退出画中画" : "画中画"
                 font.pixelSize: 11
                 enabled: activeSlot >= 0
                 onClicked: {
@@ -179,30 +236,43 @@ Item {
 
             // 操作按钮
             Button {
-                text: "📷 抓帧"; font.pixelSize: 11
+                text: "抓帧"; font.pixelSize: 11
                 enabled: activeSlot >= 0
                 onClicked: mediaController.snapshotToFile(
                     videoGridPage.slotChannelId(activeSlot))
                 background: Rectangle { color: "#252830"; radius: 6; width: 56; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
-            Button { text: mediaController.isRecording ? "⏹ 停止" : "⏺ 录像"; font.pixelSize: 11
-                onClicked: mediaController.isRecording ? mediaController.stopRecording(activeSlot) : mediaController.startRecording(activeSlot)
+            Button { text: mediaController.isRecording ? "停止" : "录像"; font.pixelSize: 11
+                onClicked: mediaController.isRecording ? mediaController.stopRecording(slotChannelId(activeSlot)) : mediaController.startRecording(slotChannelId(activeSlot))
                 background: Rectangle { color: mediaController.isRecording ? "#FF3D71" : "#252830"; radius: 6; width: 56; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: mediaController.isRecording ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
-            Button { text: "🎤 对讲"; font.pixelSize: 11
-                background: Rectangle { color: "#252830"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: mediaController.startTalk(activeSlot)
+            Button {
+                id: talkBtn
+                property bool talkActive: false
+                text: talkActive ? "停止" : "对讲"; font.pixelSize: 11
+                background: Rectangle { color: talkBtn.talkActive ? "#FF3D71" : "#252830"; radius: 6; width: 56; height: 30 }
+                contentItem: Text { text: talkBtn.text; font.pixelSize: 11; color: talkBtn.talkActive ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    if (talkBtn.talkActive) {
+                        mediaController.stopTalk()
+                        talkBtn.talkActive = false
+                        videoGridPage.showToast("对讲已停止", "info")
+                    } else {
+                        mediaController.startTalk(videoGridPage.slotChannelId(activeSlot))
+                        talkBtn.talkActive = true
+                        videoGridPage.showToast("对讲已建立", "ok")
+                    }
+                }
             }
-            Button { text: "⛶ 全屏"; font.pixelSize: 11
+            Button { text: "全屏"; font.pixelSize: 11
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 56; height: 30 }
                 contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     isFullscreen = !isFullscreen
-                    if (isFullscreen && activeSlot >= 0) mediaController.setLayout(1)
-                    else mediaController.setLayout(4)
+                    if (isFullscreen && activeSlot >= 0) mediaController.currentLayout = 1
+                    else mediaController.currentLayout = 4
                 }
             }
         }
@@ -214,18 +284,18 @@ Item {
         anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 4; spacing: 4
 
-        // ═══ 左侧: 通道列表 (单画面时显示) ═══
+        // ═══ 左侧: 通道列表 (始终可见) ═══
         Rectangle {
-            Layout.fillHeight: true; Layout.preferredWidth: 180; color: "#141720"; radius: 8
-            visible: mediaController.currentLayout === 1
+            Layout.fillHeight: true; Layout.preferredWidth: 180; color: "#141420"; radius: 8
+            visible: true
 
             Column {
                 anchors.fill: parent; anchors.margins: 8; spacing: 4
 
-                Text { text: "📡 通道列表"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                Text { text: "通道列表"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
-                    width: parent.width - 16; height: parent.height - 100; spacing: 2; clip: true
+                    width: parent.width - 16; height: parent.height - 100; spacing: 4; clip: true
                     model: deviceController.devices
 
                     delegate: Rectangle {
@@ -237,7 +307,7 @@ Item {
                         Row {
                             anchors.fill: parent; anchors.margins: 6; spacing: 6
                             Rectangle { width: 8; height: 8; radius: 4; color: modelData.status === "online" ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: modelData.device_name || ("CH" + (index + 1)); font.pixelSize: 11; color: videoGridPage.activeSlot === index ? "#00D4AA" : "#E8E8E8"; width: 100; elide: Text.ElideRight }
+                            Text { text: modelData.name || modelData.device_name || ("CH" + (index + 1)); font.pixelSize: 12; color: videoGridPage.activeSlot === index ? "#00D4AA" : "#E8E8E8"; width: 100; elide: Text.ElideRight }
                             Text { text: modelData.status === "online" ? "●" : "○"; font.pixelSize: 10; color: modelData.status === "online" ? "#00D4AA" : "#4A4D58" }
                         }
                         MouseArea { anchors.fill: parent; onClicked: videoGridPage.activeSlot = index }
@@ -246,7 +316,7 @@ Item {
 
                 TextField {
                     width: parent.width - 16; height: 28; placeholderText: "搜索通道..."
-                    placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 11
+                    placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
                     background: Rectangle { color: "#252830"; radius: 4 }
                 }
             }
@@ -267,19 +337,24 @@ Item {
                 VideoTile {
                     width: grid.width / grid.cols - 2
                     height: grid.height / grid.rows - 2
-                    deviceId: index < deviceController.devices.length ? deviceController.devices[index].device_id || "" : ""
-                    channelName: index < deviceController.devices.length ? deviceController.devices[index].device_name || ("Camera_" + (index + 1)) : ("Camera_" + (index + 1))
-                    status: index < deviceController.devices.length ? deviceController.devices[index].status || "offline" : "offline"
-                    algorithmTag: index < deviceController.devices.length ? deviceController.devices[index].algorithm || "" : ""
-                    streamUrl: mediaController.getStreamUrl(
-                        index < deviceController.devices.length ? (deviceController.devices[index].device_id || "") : ""
-                    )
+                    deviceId: index < deviceController.devices.length ? (deviceController.devices[index].id || deviceController.devices[index].device_id || "") : ""
+                    channelName: index < deviceController.devices.length ? (deviceController.devices[index].name || deviceController.devices[index].device_name || ("Camera_" + (index + 1))) : ("Camera_" + (index + 1))
+                    status: index < deviceController.devices.length ? (deviceController.devices[index].status || "offline") : "offline"
+                    algorithmTag: index < deviceController.devices.length ? (deviceController.devices[index].algorithm || "") : ""
+                    streamUrl: isPreviewActive ? (mediaController.streamUrls[
+                        index < deviceController.devices.length ? (deviceController.devices[index].id || deviceController.devices[index].device_id || "") : ""
+                    ] || "") : ""
                     active: videoGridPage.activeSlot === index
+                    // P1-1: AI detection overlay binding
+                    detectionBoxes: {
+                        var devId = index < deviceController.devices.length ? (deviceController.devices[index].id || deviceController.devices[index].device_id || "") : ""
+                        return mediaController.detections[devId] || []
+                    }
 
                     // 双击全屏
                     MouseArea {
                         anchors.fill: parent; z: 10; propagateComposedEvents: true
-                        onDoubleClicked: { videoGridPage.activeSlot = index; mediaController.setLayout(1); videoGridPage.isFullscreen = true }
+                        onDoubleClicked: { videoGridPage.activeSlot = index; mediaController.currentLayout = 1; videoGridPage.isFullscreen = true }
                         onClicked: { videoGridPage.activeSlot = index; mouse.accepted = false }
                     }
                 }
@@ -288,7 +363,7 @@ Item {
 
         // ═══ 右侧: PTZ控制面板 ═══
         Rectangle {
-            Layout.fillHeight: true; Layout.preferredWidth: 170; color: "#141720"; radius: 8
+            Layout.fillHeight: true; Layout.preferredWidth: 170; color: "#141420"; radius: 8
             visible: mediaController.currentLayout === 1 && activeSlot >= 0
 
             ScrollView {
@@ -297,7 +372,7 @@ Item {
                 Column {
                     width: 154; spacing: 8; padding: 8
 
-                    Text { text: "🎯 云台控制"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; width: parent.width }
+                    Text { text: "云台控制"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; width: parent.width }
 
                     // PTZ方向盘 (Canvas绘制)
                     Canvas {
@@ -315,7 +390,7 @@ Item {
                             ctx.strokeStyle = "#252830"; ctx.lineWidth = 2; ctx.stroke()
 
                             var dirs = ["up", "right_up", "right", "right_down", "down", "left_down", "left", "left_up"]
-                            var labels = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
+                            var labels = ["U", "UR", "R", "DR", "D", "DL", "L", "UL"]
                             for (var i = 0; i < 8; i++) {
                                 var angle = (i / 8) * 2 * Math.PI - Math.PI / 2
                                 var bx = cx + Math.cos(angle) * 38
@@ -323,7 +398,7 @@ Item {
                                 ctx.beginPath(); ctx.arc(bx, by, 14, 0, 2 * Math.PI)
                                 ctx.fillStyle = activeDir === dirs[i] ? "#3B82F6" : "#252830"; ctx.fill()
                                 ctx.fillStyle = activeDir === dirs[i] ? "#FFF" : "#8B8FA3"
-                                ctx.font = "14px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+                                ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
                                 ctx.fillText(labels[i], bx, by)
                             }
 
@@ -362,23 +437,23 @@ Item {
                         }
                     }
 
-                    Text { text: "速度: " + ptzSpeed.value.toFixed(1); font.pixelSize: 10; color: "#8B8FA3" }
+                    Text { text: "速度: " + ptzSpeed.value.toFixed(1); font.pixelSize: 11; color: "#8B8FA3" }
                     Slider { id: ptzSpeed; width: 140; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.1 }
 
-                    Text { text: "变倍 Zoom"; font.pixelSize: 10; color: "#8B8FA3" }
+                    Text { text: "变倍 Zoom"; font.pixelSize: 11; color: "#8B8FA3" }
                     Row { spacing: 4
-                        Button { width: 60; height: 26; text: "➖"; font.pixelSize: 12
+                        Button { width: 60; height: 26; text: "-"; font.pixelSize: 12
                             onClicked: mediaController.ptzControl(activeSlot, "zoom_out", 0.3)
                             background: Rectangle { color: "#252830"; radius: 4 }
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
-                        Button { width: 60; height: 26; text: "➕"; font.pixelSize: 12
+                        Button { width: 60; height: 26; text: "+"; font.pixelSize: 12
                             onClicked: mediaController.ptzControl(activeSlot, "zoom_in", 0.3)
                             background: Rectangle { color: "#252830"; radius: 4 }
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
-                    Text { text: "焦距 Focus"; font.pixelSize: 10; color: "#8B8FA3" }
+                    Text { text: "焦距 Focus"; font.pixelSize: 11; color: "#8B8FA3" }
                     Row { spacing: 4
                         Button { width: 60; height: 26; text: "近"; font.pixelSize: 11
                             onClicked: mediaController.ptzControl(activeSlot, "focus_near", 0.3)
@@ -395,17 +470,17 @@ Item {
                     Rectangle { height: 1; color: "#252830"; width: parent.width - 16 }
 
                     // 预置位
-                    Text { text: "📌 预置位"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "预置位"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                     Grid {
                         columns: 3; spacing: 4
                         Repeater {
                             model: 6
                             delegate: Button {
                                 width: 42; height: 28; text: "P" + (index + 1)
-                                font.pixelSize: 10
+                                font.pixelSize: 11
                                 onClicked: mediaController.ptzGotoPreset(activeSlot, index + 1)
                                 background: Rectangle { color: "#252830"; radius: 4 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onPressAndHold: mediaController.ptzSetPreset(activeSlot, index + 1)
                             }
                         }
@@ -413,18 +488,36 @@ Item {
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width - 16 }
 
-                    // 轮巡
-                    Text { text: "🔄 轮巡"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                    // 轮巡/巡航
+                    Text { text: "轮巡/巡航"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                     Row { spacing: 4
-                        Button { text: "▶ 开始"; font.pixelSize: 10
+                        Button { text: "开始"; font.pixelSize: 11
                             onClicked: mediaController.startPatrol(slotDeviceId(activeSlot))
                             background: Rectangle { color: "#00D4AA"; radius: 4; width: 50; height: 26 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
-                        Button { text: "⏹ 停止"; font.pixelSize: 10
+                        Button { text: "停止"; font.pixelSize: 11
                             onClicked: mediaController.stopPatrol(slotDeviceId(activeSlot))
                             background: Rectangle { color: "#FF3D71"; radius: 4; width: 50; height: 26 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        }
+                    }
+                    // 巡航路径选择 (P0-2 对标海康 PTZ)
+                    Row { spacing: 4
+                        Button { text: "路径1"; font.pixelSize: 10
+                            onClicked: mediaController.ptzControl(activeSlot, "cruise_start", 1)
+                            background: Rectangle { color: "#252830"; radius: 4; width: 46; height: 24 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        }
+                        Button { text: "路径2"; font.pixelSize: 10
+                            onClicked: mediaController.ptzControl(activeSlot, "cruise_start", 2)
+                            background: Rectangle { color: "#252830"; radius: 4; width: 46; height: 24 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        }
+                        Button { text: "轨迹1"; font.pixelSize: 10
+                            onClicked: mediaController.ptzControl(activeSlot, "track_start", 1)
+                            background: Rectangle { color: "#252830"; radius: 4; width: 46; height: 24 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
                 }
@@ -458,7 +551,7 @@ Item {
 
             // CPU
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "CPU"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: "CPU"; font.pixelSize: 11; color: "#8B8FA3" }
                 Text { text: (statusController.cpuUsage * 100).toFixed(0) + "%"
                     font.pixelSize: 11; font.bold: true
                     color: statusController.cpuUsage > 0.9 ? "#FF3D71" : statusController.cpuUsage > 0.7 ? "#FFB800" : "#00D4AA"
@@ -479,7 +572,7 @@ Item {
 
             // 内存
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "MEM"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: "MEM"; font.pixelSize: 11; color: "#8B8FA3" }
                 Text { text: (statusController.memoryUsage * 100).toFixed(0) + "%"
                     font.pixelSize: 11; font.bold: true
                     color: statusController.memoryUsage > 0.9 ? "#FF3D71" : statusController.memoryUsage > 0.7 ? "#FFB800" : "#00D4AA"
@@ -500,7 +593,7 @@ Item {
 
             // TPU
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "TPU"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: "TPU"; font.pixelSize: 11; color: "#8B8FA3" }
                 Text { text: (statusController.tpuUtilization * 100).toFixed(0) + "%"
                     font.pixelSize: 11; font.bold: true
                     color: statusController.tpuUtilization > 0.9 ? "#FF3D71" : statusController.tpuUtilization > 0.7 ? "#FFB800" : "#00D4AA"
@@ -521,7 +614,7 @@ Item {
 
             // 温度
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "TEMP"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: "TEMP"; font.pixelSize: 11; color: "#8B8FA3" }
                 Text { text: statusController.temperature.toFixed(1) + "°C"
                     font.pixelSize: 11; font.bold: true
                     color: statusController.temperature > 75 ? "#FF3D71" : statusController.temperature > 60 ? "#FFB800" : "#00D4AA"
@@ -532,13 +625,13 @@ Item {
 
             // 模型数
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "模型"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: "模型"; font.pixelSize: 11; color: "#8B8FA3" }
                 Text { text: statusController.activeModels + " 活跃"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true }
             }
 
             // 运行时间
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "运行"; font.pixelSize: 10; color: "#8B8FA3" }
+                Text { text: "运行"; font.pixelSize: 11; color: "#8B8FA3" }
                 Text { text: statusController.uptime || "--"; font.pixelSize: 11; color: "#8B8FA3" }
             }
 
@@ -557,7 +650,7 @@ Item {
     Connections {
         target: mediaController
         function onLayoutChanged() {
-            requestAllStreams()
+            if (isPreviewActive) requestAllStreams()
         }
         function onPipChanged() {
             videoGridPage.pipChannelId = mediaController.pipChannelId
@@ -592,7 +685,7 @@ Item {
     Connections {
         target: deviceController
         function onDevicesUpdated() {
-            requestAllStreams()
+            if (isPreviewActive) requestAllStreams()
         }
     }
 
@@ -615,7 +708,7 @@ Item {
             channelName: "PiP"
             status: "online"
             algorithmTag: ""
-            streamUrl: mediaController.resolveStreamUrl(videoGridPage.pipChannelId)
+            streamUrl: isPreviewActive ? (mediaController.streamUrls[videoGridPage.pipChannelId] || "") : ""
             active: true
         }
         MouseArea {
@@ -625,7 +718,7 @@ Item {
             Rectangle { anchors.fill: parent; color: "transparent" }
             Text {
                 anchors.centerIn: parent
-                text: "✕"; color: "#E8E8E8"; font.pixelSize: 14
+                text: "X"; color: "#E8E8E8"; font.pixelSize: 14
             }
         }
     }
@@ -643,7 +736,7 @@ Item {
                 case "ok":    return "#1A3A2A"
                 case "warn":  return "#3A2A1A"
                 case "error": return "#3A1A2A"
-                default:      return "#141720"
+                default:      return "#141420"
             }
         }
         border.color: {
@@ -670,6 +763,6 @@ Item {
     }
 
     Component.onCompleted: {
-        requestAllStreams()
+        // Preview starts manually via the toolbar toggle button.
     }
 }

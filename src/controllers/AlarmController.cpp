@@ -211,6 +211,13 @@ void AlarmController::flushPendingUI() {
         m_alarmModel->setAlarms(m_alarms);
 }
 
+void AlarmController::onUnifiedAlarmReceived(const QJsonObject& payload) {
+    // 统一 WS 通道入口(规范 b4ced019): 接收 WsMessageRouter::alarmReceived
+    // 复用 onWsTextMessage 的去重/防抖/弹窗逻辑
+    QJsonDocument doc(payload);
+    onWsTextMessage(QString::fromUtf8(doc.toJson(QJsonDocument::Compact)));
+}
+
 // ─────────────────────────────────────────────────────────────────────
 //  导出 (规范 P1 #11)
 // ─────────────────────────────────────────────────────────────────────

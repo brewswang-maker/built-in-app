@@ -59,8 +59,6 @@ Item {
             cfgVlan = nc.vlan || ""
         }
         function onConfigSaved() { statusMsg = "Config saved"; statusTimer.start() }
-        function onConfigExported() { statusMsg = "Config exported"; statusTimer.start() }
-        function onConfigImported() { statusMsg = "Config imported"; statusTimer.start() }
         function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
     }
 
@@ -344,7 +342,7 @@ Item {
 
                 ListView {
                     width: parent.width; height: 320; spacing: 4; clip: true
-                    model: configController.algorithmList
+                    model: configController.algorithms
 
                     delegate: Rectangle {
                         width: ListView.view.width; height: 48; color: "#0D0F12"; radius: 4
@@ -378,13 +376,13 @@ Item {
                         anchors.fill: parent; anchors.margins: 12; spacing: 4
                         Text { text: "TPU Utilization"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Row { spacing: 20
-                            Text { text: "Active models: " + configController.algorithmList.filter(function(e){ return e.status === "active" }).length; font.pixelSize: 11; color: "#00D4AA" }
-                            Text { text: "Total FPS: " + configController.algorithmList.reduce(function(a, e){ return a + (e.fps || 0) }, 0); font.pixelSize: 11; color: "#3B82F6" }
-                            Text { text: "Avg latency: " + (configController.algorithmList.length > 0 ? (configController.algorithmList.reduce(function(a, e){ return a + (e.inferenceMs || 0) }, 0) / configController.algorithmList.filter(function(e){ return e.status === "active" }).length).toFixed(1) : 0) + "ms"; font.pixelSize: 11; color: "#FFB800" }
+                            Text { text: "Active models: " + (configController.algorithms || []).filter(function(e){ return e.status === "active" }).length; font.pixelSize: 11; color: "#00D4AA" }
+                            Text { text: "Total FPS: " + (configController.algorithms || []).reduce(function(a, e){ return a + (e.fps || 0) }, 0); font.pixelSize: 11; color: "#3B82F6" }
+                            Text { text: "Avg latency: " + ((configController.algorithms || []).length > 0 ? ((configController.algorithms || []).reduce(function(a, e){ return a + (e.inferenceMs || 0) }, 0) / (configController.algorithms || []).filter(function(e){ return e.status === "active" }).length).toFixed(1) : 0) + "ms"; font.pixelSize: 11; color: "#FFB800" }
                         }
                         Row { spacing: 20
-                            Text { text: "Storage used: " + configController.algorithmList.reduce(function(a, e){ return a + (e.size || 0) }, 0).toFixed(1) + " MB"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: "TPU slots: " + configController.algorithmList.filter(function(e){ return e.slot > 0 }).length + "/8"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "Storage used: " + (configController.algorithms || []).reduce(function(a, e){ return a + (e.size || 0) }, 0).toFixed(1) + " MB"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "TPU slots: " + (configController.algorithms || []).filter(function(e){ return e.slot > 0 }).length + "/8"; font.pixelSize: 11; color: "#8B8FA3" }
                         }
                     }
                 }

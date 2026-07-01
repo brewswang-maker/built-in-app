@@ -36,7 +36,7 @@ Item {
 
     Connections {
         target: mediaController
-        function onStreamsUpdated() { /* refresh stream info */ }
+        function onChannelsUpdated() { /* refresh channel info */ }
         function onStreamStarted(channelId) { statusMsg = "Preview started: " + channelId; statusTimer.start() }
         function onStreamStopped(channelId) { statusMsg = "Preview stopped: " + channelId; statusTimer.start() }
         function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }

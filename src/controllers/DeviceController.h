@@ -168,6 +168,8 @@ signals:
     void deviceUpdated(const QString& deviceId);
     void deviceRemoved(const QString& deviceId);
     void groupCreated(const QString& groupId);
+    void deviceDiscovered(const QVariantList& results);
+    void deviceDetailReady(const QVariantMap& detail);
     void errorOccurred(int code, const QString& message);
 
 private slots:

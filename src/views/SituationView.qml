@@ -83,8 +83,9 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 24; anchors.rightMargin: 24
 
+            AppIcon { name: "shield"; size: 24; iconColor: "#00D4AA"; Layout.preferredWidth: 28; Layout.preferredHeight: 28 }
             Text {
-                text: "🛡️ 华盾AI 安全态势大屏"
+                text: "华盾AI 安全态势大屏"
                 font.pixelSize: 18; font.bold: true; color: "#00D4AA"
             }
 
@@ -134,7 +135,7 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                        Text { text: "📊 安全评分"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "安全评分"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                         Rectangle {
                             width: 120; height: 120
@@ -183,7 +184,7 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
 
-                        Text { text: "🚨 告警趋势 (24h)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "告警趋势 (24h)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                         Canvas {
                             id: trendCanvas
@@ -216,13 +217,22 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
 
-                        Text { text: "📹 设备状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "设备状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                         Row {
                             spacing: 12
-                            Text { text: "🟢 在线: " + deviceController.deviceCount; font.pixelSize: 12; color: "#00D4AA" }
-                            Text { text: "🔴 离线: " + Math.max(0, deviceController.deviceCount > 0 ? Math.floor(deviceController.deviceCount * 0.15) : 0); font.pixelSize: 12; color: "#FF3D71" }
-                            Text { text: "🟡 告警: " + alarmController.alarmCount; font.pixelSize: 12; color: "#FFB800" }
+                            Row { spacing: 4
+                                Rectangle { width: 8; height: 8; radius: 4; color: "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "在线: " + deviceController.deviceCount; font.pixelSize: 12; color: "#00D4AA" }
+                            }
+                            Row { spacing: 4
+                                Rectangle { width: 8; height: 8; radius: 4; color: "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "离线: " + Math.max(0, deviceController.deviceCount > 0 ? Math.floor(deviceController.deviceCount * 0.15) : 0); font.pixelSize: 12; color: "#FF3D71" }
+                            }
+                            Row { spacing: 4
+                                Rectangle { width: 8; height: 8; radius: 4; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
+                                Text { text: "告警: " + alarmController.alarmCount; font.pixelSize: 12; color: "#FFB800" }
+                            }
                         }
                     }
                 }
@@ -237,10 +247,27 @@ Item {
             Column {
                 anchors.fill: parent; spacing: 8
 
-                // 3D地图区域
+                // 3D地图区域 (P1.1 + P1.2: 集成热力图+轨迹回放)
                 Rectangle {
                     width: parent.width; height: parent.height * 0.65
                     color: "#0A0C10"; radius: 8
+
+                    // 热力图+轨迹回放叠加层
+                    HeatmapOverlay {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        z: 5
+                        id: heatmapOverlay
+                        // 示例热力点 (基于告警分布)
+                        heatPoints: [
+                            { x: 0.15, y: 0.2, count: 3, type: "perimeter" },
+                            { x: 0.45, y: 0.3, count: 8, type: "fire" },
+                            { x: 0.7, y: 0.15, count: 2, type: "helmet" },
+                            { x: 0.3, y: 0.55, count: 12, type: "intrusion" },
+                            { x: 0.6, y: 0.42, count: 5, type: "crowd" }
+                        ]
+                        showHeatmap: false  // 默认关闭，用户可点击开启
+                    }
 
                     Canvas {
                         id: scene3d
@@ -310,7 +337,7 @@ Item {
                                 ctx.fillStyle = hasAlert ? "#FF3D71" : "#00D4AA"
                                 ctx.beginPath(); ctx.arc(cam.x, cam.y, 6, 0, 2 * Math.PI); ctx.fill()
 
-                                ctx.fillStyle = "#8B8FA3"; ctx.font = "9px sans-serif"
+                                ctx.fillStyle = "#8B8FA3"; ctx.font = "11px sans-serif"
                                 ctx.fillText(cam.name, cam.x - 15, cam.y - 10)
 
                                 if (hasAlert) {
@@ -322,11 +349,66 @@ Item {
                                 }
                             }
 
-                            ctx.fillStyle = "#4A4D58"; ctx.font = "10px sans-serif"
-                            ctx.fillText("📹 正常  🔴 告警  🏢 监控区域", 12, h - 10)
+                            ctx.fillStyle = "#4A4D58"; ctx.font = "11px sans-serif"
+                            ctx.fillText("正常  告警  监控区域", 12, h - 10)
                         }
 
                         Timer { interval: 100; running: true; repeat: true; onTriggered: scene3d.requestPaint() }
+
+                        // 摄像头点击交互
+                        MouseArea {
+                            anchors.fill: parent
+                            acceptedButtons: Qt.LeftButton
+                            onClicked: {
+                                var camW = 6
+                                var cameras = [
+                                    { x: width*0.15, y: height*0.2, name: "CAM-01" },
+                                    { x: width*0.45, y: height*0.3, name: "CAM-02" },
+                                    { x: width*0.7, y: height*0.15, name: "CAM-03" },
+                                    { x: width*0.3, y: height*0.55, name: "CAM-04" },
+                                    { x: width*0.6, y: height*0.42, name: "CAM-05" }
+                                ]
+                                for (var i = 0; i < cameras.length; i++) {
+                                    var dx = mouseX - cameras[i].x
+                                    var dy = mouseY - cameras[i].y
+                                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
+                                        camPopup.camName = cameras[i].name
+                                        camPopup.camX = cameras[i].x
+                                        camPopup.camY = cameras[i].y
+                                        camPopup.open()
+                                        return
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 摄像头详情弹窗
+                    Popup {
+                        id: camPopup
+                        property string camName: ""
+                        property real camX: 0
+                        property real camY: 0
+                        x: camX + 10
+                        y: camY + 10
+                        width: 180; height: 120
+                        modal: false
+                        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+                        background: Rectangle { color: "#141720"; radius: 8; border.color: "#3B82F6"; border.width: 1 }
+
+                        Column {
+                            anchors.fill: parent; anchors.margins: 10; spacing: 4
+                            Text { text: camPopup.camName; font.pixelSize: 13; font.bold: true; color: "#3B82F6" }
+                            Text { text: "状态: 在线"; font.pixelSize: 11; color: "#00D4AA" }
+                            Text { text: "分辨率: 1080p"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "码率: 4Mbps"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Button {
+                                text: "查看预览"; font.pixelSize: 10
+                                background: Rectangle { color: "#3B82F6"; radius: 4; width: 70; height: 22 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                onClicked: camPopup.close()
+                            }
+                        }
                     }
                 }
 
@@ -340,7 +422,7 @@ Item {
 
                         Row {
                             spacing: 8
-                            Text { text: "🚨 最新告警"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                            Text { text: "最新告警"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                             Text { text: "(" + alarmController.alarmCount + "条)"; font.pixelSize: 12; color: "#8B8FA3" }
                         }
 
@@ -366,7 +448,7 @@ Item {
                                                alarmData.level === "中" ? "#FFB800" : "#8B8FA3"
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
-                                    Text { text: alarmData.time || ""; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: alarmData.time || ""; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                                     Text { text: alarmData.location || ""; font.pixelSize: 12; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter; width: 120 }
                                     Text { text: alarmData.type || ""; font.pixelSize: 12; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter; width: 90 }
                                     Rectangle {
@@ -376,17 +458,17 @@ Item {
                                         anchors.verticalCenter: parent.verticalCenter
                                         Text {
                                             text: alarmData.status || "未处置"
-                                            font.pixelSize: 10
+                                            font.pixelSize: 11
                                             color: alarmData.status === "已处置" ? "#00D4AA" :
                                                    alarmData.status === "处置中" ? "#FFB800" : "#FF3D71"
                                             anchors.centerIn: parent
                                         }
                                     }
                                     Button {
-                                        text: "处置"; font.pixelSize: 9
+                                        text: "处置"; font.pixelSize: 11
                                         visible: alarmData.status !== "已处置"
-                                        background: Rectangle { color: "#3B82F6"; radius: 3; width: 36; height: 18 }
-                                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        background: Rectangle { color: "#3B82F6"; radius: 3; width: 40; height: 22 }
+                                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                         onClicked: alarmController.handleAlarm(alarmData.id, "confirm")
                                     }
                                 }
@@ -413,7 +495,7 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
 
-                        Text { text: "🧠 AI推理性能"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "AI推理性能"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                         Row { spacing: 12
                             Text { text: "TPU:"; font.pixelSize: 11; color: "#8B8FA3" }
                             Text { id: tpuValueText; text: "0%"; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
@@ -450,7 +532,7 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 4
 
-                        Text { text: "📦 模型状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "模型状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                         ListView {
                             width: parent.width; height: parent.height - 30
@@ -464,8 +546,8 @@ Item {
                                     anchors.fill: parent; spacing: 6
                                     Rectangle { width: 6; height: 6; radius: 3; color: algoData.enabled ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
                                     Text { text: algoData.name || ""; font.pixelSize: 11; color: "#E8E8E8"; width: 70; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: (algoData.fps || "-") + " FPS"; font.pixelSize: 10; color: "#8B8FA3"; width: 50; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: "TPU " + (algoData.tpu || "0%"); font.pixelSize: 10; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: (algoData.fps || "-") + " FPS"; font.pixelSize: 11; color: "#8B8FA3"; width: 50; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: "TPU " + (algoData.tpu || "0%"); font.pixelSize: 11; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
                                 }
                             }
                         }
@@ -480,7 +562,7 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 4
 
-                        Text { text: "⚙️ 硬件状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                        Text { text: "硬件状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                         Column {
                             width: parent.width; spacing: 6

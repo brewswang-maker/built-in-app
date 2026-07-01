@@ -86,7 +86,7 @@ Window {
             var actions = []
             for (var i = 0; i < linkageLogs.length; i++) {
                 actions.push({
-                    icon: linkageLogs[i].icon || "🔗",
+                    icon: linkageLogs[i].icon || "",
                     label: linkageLogs[i].text || linkageLogs[i].action || "-",
                     active: linkageLogs[i].status === "running" || linkageLogs[i].status === "done"
                 })
@@ -146,7 +146,7 @@ Window {
                             NumberAnimation { from: 0.2; to: 1; duration: 600 } } }
 
                     Text {
-                        text: currentAlarm ? "🚨 " + (currentAlarm.alarm_type || currentAlarm.type || "告警") : "🚨 告警"
+                        text: currentAlarm ? "" + (currentAlarm.alarm_type || currentAlarm.type || "告警") : "告警"
                         font.pixelSize: 15; font.bold: true; color: "#FF3D71"
                     }
                     Text { text: currentAlarm ? (currentAlarm.location_name || currentAlarm.location || "") : ""; font.pixelSize: 12; color: "#8B8FA3" }
@@ -156,7 +156,7 @@ Window {
 
                     // 倒计时
                     Text { id: countdownText; text: "15s"; font.pixelSize: 11; color: "#FF6B35"; font.bold: true }
-                    Button { text: "✕"; font.pixelSize: 14
+                    Button { text: "X"; font.pixelSize: 14
                         background: Rectangle { color: "transparent" }
                         contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#4A4D58" }
                         onClicked: linkagePopup.dismiss()
@@ -230,7 +230,7 @@ Window {
                             // 通道信息叠加
                             Rectangle { anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8; width: 200; height: 28; color: "#B3000000"; radius: 4
                                 Text {
-                                    text: currentAlarm ? "📹 " + (currentAlarm.device_name || "") + " | CH" + (currentAlarm.channel_id || "?") : ""
+                                    text: currentAlarm ? "" + (currentAlarm.device_name || "") + " | CH" + (currentAlarm.channel_id || "?") : ""
                                     font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent
                                 }
                             }
@@ -273,20 +273,20 @@ Window {
                             RowLayout {
                                 anchors.fill: parent; anchors.margins: 4; spacing: 4
 
-                                Text { text: "🔗 联动:"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "联动:"; font.pixelSize: 10; color: "#8B8FA3" }
 
                                 Repeater {
                                     model: linkageActions
                                     delegate: Rectangle { width: 68; height: 20; radius: 4
                                         color: modelData.active ? "#0A3A2A" : "#1A1A2A"
                                         Row { anchors.centerIn: parent; spacing: 2
-                                            Text { text: modelData.icon || "🔗"; font.pixelSize: 9 }
+                                            Text { text: modelData.icon || ""; font.pixelSize: 9 }
                                             Text { text: modelData.label || "-"; font.pixelSize: 8; color: modelData.active ? "#00D4AA" : "#4A4D58" }
                                         }
                                     }
                                 }
                                 Item { Layout.fillWidth: true }
-                                Button { text: "📼 回放"; font.pixelSize: 9
+                                Button { text: "回放"; font.pixelSize: 9
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 20 }
                                     contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: {
@@ -311,7 +311,7 @@ Window {
                             width: 264; spacing: 6; padding: 8
 
                             // 联动抓图区域 (占位)
-                            Text { text: "📸 联动抓图"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
+                            Text { text: "联动抓图"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
                             Rectangle { width: 260; height: 146; color: "#0A0C10"; radius: 6
                                 Text {
                                     anchors.centerIn: parent
@@ -321,7 +321,7 @@ Window {
                             }
 
                             // 告警信息
-                            Text { text: "📋 告警信息"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
+                            Text { text: "告警信息"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
                             Grid { columns: 2; columnSpacing: 8; rowSpacing: 2; width: parent.width
                                 Text { text: "类型:"; font.pixelSize: 10; color: "#4A4D58" }
                                 Text { text: currentAlarm ? (currentAlarm.alarm_type || currentAlarm.type || "-") : "-"; font.pixelSize: 10; color: "#E8E8E8" }
@@ -341,12 +341,12 @@ Window {
                                 Text { text: currentAlarm ? (currentAlarm.target_label || "-") : "-"; font.pixelSize: 10; color: "#E8E8E8" }
                             }
 
-                            readonly property var levelLabels: ({ "critical": "🔴 严重", "warning": "🟡 警告", "info": "🟢 信息" })
+                            readonly property var levelLabels: ({ "critical": "严重", "warning": "警告", "info": "信息" })
 
                             Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                             // AI研判
-                            Text { text: "🧠 AI研判"; font.pixelSize: 11; color: "#6C5CE7"; font.bold: true }
+                            Text { text: "AI研判"; font.pixelSize: 11; color: "#6C5CE7"; font.bold: true }
                             Rectangle { width: 260; height: 48; color: "#0A0A2A"; radius: 6
                                 Text {
                                     text: currentAlarm ? (currentAlarm.ai_analysis || currentAlarm.aiVerdict || "分析中...") : "分析中..."
@@ -355,7 +355,7 @@ Window {
                             }
 
                             // 建议处置
-                            Text { text: "💡 建议处置"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
+                            Text { text: "建议处置"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
                             Text {
                                 text: currentAlarm ? (currentAlarm.suggested_action || currentAlarm.suggestion || "-") : "-"
                                 font.pixelSize: 10; color: "#FFB800"
@@ -364,7 +364,7 @@ Window {
                             Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                             // 联动执行状态 — 从 linkageController.logs 获取
-                            Text { text: "🔗 联动执行状态"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true }
+                            Text { text: "联动执行状态"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true }
                             Column {
                                 id: linkageStatusCol
                                 spacing: 2; width: parent.width
@@ -374,8 +374,8 @@ Window {
                                     model: linkageLogs
 
                                     delegate: Row { spacing: 4
-                                        Text { text: modelData.status === "done" ? "✅" : modelData.status === "running" ? "⏳" : "⬜"; font.pixelSize: 10 }
-                                        Text { text: modelData.icon || "🔗"; font.pixelSize: 10 }
+                                        Text { text: modelData.status === "done" ? "OK" : modelData.status === "running" ? "..." : "-"; font.pixelSize: 10 }
+                                        Text { text: modelData.icon || ""; font.pixelSize: 10 }
                                         Text { text: modelData.text || modelData.action || "-"; font.pixelSize: 10; color: modelData.status === "running" ? "#FFB800" : "#8B8FA3" }
                                     }
                                 }
@@ -392,7 +392,7 @@ Window {
                 RowLayout {
                     anchors.fill: parent; anchors.margins: 8; spacing: 8
 
-                    Button { text: "✅ 确认告警"; font.pixelSize: 12
+                    Button { text: "确认告警"; font.pixelSize: 12
                         background: Rectangle { color: "#3B82F6"; radius: 8; width: 100; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
@@ -403,7 +403,7 @@ Window {
                             linkagePopup.dismiss()
                         }
                     }
-                    Button { text: "❌ 误报"; font.pixelSize: 12
+                    Button { text: "误报"; font.pixelSize: 12
                         background: Rectangle { color: "#2A1A1A"; radius: 8; width: 70; height: 32; border.color: "#FF3D71"; border.width: 1 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
@@ -414,7 +414,7 @@ Window {
                             linkagePopup.dismiss()
                         }
                     }
-                    Button { text: "🔇 静音"; font.pixelSize: 12
+                    Button { text: "静音"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 8; width: 70; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
@@ -425,7 +425,7 @@ Window {
                             linkagePopup.dismiss()
                         }
                     }
-                    Button { text: "📼 回放"; font.pixelSize: 12
+                    Button { text: "回放"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 8; width: 70; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
@@ -434,7 +434,7 @@ Window {
                             }
                         }
                     }
-                    Button { text: "🎙️ 对讲"; font.pixelSize: 12
+                    Button { text: "对讲"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 8; width: 70; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {

@@ -146,15 +146,11 @@ int StatisticsController::healthyModelCount() const {
 }
 
 void StatisticsController::refreshModelHealth() {
-    // /api/v1/ai/models 返回: { models: [{id, name, type, status, version, ...}] }
-    // 实际后端 payload 字段名可能不同,兼容:
-    //   - items / models / data (数组)
-    //   - accuracy / drift_score / last_evaluated_at (健康度元数据)
+    // 后端响应: {code,message,data:{models:[{id,name,type,status,...}]}}
+    // extractArray 会先解包 data 信封, 再按优先级查数组
     m_api->get("/api/v1/ai/models",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("models").toArray();
-            if (arr.isEmpty()) arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("data").toArray();
+            QJsonArray arr = ApiClient::extractArray(obj, {"models", "items", "data"});
             m_modelHealthList.clear();
             for (const auto& v : arr) {
                 QJsonObject mo = v.toObject();
@@ -199,7 +195,9 @@ void StatisticsController::refreshDashboard() {
     setLoading(true);
     m_api->get("/api/v1/stats/dashboard",
         [this](QJsonObject obj) {
-            QVariantMap d = obj.toVariantMap();
+            // 后端响应: {code,message,data:{total_devices,online_devices,security_score,hourly_trend,...}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QVariantMap d = data.toVariantMap();
             m_dashboard = d;
             m_hourlyTrend = d.value("hourly_trend").toList();
             m_topAlarmTypes = d.value("top_alarm_types").toList();
@@ -216,7 +214,8 @@ void StatisticsController::refreshDashboard() {
 void StatisticsController::refreshOverview() {
     m_api->get("/api/v1/stats/overview",
         [this](QJsonObject obj) {
-            m_overview = obj.toVariantMap();
+            // 后端响应: {code,message,data:{...overview 字段...}}
+            m_overview = ApiClient::unwrapData(obj).toVariantMap();
             emit overviewUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -225,8 +224,8 @@ void StatisticsController::refreshOverview() {
 void StatisticsController::refreshHourlyTrend() {
     m_api->get("/api/v1/situation/hourly-stats",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("data").toArray();
-            if (arr.isEmpty()) arr = obj.value("hourly").toArray();
+            // 后端响应: {code,message,data:{data:[...]/hourly:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"data", "hourly", "items"});
             m_hourlyTrend.clear();
             for (const auto& v : arr) m_hourlyTrend.append(v.toVariant().toMap());
             emit dashboardUpdated();
@@ -237,8 +236,8 @@ void StatisticsController::refreshHourlyTrend() {
 void StatisticsController::refreshRecentEvents(int limit) {
     m_api->get(QString("/api/v1/alarms/history?limit=%1").arg(limit),
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("alarms").toArray();
+            // 后端响应: {code,message,data:{items:[...]/alarms:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "alarms", "events"});
             m_recentEvents.clear();
             for (const auto& v : arr) m_recentEvents.append(v.toVariant().toMap());
             emit recentEventsUpdated();
@@ -249,7 +248,9 @@ void StatisticsController::refreshRecentEvents(int limit) {
 void StatisticsController::refreshFalseAlarmBaseline(int days) {
     m_api->get(QString("/api/v1/stats/false_alarm_baseline?days=%1").arg(days),
         [this](QJsonObject obj) {
-            emit falseAlarmBaselineUpdated(obj.toVariantMap());
+            // 后端响应: {code,message,data:{...baseline 字段...}}
+            QVariantMap baseline = ApiClient::unwrapData(obj).toVariantMap();
+            emit falseAlarmBaselineUpdated(baseline);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
@@ -257,7 +258,8 @@ void StatisticsController::refreshFalseAlarmBaseline(int days) {
 void StatisticsController::refreshAlarmLevelDist() {
     m_api->get("/api/v1/alarms/stats",
         [this](QJsonObject obj) {
-            m_alarmLevelDist = obj.toVariantMap();
+            // 后端响应: {code,message,data:{critical:N,high:N,medium:N,low:N,...}}
+            m_alarmLevelDist = ApiClient::unwrapData(obj).toVariantMap();
             emit alarmLevelDistUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -266,7 +268,8 @@ void StatisticsController::refreshAlarmLevelDist() {
 void StatisticsController::refreshDeviceStats() {
     m_api->get("/api/v1/devices/stats",
         [this](QJsonObject obj) {
-            m_deviceStats = obj.toVariantMap();
+            // 后端响应: {code,message,data:{online:N,offline:N,total:N,...}}
+            m_deviceStats = ApiClient::unwrapData(obj).toVariantMap();
             emit deviceStatsUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });

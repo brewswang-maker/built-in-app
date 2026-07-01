@@ -1,24 +1,123 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import Qt.labs.settings 1.0
 
 ApplicationWindow {
     id: root
-    width: 1920
-    height: 1080
+    width: 1440
+    height: 860
     visible: true
     color: "#0D0F12"
     title: "华盾AI智能视频盒子"
 
-    // ── Header ──
+    // ═══ 全局主题常量 (P2.1 暗色主题质量升级) ═══
+    readonly property color c_bg_base: "#0D0F12"
+    readonly property color c_bg_elevated: "#141420"
+    readonly property color c_bg_surface: "#1A1D23"
+    readonly property color c_border: "#252830"
+    readonly property color c_text_primary: "#E8E8E8"
+    readonly property color c_text_secondary: "#8B8FA3"
+    readonly property color c_text_disabled: "#4A4D58"
+    readonly property color c_accent: "#00D4AA"
+    readonly property color c_danger: "#FF3D71"
+    readonly property color c_warning: "#FFB800"
+    readonly property color c_info: "#3B82F6"
+
+    // ═══ 侧边栏折叠状态 ═══
+    property bool sidebarCollapsed: false
+    property string searchKeyword: ""
+
+    // ═══ 导航菜单数据 (4组 × 18项) ═══
+    readonly property var navGroups: [
+        {
+            title: "视频监控",
+            icon: "camera",
+            items: [
+                { idx: 0, icon: "dashboard", label: "总览", tip: "Dashboard" },
+                { idx: 1, icon: "camera", label: "预览", tip: "Video Grid" },
+                { idx: 5, icon: "gb28181", label: "GB28181", tip: "GB28181 Devices" },
+                { idx: 6, icon: "onvif", label: "ONVIF", tip: "ONVIF Discovery" },
+                { idx: 7, icon: "record", label: "录像", tip: "Recording" }
+            ]
+        },
+        {
+            title: "AI智能",
+            icon: "ai",
+            items: [
+                { idx: 3, icon: "algorithm", label: "算法", tip: "Algorithm Center" },
+                { idx: 4, icon: "pipeline", label: "流水线", tip: "Pipeline Editor" },
+                { idx: 14, icon: "model", label: "模型", tip: "Model Mgmt" },
+                { idx: 9, icon: "ai", label: "AI助手", tip: "AI Assistant" }
+            ]
+        },
+        {
+            title: "告警联动",
+            icon: "alarm",
+            items: [
+                { idx: 2, icon: "alarm", label: "告警", tip: "Alarms" },
+                { idx: 18, icon: "linkage", label: "联动", tip: "Event Linkage" },
+                { idx: 8, icon: "situation", label: "态势", tip: "Situation 3D" },
+                { idx: 10, icon: "statistics", label: "统计", tip: "Statistics" },
+                { idx: 16, icon: "audit", label: "审计", tip: "Audit Center" }
+            ]
+        },
+        {
+            title: "系统管理",
+            icon: "settings",
+            items: [
+                { idx: 11, icon: "device", label: "设备", tip: "Devices" },
+                { idx: 12, icon: "channel", label: "通道", tip: "Channels" },
+                { idx: 13, icon: "stream", label: "流管理", tip: "Streams" },
+                { idx: 15, icon: "federation", label: "联邦", tip: "Federation" },
+                { idx: 17, icon: "folder", label: "场景", tip: "Scene Manage" },
+                { idx: 19, icon: "refresh", label: "OTA", tip: "OTA Upgrade" },
+                { idx: 20, icon: "settings", label: "设置", tip: "Settings" }
+            ]
+        }
+    ]
+
+    // ═══ 加载折叠状态 ═══
+    Component.onCompleted: {
+        sidebarCollapsed = sidebarSettings.collapsed
+        // 原有初始化
+        deviceController.refreshDevices()
+        alarmController.refreshAlarms(50)
+        alarmController.connectWebSocket()
+        statusController.startPolling(5000)
+        mediaController.refreshStreams()
+    }
+
+    // QSettings 持久化折叠状态
+    Settings {
+        id: sidebarSettings
+        category: "sidebar"
+        property bool collapsed: false
+    }
+
+    // ── Header (P2.1: 渐变背景+底部高光) ──
     Rectangle {
         id: header
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         height: 56
-        color: "#141720"
         z: 100
+
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.darker(c_bg_elevated, 1.1) }
+            GradientStop { position: 0.5; color: c_bg_elevated }
+            GradientStop { position: 1.0; color: c_bg_base }
+        }
+
+        // 底部分割线高光
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: Qt.rgba(0, 0.85, 0.67, 0.15)  // 微青色高光
+        }
 
         RowLayout {
             anchors.fill: parent
@@ -26,11 +125,20 @@ ApplicationWindow {
             anchors.rightMargin: 16
             spacing: 12
 
+            // Logo
+            AppIcon {
+                name: "shield"
+                size: 24
+                iconColor: c_accent
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 28
+            }
+
             Text {
-                text: "🛡️ 华盾AI 智能视频盒子"
+                text: "华盾AI 智能视频盒子"
                 font.pixelSize: 18
                 font.bold: true
-                color: "#E8E8E8"
+                color: c_text_primary
             }
 
             Item { Layout.fillWidth: true }
@@ -39,7 +147,7 @@ ApplicationWindow {
             Text {
                 id: clockText
                 font.pixelSize: 14
-                color: "#8B8FA3"
+                color: c_text_secondary
                 text: Qt.formatTime(new Date(), "hh:mm:ss")
 
                 Timer {
@@ -57,7 +165,7 @@ ApplicationWindow {
                 Layout.preferredHeight: 32
                 MouseArea {
                     anchors.fill: parent
-                    onClicked: navBar.currentIndex = 2  // Alarms
+                    onClicked: sidebar.currentIndex = 2  // Alarms
                 }
             }
 
@@ -78,94 +186,276 @@ ApplicationWindow {
 
             // Settings button
             Button {
-                text: "⚙️"
-                font.pixelSize: 18
                 flat: true
-                onClicked: navBar.currentIndex = 3
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 32
+                onClicked: sidebar.currentIndex = 20
                 background: Rectangle { color: "transparent" }
-                contentItem: Text {
-                    text: parent.text
-                    font.pixelSize: parent.font.pixelSize
-                    color: "#8B8FA3"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
+                contentItem: AppIcon {
+                    name: "settings"
+                    size: 20
+                    iconColor: c_text_secondary
                 }
             }
         }
     }
 
-    // ── Left Sidebar Navigation ──
+    // ═══ 左侧导航 (对标海康iVMS/DSS Pro: 可折叠+分组+搜索) ═══
     Rectangle {
         id: sidebar
         anchors.top: header.bottom
         anchors.bottom: parent.bottom
         anchors.left: parent.left
-        width: 72
-        color: "#141720"
+        width: sidebarCollapsed ? 64 : 200
         z: 100
+
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: c_bg_elevated }
+            GradientStop { position: 1.0; color: Qt.darker(c_bg_elevated, 1.2) }
+        }
 
         property int currentIndex: 0
 
-        Column {
-            anchors.fill: parent
-            anchors.margins: 4
-            spacing: 1
+        Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
-            Repeater {
-                model: [
-                    { icon: "🏠", label: "总览", tip: "Dashboard" },
-                    { icon: "📹", label: "预览", tip: "Video Grid" },
-                    { icon: "🚨", label: "告警", tip: "Alarms" },
-                    { icon: "🧩", label: "算法", tip: "Algorithm Center" },
-                    { icon: "🔗", label: "流水线", tip: "Pipeline Editor" },
-                    { icon: "📡", label: "GB28181", tip: "GB28181 Devices" },
-                    { icon: "🔌", label: "ONVIF", tip: "ONVIF Discovery" },
-                    { icon: "📼", label: "录像", tip: "Recording" },
-                    { icon: "🛡️", label: "态势", tip: "Situation 3D" },
-                    { icon: "🤖", label: "AI", tip: "AI Assistant" },
-                    { icon: "📊", label: "统计", tip: "Statistics" },
-                    { icon: "📟", label: "设备", tip: "Devices" },
-                    { icon: "📶", label: "通道", tip: "Channels" },
-                    { icon: "📺", label: "流管理", tip: "Streams" },
-                    { icon: "📦", label: "模型", tip: "Model Mgmt" },
-                    { icon: "🌐", label: "联邦", tip: "Federation" },
-                    { icon: "🔗", label: "联动", tip: "Event Linkage" },
-                    { icon: "⚙️", label: "设置", tip: "Settings" }
-                ]
+        // ── 搜索框 (展开态) ──
+        Rectangle {
+            id: searchBox
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: 8
+            height: sidebarCollapsed ? 0 : 36
+            visible: !sidebarCollapsed
+            color: "#1A1D23"
+            radius: 8
+            border.color: searchInput.activeFocus ? c_accent : "transparent"
+            border.width: 1
 
-                delegate: Button {
-                    width: sidebar.width - 8
-                    height: 50
-                    flat: true
-                    highlighted: sidebar.currentIndex === index
-                    onClicked: sidebar.currentIndex = index
+            Row {
+                anchors.fill: parent
+                anchors.margins: 6
+                spacing: 6
 
-                    background: Rectangle {
-                        color: sidebar.currentIndex === index ? "#1A1D23" : "transparent"
-                        radius: 8
-                    }
+                AppIcon {
+                    name: "search"
+                    size: 16
+                    iconColor: c_text_disabled
+                    anchors.verticalCenter: parent.verticalCenter
+                }
 
-                    contentItem: Column {
-                        spacing: 2
-                        Text {
-                            text: modelData.icon
-                            font.pixelSize: 22
-                            horizontalAlignment: Text.AlignHCenter
-                            anchors.horizontalCenter: parent.horizontalCenter
+                TextField {
+                    id: searchInput
+                    width: searchBox.width - 40
+                    height: 24
+                    placeholderText: "搜索功能..."
+                    placeholderTextColor: c_text_disabled
+                    color: c_text_primary
+                    font.pixelSize: 13
+                    background: Rectangle { color: "transparent" }
+                    onTextChanged: searchKeyword = text.toLowerCase().trim()
+                }
+            }
+        }
+
+        // ── 分组菜单 ScrollView ──
+        ScrollView {
+            id: navScroll
+            anchors.top: searchBox.bottom
+            anchors.bottom: collapseBtn.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.topMargin: 4
+            anchors.bottomMargin: 4
+            clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+            Column {
+                width: parent.width
+                spacing: 4
+                
+                Repeater {
+                    model: root.navGroups
+
+                    // ── 分组 ──
+                    Column {
+                        width: parent.width
+                        spacing: 0
+                        visible: groupMatchesSearch(modelData)
+
+                        function groupMatchesSearch(grp) {
+                            if (searchKeyword.length === 0) return true
+                            for (var i = 0; i < grp.items.length; i++) {
+                                if (grp.items[i].label.toLowerCase().indexOf(searchKeyword) >= 0)
+                                    return true
+                            }
+                            return false
                         }
-                        Text {
-                            text: modelData.label
-                            font.pixelSize: 10
-                            font.bold: sidebar.currentIndex === index
-                            color: sidebar.currentIndex === index ? "#00D4AA" : "#8B8FA3"
-                            horizontalAlignment: Text.AlignHCenter
-                            anchors.horizontalCenter: parent.horizontalCenter
+
+                        // ── 分组标题 ──
+                        Item {
+                            width: parent.width
+                            height: sidebarCollapsed ? 6 : 24
+
+                            // 展开态: 分组标题文字
+                            Text {
+                                visible: !sidebarCollapsed
+                                text: modelData.title
+                                font.pixelSize: 11
+                                font.bold: true
+                                color: c_text_disabled
+                                anchors.left: parent.left
+                                anchors.leftMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            // 折叠态: 分隔线
+                            Rectangle {
+                                visible: sidebarCollapsed
+                                width: parent.width - 16
+                                height: 1
+                                color: c_border
+                                anchors.horizontalCenter: parent.horizontalCenter
+                            }
+                        }
+
+                        // ── 分组菜单项 ──
+                        Repeater {
+                            model: modelData.items
+
+                            Item {
+                                id: menuItem
+                                width: parent.width
+                                height: itemMatchesSearch(modelData) ? 38 : 0
+                                visible: height > 0
+
+                                readonly property int targetIdx: modelData.idx
+                                readonly property bool isActive: sidebar.currentIndex === targetIdx
+
+                                function itemMatchesSearch(d) {
+                                    if (searchKeyword.length === 0) return true
+                                    return d.label.toLowerCase().indexOf(searchKeyword) >= 0 ||
+                                           d.tip.toLowerCase().indexOf(searchKeyword) >= 0
+                                }
+
+                                // 背景高亮
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 2
+                                    color: menuItem.isActive ? c_bg_surface : "transparent"
+                                    radius: 6
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+
+                                // 左侧高亮条
+                                Rectangle {
+                                    visible: menuItem.isActive
+                                    width: 3; height: 20
+                                    color: c_accent; radius: 2
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 2
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                // 图标 + 文字
+                                Row {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: sidebarCollapsed ? 0 : 14
+                                    spacing: 10
+
+                                    Item {
+                                        width: sidebarCollapsed ? parent.width : 22
+                                        height: parent.height
+
+                                        AppIcon {
+                                            name: modelData.icon
+                                            size: 18
+                                            active: menuItem.isActive
+                                            iconColor: menuItem.isActive ? c_accent : c_text_secondary
+                                            anchors.centerIn: parent
+                                        }
+                                    }
+
+                                    Text {
+                                        visible: !sidebarCollapsed
+                                        text: modelData.label
+                                        font.pixelSize: 13
+                                        font.bold: menuItem.isActive
+                                        color: menuItem.isActive ? c_accent : c_text_secondary
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                }
+
+                                // 单一 MouseArea: hover + click
+                                MouseArea {
+                                    id: menuMouseArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: sidebar.currentIndex = menuItem.targetIdx
+                                }
+
+                                // Tooltip (折叠态或搜索态)
+                                ToolTip.visible: (sidebarCollapsed || searchKeyword.length > 0) && menuMouseArea.containsMouse
+                                ToolTip.text: modelData.tip
+                                ToolTip.delay: 300
+                            }
                         }
                     }
+                }
+            }
+        }
 
-                    ToolTip.visible: pressed || hovered
-                    ToolTip.text: modelData.tip
-                    ToolTip.delay: 500
+        // ── 折叠/展开按钮 ──
+        Rectangle {
+            id: collapseBtn
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 36
+            color: "transparent"
+
+            Rectangle {
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 1
+                color: c_border
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: 8
+                spacing: 6
+
+                Item {
+                    width: sidebarCollapsed ? parent.width : 24
+                    height: parent.height
+
+                    AppIcon {
+                        name: sidebarCollapsed ? "chevronRight" : "chevronLeft"
+                        size: 18
+                        iconColor: c_text_secondary
+                        anchors.horizontalCenter: sidebarCollapsed ? parent.horizontalCenter : undefined
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                Text {
+                    visible: !sidebarCollapsed
+                    text: "收起菜单"
+                    font.pixelSize: 12
+                    color: c_text_secondary
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    sidebarCollapsed = !sidebarCollapsed
+                    sidebarSettings.collapsed = sidebarCollapsed
                 }
             }
         }
@@ -220,15 +510,12 @@ ApplicationWindow {
     NotificationPopup {
         id: notifPopup
         unreadCount: notificationController.unreadCount
-        // onMarkAllRead: removed
-        // onClearAll: removed
     }
 
     // ── Connections ──
     Connections {
         target: alarmController
         function onNewAlarm(alarm) {
-            // 高级别告警或联动告警使用增强版弹窗
             var level = alarm.severity || alarm.level || 0
             if (level >= 3 || alarm.has_linkage) {
                 linkageAlarmPopup.showAlarm(alarm, alarm.linkage_actions || [])
@@ -236,14 +523,5 @@ ApplicationWindow {
                 alarmPopup.showAlarm(alarm)
             }
         }
-    }
-
-    // ── Init ──
-    Component.onCompleted: {
-        deviceController.refreshDevices()
-        alarmController.refreshAlarms(50)
-        alarmController.connectWebSocket()
-        statusController.startPolling(5000)
-        mediaController.refreshStreams()
     }
 }

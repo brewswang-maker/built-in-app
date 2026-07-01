@@ -58,7 +58,7 @@ Item {
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-            Text { text: "🌐 联邦学习"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "联邦学习"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
 
             Rectangle { width: 8; height: 8; radius: 4; color: federationController.federating ? "#00D4AA" : "#4A4D58" }
@@ -70,7 +70,7 @@ Item {
             }
 
             Button {
-                text: federationController.federating ? "⏹ 停止" : "▶ 开始训练"
+                text: federationController.federating ? "停止" : "▶ 开始训练"
                 font.pixelSize: 12
                 background: Rectangle {
                     color: federationController.federating ? "#FF3D71" : "#00D4AA"
@@ -93,7 +93,7 @@ Item {
                     }
                 }
             }
-            Button { text: "⚙️ 配置"; font.pixelSize: 12
+            Button { text: "配置"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
@@ -113,7 +113,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "🔗 联邦拓扑"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "联邦拓扑"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 // Canvas拓扑图 — 中心聚合节点 + 边缘节点
                 Canvas {
@@ -208,7 +208,7 @@ Item {
                 Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
 
                 // 训练统计
-                Text { text: "📊 训练统计"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                Text { text: "训练统计"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                 Grid {
                     columns: 2; spacing: 8; width: parent.width - 24
@@ -235,7 +235,7 @@ Item {
                 Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
 
                 // 联邦策略
-                Text { text: "⚙️ 聚合策略"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                Text { text: "聚合策略"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                 Column { spacing: 4; width: parent.width - 24
                     Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.algorithm || "FedAvg") : "FedAvg"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true } }
                     Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.minNodes || "3") : "3"; font.pixelSize: 11; color: "#E8E8E8" } }
@@ -252,7 +252,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "📈 训练曲线 (实时)"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "训练曲线 (实时)"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 // 精度/损失双Y轴图表
                 Canvas {
@@ -314,7 +314,7 @@ Item {
                 }
 
                 // 梯度分布热力图
-                Text { text: "🌡️ 梯度分布热力图 (最新轮)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; topPadding: 8 }
+                Text { text: "梯度分布热力图 (最新轮)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; topPadding: 8 }
 
                 Canvas {
                     id: gradHeatmap
@@ -365,7 +365,7 @@ Item {
                 }
 
                 // 各节点精度对比
-                Text { text: "📋 各节点本轮贡献"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; topPadding: 4 }
+                Text { text: "各节点本轮贡献"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; topPadding: 4 }
 
                 ListView {
                     id: nodeContribListView
@@ -400,7 +400,7 @@ Item {
                 Column {
                     width: 236; spacing: 10
 
-                    Text { text: "🧠 全局模型"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "全局模型"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                     Column { spacing: 4
                         Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
@@ -410,7 +410,7 @@ Item {
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    Text { text: "📦 轮次历史"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "轮次历史"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     ListView {
                         width: parent.width; height: 200; clip: true; spacing: 2
@@ -421,7 +421,7 @@ Item {
                             color: index === 0 ? "#1A3A2A" : "transparent"
                             Row {
                                 anchors.fill: parent; anchors.leftMargin: 4; spacing: 8
-                                Text { text: index === 0 ? "★" : " "; font.pixelSize: 10; color: "#FFB800" }
+                                Text { text: index === 0 ? "*" : " "; font.pixelSize: 10; color: "#FFB800" }
                                 Text { text: "R" + (modelData.round || index); font.pixelSize: 10; color: index === 0 ? "#00D4AA" : "#E8E8E8"; font.bold: index === 0 }
                                 Text { text: modelData.accuracy !== undefined ? "Acc:" + modelData.accuracy.toFixed(1) + "%" : "-"; font.pixelSize: 10; color: "#8B8FA3" }
                                 Text { text: modelData.loss !== undefined ? "L:" + modelData.loss.toFixed(4) : "-"; font.pixelSize: 10; color: "#4A4D58" }
@@ -432,7 +432,7 @@ Item {
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
 
-                    Text { text: "🔗 节点管理"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                    Text { text: "节点管理"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
                     ListView {
                         width: parent.width; height: Math.min(fedNodes.length * 28, 140); clip: true; spacing: 2

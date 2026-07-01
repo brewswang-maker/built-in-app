@@ -354,12 +354,13 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.margins: 12; spacing: 12
 
-            Text { text: "🔗 事件联动"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            AppIcon { name: "linkage"; size: 22; iconColor: "#E8E8E8"; Layout.preferredWidth: 24; Layout.preferredHeight: 24 }
+            Text { text: "事件联动"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Text { text: "配置告警触发条件和联动动作"; font.pixelSize: 11; color: "#4A4D58" }
 
             Item { Layout.fillWidth: true }
 
-            Button { text: "➕ 新建规则"; font.pixelSize: 12
+            Button { text: "新建规则"; font.pixelSize: 12
                 background: Rectangle { color: "#00D4AA"; radius: 8; width: 100; height: 34 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
@@ -367,6 +368,16 @@ Item {
                     resetForm()
                     ruleEditor.visible = true
                 }
+            }
+            Button { text: "导出"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 8; width: 60; height: 34 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: exportDialog.open()
+            }
+            Button { text: "导入"; font.pixelSize: 12
+                background: Rectangle { color: "#252830"; radius: 8; width: 60; height: 34 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: importDialog.open()
             }
         }
     }
@@ -415,23 +426,23 @@ Item {
                                     Text { text: "P" + (modelData.priority || 0); font.pixelSize: 9; color: "#00D4AA"; anchors.centerIn: parent } }
                             }
                             Row { spacing: 12
-                                Text { text: "🎯 " + (modelData.eventTypes || "-"); font.pixelSize: 10; color: "#6C5CE7" }
-                                Text { text: "⚡ " + (modelData.actions || "-"); font.pixelSize: 10; color: "#8B8FA3"; elide: Text.ElideRight; width: 200 }
+                                Text { text: (modelData.eventTypes || "-"); font.pixelSize: 10; color: "#6C5CE7" }
+                                Text { text: (modelData.actions || "-"); font.pixelSize: 10; color: "#8B8FA3"; elide: Text.ElideRight; width: 200 }
                             }
                         }
 
-                        Button { text: "✏️"; font.pixelSize: 14
+                        Button { text: "编辑"; font.pixelSize: 10
                             background: Rectangle { color: "transparent" }
-                            contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#8B8FA3" }
+                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#8B8FA3" }
                             onClicked: {
                                 editingRule = modelData
                                 populateForm(modelData)
                                 ruleEditor.visible = true
                             }
                         }
-                        Button { text: "🗑️"; font.pixelSize: 14
+                        Button { text: "删除"; font.pixelSize: 10
                             background: Rectangle { color: "transparent" }
-                            contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#FF3D71" }
+                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FF3D71" }
                             onClicked: linkageController.deleteRule(modelData.id)
                         }
                     }
@@ -456,9 +467,9 @@ Item {
 
                 // ── 基本信息 ──
                 Row { spacing: 8
-                    Text { text: editingRule ? "📝 编辑联动规则" : "📝 新建联动规则"; font.pixelSize: 15; font.bold: true; color: "#E8E8E8" }
+                    Text { text: editingRule ? "编辑联动规则" : "新建联动规则"; font.pixelSize: 15; font.bold: true; color: "#E8E8E8" }
                     Item { width: 100 }
-                    Button { text: "✕ 关闭"; font.pixelSize: 11
+                    Button { text: "关闭"; font.pixelSize: 11
                         background: Rectangle { color: "transparent" }
                         contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FF6B35" }
                         onClicked: ruleEditor.visible = false
@@ -505,7 +516,7 @@ Item {
                     visible: false
                     Row {
                         anchors.fill: parent; anchors.margins: 8; spacing: 8
-                        Text { text: "⚠️"; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
+                        AppIcon { name: "warning"; size: 16; iconColor: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
                             Text { text: validationError; font.pixelSize: 11; color: "#FF8080"; font.bold: true }
@@ -516,7 +527,7 @@ Item {
                             }
                         }
                         Item { width: 8 }
-                        Button { text: "✕"; font.pixelSize: 12
+                        Button { text: "X"; font.pixelSize: 12
                             background: Rectangle { color: "transparent" }
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF8080" }
                             onClicked: { errorBanner.visible = false; validationError = ""; validationField = ""; validationCode = -1 }
@@ -539,11 +550,11 @@ Item {
                 Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                 // ═══ 触发条件 ═══
-                Text { text: "📋 触发条件"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "触发条件"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 // 1. 指定时间段
                 GroupBox {
-                    width: parent.width; title: "🕐 时间条件"
+                    width: parent.width; title: "时间条件"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -564,7 +575,7 @@ Item {
 
                 // 2. 指定区域/位置
                 GroupBox {
-                    width: parent.width; title: "📍 空间条件"
+                    width: parent.width; title: "空间条件"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -583,7 +594,7 @@ Item {
 
                 // 3. 指定事件类型
                 GroupBox {
-                    width: parent.width; title: "🎯 事件类型"
+                    width: parent.width; title: "事件类型"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -609,7 +620,7 @@ Item {
 
                 // 4. 指定事件源
                 GroupBox {
-                    width: parent.width; title: "📹 事件源"
+                    width: parent.width; title: "事件源"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -625,7 +636,7 @@ Item {
 
                 // 5. 自动合并
                 GroupBox {
-                    width: parent.width; title: "🔄 自动合并 (merge_cond)"
+                    width: parent.width; title: "自动合并 (merge_cond)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -651,7 +662,7 @@ Item {
 
                 // 6. 互斥与抑制 (P1 #6)
                 GroupBox {
-                    width: parent.width; title: "🔗 互斥与抑制 (mutex_group / suppress_after / suppress_lower)"
+                    width: parent.width; title: "互斥与抑制 (mutex_group / suppress_after / suppress_lower)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -688,7 +699,7 @@ Item {
 
                 // 7. 条件树 (P1 #5)
                 GroupBox {
-                    width: parent.width; title: "🌳 条件树 (AND / OR / LEAF, 深度≤3)"
+                    width: parent.width; title: "条件树 (AND / OR / LEAF, 深度≤3)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
@@ -709,15 +720,23 @@ Item {
                             Behavior on height { NumberAnimation { duration: 200 } }
                             ScrollView {
                                 anchors.fill: parent; clip: true
-                                Column { width: parent.width; spacing: 4; padding: 6
-                                    ConditionNodeEditor {
-                                        id: treeRootEditor
-                                        width: parent.width
-                                        node: linkagePage.conditionTree
-                                        depth: 0
-                                        onNodeChanged: linkagePage.conditionTree = node
+                                Loader {
+                                    id: treeEditorLoader
+                                    active: linkagePage.useTreeMode
+                                    source: "qrc:/LinkageConditionNode.qml"
+                                    onLoaded: {
+                                        item.node = linkagePage.conditionTree
+                                        item.depth = 0
+                                        item.width = Qt.binding(function() { return treeEditorLoader.parent.width - 12 })
+                                        item.nodeChanged.connect(function() { linkagePage.conditionTree = item.node })
                                     }
                                 }
+                            }
+                        }
+                        QtObject {
+                            id: treeRootEditor
+                            function refresh(n) {
+                                if (treeEditorLoader.item) treeEditorLoader.item.refresh(n)
                             }
                         }
                         Row { spacing: 6
@@ -754,7 +773,7 @@ Item {
                 Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                 // ═══ 联动动作 ═══
-                Text { text: "⚡ 联动动作"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "联动动作"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 // Tab: 客户端 | Web | APP | 小程序 | 系统
                 TabBar {
@@ -762,19 +781,19 @@ Item {
                     width: parent.width; height: 32
                     background: Rectangle { color: "#0D0F12"; radius: 4 }
 
-                    TabButton { text: "🖥️ 客户端"; font.pixelSize: 10
+                    TabButton { text: "客户端"; font.pixelSize: 10
                         contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 0 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 0 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "🌐 Web端"; font.pixelSize: 10
+                    TabButton { text: "Web端"; font.pixelSize: 10
                         contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 1 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 1 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "📱 APP"; font.pixelSize: 10
+                    TabButton { text: "APP"; font.pixelSize: 10
                         contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 2 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 2 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "💬 小程序"; font.pixelSize: 10
+                    TabButton { text: "小程序"; font.pixelSize: 10
                         contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 3 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 3 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "⚙️ 系统"; font.pixelSize: 10
+                    TabButton { text: "系统"; font.pixelSize: 10
                         contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 4 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 4 ? "#1A1D23" : "transparent"; radius: 4 } }
                 }
@@ -786,118 +805,118 @@ Item {
                     ScrollView { clip: true
                         Column { id: clientActionColumn; width: 412; spacing: 2
 
-                            Text { text: "📹 视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
-                            ActionCheckRow { text: "弹出指定监控点实时视频"; icon: "📹"; actionType: "CLIENT_SHOW_LIVE" }
-                            ActionCheckRow { text: "弹出指定监控点录像回放"; icon: "📼"; actionType: "CLIENT_SHOW_PLAYBACK" }
-                            ActionCheckRow { text: "弹出事件图片"; icon: "🖼️"; actionType: "CLIENT_SHOW_IMAGE" }
-                            ActionCheckRow { text: "弹窗视频画面叠加事件信息"; icon: "📋"; actionType: "CLIENT_OVERLAY_INFO" }
+                            ActionCheckRow { text: "弹出指定监控点实时视频"; icon: "camera"; actionType: "CLIENT_SHOW_LIVE" }
+                            ActionCheckRow { text: "弹出指定监控点录像回放"; icon: "record"; actionType: "CLIENT_SHOW_PLAYBACK" }
+                            ActionCheckRow { text: "弹出事件图片"; icon: "image"; actionType: "CLIENT_SHOW_IMAGE" }
+                            ActionCheckRow { text: "弹窗视频画面叠加事件信息"; icon: "folder"; actionType: "CLIENT_OVERLAY_INFO" }
 
-                            Text { text: "🔊 音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
-                            ActionCheckRow { text: "控制指定对讲通道语音对讲"; icon: "🎙️"; actionType: "CLIENT_VOICE_TALK" }
-                            ActionCheckRow { text: "播放提示音"; icon: "🔔"; actionType: "CLIENT_PLAY_TONE" }
-                            ActionCheckRow { text: "语音播报事件信息 (重复N次)"; icon: "📢"; actionType: "CLIENT_TTS_BROADCAST" }
+                            ActionCheckRow { text: "控制指定对讲通道语音对讲"; icon: "device"; actionType: "CLIENT_VOICE_TALK" }
+                            ActionCheckRow { text: "播放提示音"; icon: "bell"; actionType: "CLIENT_PLAY_TONE" }
+                            ActionCheckRow { text: "语音播报事件信息 (重复N次)"; icon: "bell"; actionType: "CLIENT_TTS_BROADCAST" }
 
-                            Text { text: "📺 显示联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "显示联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
-                            ActionCheckRow { text: "联动地图位置"; icon: "🗺️"; actionType: "CLIENT_SHOW_MAP" }
-                            ActionCheckRow { text: "指定监控点上电视墙 (持续N秒)"; icon: "🖥️"; actionType: "CLIENT_TV_WALL" }
-                            ActionCheckRow { text: "发生预警不弹窗 (静默)"; icon: "🔇"; actionType: "CLIENT_SUPPRESS_POPUP" }
-                            ActionCheckRow { text: "执行事件处理预案"; icon: "📋"; actionType: "CLIENT_EXECUTE_PLAN" }
+                            ActionCheckRow { text: "联动地图位置"; icon: "map"; actionType: "CLIENT_SHOW_MAP" }
+                            ActionCheckRow { text: "指定监控点上电视墙 (持续N秒)"; icon: "device"; actionType: "CLIENT_TV_WALL" }
+                            ActionCheckRow { text: "发生预警不弹窗 (静默)"; icon: "info"; actionType: "CLIENT_SUPPRESS_POPUP" }
+                            ActionCheckRow { text: "执行事件处理预案"; icon: "folder"; actionType: "CLIENT_EXECUTE_PLAN" }
 
-                            Text { text: "📹 录像与抓图"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "录像与抓图"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
-                            ActionCheckRow { text: "视频录像 (持续N秒)"; icon: "🎞️"; actionType: "CLIENT_RECORD_VIDEO" }
-                            ActionCheckRow { text: "指定监控点事件录像"; icon: "🎥"; actionType: "CLIENT_RECORD_EVENT" }
-                            ActionCheckRow { text: "添加录像标记 (类型+描述)"; icon: "🔖"; actionType: "CLIENT_ADD_BOOKMARK" }
-                            ActionCheckRow { text: "间隔N秒抓图M次"; icon: "📸"; actionType: "CLIENT_CAPTURE_IMAGE" }
+                            ActionCheckRow { text: "视频录像 (持续N秒)"; icon: "record"; actionType: "CLIENT_RECORD_VIDEO" }
+                            ActionCheckRow { text: "指定监控点事件录像"; icon: "camera"; actionType: "CLIENT_RECORD_EVENT" }
+                            ActionCheckRow { text: "添加录像标记 (类型+描述)"; icon: "folder"; actionType: "CLIENT_ADD_BOOKMARK" }
+                            ActionCheckRow { text: "间隔N秒抓图M次"; icon: "snapshot"; actionType: "CLIENT_CAPTURE_IMAGE" }
 
-                            Text { text: "🎮 设备控制"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "设备控制"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
-                            ActionCheckRow { text: "控制指定报警输出"; icon: "🚨"; actionType: "CLIENT_ALARM_OUTPUT" }
-                            ActionCheckRow { text: "控制云台"; icon: "🎮"; actionType: "CLIENT_PTZ_CONTROL" }
-                            ActionCheckRow { text: "事件开始转到预置点"; icon: "📍"; actionType: "CLIENT_PTZ_PRESET_START" }
-                            ActionCheckRow { text: "事件结束恢复到预置点"; icon: "🔙"; actionType: "CLIENT_PTZ_PRESET_END" }
-                            ActionCheckRow { text: "调用巡航路径"; icon: "🔄"; actionType: "CLIENT_PTZ_CRUISE" }
-                            ActionCheckRow { text: "调用轨迹"; icon: "〰️"; actionType: "CLIENT_PTZ_TRACK" }
-                            ActionCheckRow { text: "指定门禁点开门"; icon: "🚪"; actionType: "CLIENT_ACCESS_OPEN" }
+                            ActionCheckRow { text: "控制指定报警输出"; icon: "alarm"; actionType: "CLIENT_ALARM_OUTPUT" }
+                            ActionCheckRow { text: "控制云台"; icon: "tool"; actionType: "CLIENT_PTZ_CONTROL" }
+                            ActionCheckRow { text: "事件开始转到预置点"; icon: "map"; actionType: "CLIENT_PTZ_PRESET_START" }
+                            ActionCheckRow { text: "事件结束恢复到预置点"; icon: "refresh"; actionType: "CLIENT_PTZ_PRESET_END" }
+                            ActionCheckRow { text: "调用巡航路径"; icon: "refresh"; actionType: "CLIENT_PTZ_CRUISE" }
+                            ActionCheckRow { text: "调用轨迹"; icon: "stream"; actionType: "CLIENT_PTZ_TRACK" }
+                            ActionCheckRow { text: "指定门禁点开门"; icon: "lock"; actionType: "CLIENT_ACCESS_OPEN" }
 
-                            Text { text: "📬 通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
-                            ActionCheckRow { text: "发送短信给指定用户"; icon: "SMS"; actionType: "CLIENT_SEND_SMS" }
-                            ActionCheckRow { text: "发送邮件给指定用户"; icon: "📧"; actionType: "CLIENT_SEND_EMAIL" }
-                            ActionCheckRow { text: "指定IP进行指定模式报警"; icon: "🌐"; actionType: "CLIENT_ALARM_MODE" }
-                            ActionCheckRow { text: "逐级推送 (每N秒未解决推送至下一级)"; icon: "⬆️"; actionType: "CLIENT_ESCALATE" }
+                            ActionCheckRow { text: "发送短信给指定用户"; icon: "send"; actionType: "CLIENT_SEND_SMS" }
+                            ActionCheckRow { text: "发送邮件给指定用户"; icon: "send"; actionType: "CLIENT_SEND_EMAIL" }
+                            ActionCheckRow { text: "指定IP进行指定模式报警"; icon: "federation"; actionType: "CLIENT_ALARM_MODE" }
+                            ActionCheckRow { text: "逐级推送 (每N秒未解决推送至下一级)"; icon: "upload"; actionType: "CLIENT_ESCALATE" }
                         }
                     }
 
                     // ─── Web端 ───
                     ScrollView { clip: true
                         Column { id: webActionColumn; width: 412; spacing: 2
-                            Text { text: "💬 基础通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "Web端弹窗通知"; icon: "💬"; actionType: "WEB_POPUP" }
-                            ActionCheckRow { text: "发送邮件"; icon: "📧"; actionType: "WEB_EMAIL" }
-                            ActionCheckRow { text: "HTTP回调 (WebHook)"; icon: "🔗"; actionType: "WEB_WEBHOOK" }
-                            ActionCheckRow { text: "Dashboard嵌入告警"; icon: "📊"; actionType: "WEB_DASHBOARD_ALERT" }
+                            Text { text: "基础通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端弹窗通知"; icon: "send"; actionType: "WEB_POPUP" }
+                            ActionCheckRow { text: "发送邮件"; icon: "send"; actionType: "WEB_EMAIL" }
+                            ActionCheckRow { text: "HTTP回调 (WebHook)"; icon: "linkage"; actionType: "WEB_WEBHOOK" }
+                            ActionCheckRow { text: "Dashboard嵌入告警"; icon: "statistics"; actionType: "WEB_DASHBOARD_ALERT" }
 
-                            Text { text: "📹 视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "Web端弹出实时视频"; icon: "📹"; actionType: "WEB_SHOW_LIVE" }
-                            ActionCheckRow { text: "Web端弹出录像回放"; icon: "📼"; actionType: "WEB_SHOW_PLAYBACK" }
-                            ActionCheckRow { text: "Web端弹出事件图片"; icon: "🖼️"; actionType: "WEB_SHOW_IMAGE" }
-                            ActionCheckRow { text: "Web端事件录像"; icon: "🎥"; actionType: "WEB_RECORD_EVENT" }
+                            Text { text: "视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端弹出实时视频"; icon: "camera"; actionType: "WEB_SHOW_LIVE" }
+                            ActionCheckRow { text: "Web端弹出录像回放"; icon: "record"; actionType: "WEB_SHOW_PLAYBACK" }
+                            ActionCheckRow { text: "Web端弹出事件图片"; icon: "image"; actionType: "WEB_SHOW_IMAGE" }
+                            ActionCheckRow { text: "Web端事件录像"; icon: "camera"; actionType: "WEB_RECORD_EVENT" }
 
-                            Text { text: "🔊 音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "Web端播放提示音"; icon: "🔔"; actionType: "WEB_PLAY_TONE" }
-                            ActionCheckRow { text: "Web端语音播报"; icon: "📢"; actionType: "WEB_TTS_BROADCAST" }
+                            Text { text: "音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端播放提示音"; icon: "bell"; actionType: "WEB_PLAY_TONE" }
+                            ActionCheckRow { text: "Web端语音播报"; icon: "bell"; actionType: "WEB_TTS_BROADCAST" }
 
-                            Text { text: "📸 抓图与通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "Web端抓图"; icon: "📸"; actionType: "WEB_CAPTURE_IMAGE" }
-                            ActionCheckRow { text: "Web端发送短信"; icon: "📱"; actionType: "WEB_SEND_SMS" }
+                            Text { text: "抓图与通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "Web端抓图"; icon: "snapshot"; actionType: "WEB_CAPTURE_IMAGE" }
+                            ActionCheckRow { text: "Web端发送短信"; icon: "send"; actionType: "WEB_SEND_SMS" }
                         }
                     }
 
                     // ─── APP ───
                     ScrollView { clip: true
                         Column { id: appActionColumn; width: 412; spacing: 2
-                            ActionCheckRow { text: "APP推送通知"; icon: "📱"; actionType: "APP_PUSH_NOTIFY" }
-                            ActionCheckRow { text: "APP弹实时视频"; icon: "📹"; actionType: "APP_SHOW_LIVE" }
-                            ActionCheckRow { text: "APP弹事件图片"; icon: "🖼️"; actionType: "APP_SHOW_IMAGE" }
-                            ActionCheckRow { text: "APP弹录像回放"; icon: "📼"; actionType: "APP_SHOW_PLAYBACK" }
-                            ActionCheckRow { text: "APP处置按钮"; icon: "✅"; actionType: "APP_HANDLE_DISPOSE" }
+                            ActionCheckRow { text: "APP推送通知"; icon: "bell"; actionType: "APP_PUSH_NOTIFY" }
+                            ActionCheckRow { text: "APP弹实时视频"; icon: "camera"; actionType: "APP_SHOW_LIVE" }
+                            ActionCheckRow { text: "APP弹事件图片"; icon: "image"; actionType: "APP_SHOW_IMAGE" }
+                            ActionCheckRow { text: "APP弹录像回放"; icon: "record"; actionType: "APP_SHOW_PLAYBACK" }
+                            ActionCheckRow { text: "APP处置按钮"; icon: "check"; actionType: "APP_HANDLE_DISPOSE" }
                         }
                     }
 
                     // ─── 小程序 ───
                     ScrollView { clip: true
                         Column { id: mpActionColumn; width: 412; spacing: 2
-                            ActionCheckRow { text: "小程序订阅消息"; icon: "💬"; actionType: "MP_SUBSCRIBE_MSG" }
-                            ActionCheckRow { text: "小程序弹事件图片"; icon: "🖼️"; actionType: "MP_SHOW_IMAGE" }
-                            ActionCheckRow { text: "小程序弹实时视频"; icon: "📹"; actionType: "MP_SHOW_LIVE" }
+                            ActionCheckRow { text: "小程序订阅消息"; icon: "send"; actionType: "MP_SUBSCRIBE_MSG" }
+                            ActionCheckRow { text: "小程序弹事件图片"; icon: "image"; actionType: "MP_SHOW_IMAGE" }
+                            ActionCheckRow { text: "小程序弹实时视频"; icon: "camera"; actionType: "MP_SHOW_LIVE" }
                         }
                     }
 
                     // ─── 系统 ───
                     ScrollView { clip: true
                         Column { id: sysActionColumn; width: 412; spacing: 2
-                            Text { text: "🔌 工业协议"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "MQTT消息发布"; icon: "📡"; actionType: "SYS_MQTT_PUBLISH" }
-                            ActionCheckRow { text: "Modbus写寄存器"; icon: "🔌"; actionType: "SYS_MODBUS_WRITE" }
-                            ActionCheckRow { text: "ONVIF事件触发"; icon: "🔗"; actionType: "SYS_ONVIF_TRIGGER" }
-                            ActionCheckRow { text: "继电器开关"; icon: "⚡"; actionType: "SYS_RELAY_SWITCH" }
+                            Text { text: "工业协议"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "MQTT消息发布"; icon: "gb28181"; actionType: "SYS_MQTT_PUBLISH" }
+                            ActionCheckRow { text: "Modbus写寄存器"; icon: "onvif"; actionType: "SYS_MODBUS_WRITE" }
+                            ActionCheckRow { text: "ONVIF事件触发"; icon: "linkage"; actionType: "SYS_ONVIF_TRIGGER" }
+                            ActionCheckRow { text: "继电器开关"; icon: "alarm"; actionType: "SYS_RELAY_SWITCH" }
 
-                            Text { text: "☁️ 上层转发"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "HTTP回调"; icon: "🌐"; actionType: "SYS_HTTP_CALLBACK" }
-                            ActionCheckRow { text: "转发到云端"; icon: "☁️"; actionType: "SYS_CLOUD_FORWARD" }
+                            Text { text: "上层转发"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "HTTP回调"; icon: "federation"; actionType: "SYS_HTTP_CALLBACK" }
+                            ActionCheckRow { text: "转发到云端"; icon: "upload"; actionType: "SYS_CLOUD_FORWARD" }
 
-                            // 端到端闭环: 告警→触发推理→回写事件 (规范 a45b219c Hermes v6.0)
-                            Text { text: "🧠 推理/流闭环 (Hermes v6.0)"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true; topPadding: 4 }
-                            ActionCheckRow { text: "启动推理通道"; icon: "▶️"; actionType: "SYS_START_INFERENCE" }
-                            ActionCheckRow { text: "停止推理通道"; icon: "⏹️"; actionType: "SYS_STOP_INFERENCE" }
-                            ActionCheckRow { text: "启动拉流"; icon: "📥"; actionType: "SYS_START_STREAM" }
-                            ActionCheckRow { text: "停止拉流"; icon: "📤"; actionType: "SYS_STOP_STREAM" }
-                            ActionCheckRow { text: "部署 Pipeline"; icon: "🚀"; actionType: "SYS_DEPLOY_PIPELINE" }
-                            ActionCheckRow { text: "卸载 Pipeline"; icon: "🛬"; actionType: "SYS_UNDEPLOY_PIPELINE" }
+                            // 端到端闭环: 告警触发推理回写事件 (规范 a45b219c Hermes v6.0)
+                            Text { text: "推理/流闭环 (Hermes v6.0)"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true; topPadding: 4 }
+                            ActionCheckRow { text: "启动推理通道"; icon: "play"; actionType: "SYS_START_INFERENCE" }
+                            ActionCheckRow { text: "停止推理通道"; icon: "stop"; actionType: "SYS_STOP_INFERENCE" }
+                            ActionCheckRow { text: "启动拉流"; icon: "download"; actionType: "SYS_START_STREAM" }
+                            ActionCheckRow { text: "停止拉流"; icon: "upload"; actionType: "SYS_STOP_STREAM" }
+                            ActionCheckRow { text: "部署 Pipeline"; icon: "play"; actionType: "SYS_DEPLOY_PIPELINE" }
+                            ActionCheckRow { text: "卸载 Pipeline"; icon: "stop"; actionType: "SYS_UNDEPLOY_PIPELINE" }
                         }
                     }
                 }
@@ -910,7 +929,7 @@ Item {
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: ruleEditor.visible = false
                     }
-                    Button { text: "💾 保存规则"; font.pixelSize: 13
+                    Button { text: "保存规则"; font.pixelSize: 13
                         background: Rectangle { color: "#00D4AA"; radius: 8; width: 110; height: 38 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
@@ -943,159 +962,128 @@ Item {
         property alias checked: cb.checked
 
         CheckBox { id: cb; anchors.verticalCenter: parent.verticalCenter }
-        Text { text: actionRow.icon; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+        AppIcon { name: actionRow.icon; size: 14; iconColor: cb.checked ? "#00D4AA" : "#4A4D58"; visible: actionRow.icon !== ""; anchors.verticalCenter: parent.verticalCenter }
         Text { text: actionRow.text; font.pixelSize: 11; color: cb.checked ? "#E8E8E8" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter; width: 300; elide: Text.ElideRight }
-        Button { text: "⚙️"; font.pixelSize: 10; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
+        Button { text: "配置"; font.pixelSize: 9; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
             background: Rectangle { color: "transparent" }
-            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#3B82F6" }
+            contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#3B82F6" }
         }
     }
 
-    // ─── 条件树节点编辑器 (P1 #5, 递归) ───
-    // 数据模型: { node_type: "AND"|"OR"|"LEAF", leaf_type, field, op, value, children: [...] }
-    // 支持 AND/OR 嵌套 (深度 ≤ 3); LEAF 节点是叶子
-    component ConditionNodeEditor: Column {
-        id: cne
-        property var node: ({ node_type: "LEAF", field: "event_type", op: "==", value: "" })
-        property int depth: 0
-        signal nodeChanged()
+    // ─── 条件树节点编辑器已迁移到独立文件 LinkageConditionNode.qml ───
+    // 原因: Qt 6 内联 component 不允许自递归, 独立文件支持无限嵌套
 
-        function refresh(n) {
-            // 强制刷新: 重新赋值 node
-            node = JSON.parse(JSON.stringify(n))
-        }
-        function deleteChild(idx) {
-            if (Array.isArray(node.children)) {
-                node.children.splice(idx, 1)
-                nodeChanged()
+    // ═══ P3.4: 规则导出弹窗 ═══
+    Popup {
+        id: exportDialog
+        anchors.centerIn: parent; width: 560; height: 480
+        background: Rectangle { color: "#141420"; radius: 12; border.color: "#252830" }
+        property string exportText: ""
+
+        Column {
+            anchors.fill: parent; anchors.margins: 16; spacing: 10
+
+            Row {
+                spacing: 8
+                Text { text: "联动规则导出"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Item { width: 280 }
+                AppIcon { name: "close"; size: 16; iconColor: "#8B8FA3"
+                    MouseArea { anchors.fill: parent; onClicked: exportDialog.close() } }
+            }
+
+            Component.onCompleted: {
+                var data = { version: "1.0", exportTime: new Date().toISOString(), rules: rules }
+                exportDialog.exportText = JSON.stringify(data, null, 2)
+            }
+
+            ScrollView {
+                width: parent.width; height: 340; clip: true
+                TextArea {
+                    id: exportArea
+                    width: parent.width; height: 340
+                    readOnly: true
+                    text: exportDialog.exportText
+                    color: "#00D4AA"; font.family: "monospace"; font.pixelSize: 10
+                    background: Rectangle { color: "#0D0F12"; radius: 6; border.color: "#252830" }
+                    wrapMode: TextArea.Wrap
+                }
+            }
+
+            Row {
+                spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
+                Button {
+                    text: "复制到剪贴板"; font.pixelSize: 12
+                    background: Rectangle { color: "#3B82F6"; radius: 6; width: 120; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: { exportArea.selectAll(); exportArea.copy() }
+                }
+                Button {
+                    text: "关闭"; font.pixelSize: 12
+                    background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: exportDialog.close()
+                }
             }
         }
-        function addChild() {
-            if (!Array.isArray(node.children)) node.children = []
-            node.children.push({ node_type: "LEAF", leaf_type: "SOURCE", field: "event_type", op: "==", value: "" })
-            nodeChanged()
-        }
-        function addOrChild() {
-            if (!Array.isArray(node.children)) node.children = []
-            node.children.push({ node_type: "OR", children: [{ node_type: "LEAF", leaf_type: "SOURCE", field: "event_type", op: "==", value: "" }] })
-            nodeChanged()
-        }
-        function promoteType(t) {
-            node.node_type = t
-            if ((t === "AND" || t === "OR") && !Array.isArray(node.children)) node.children = []
-            nodeChanged()
-        }
+    }
 
-        // 节点背景色按类型
-        Rectangle {
-            width: parent ? parent.width : 0
-            height: cneColumn.implicitHeight + 8
-            color: cne.node.node_type === "AND" ? "#1A2A3A" : cne.node.node_type === "OR" ? "#2A1A3A" : "#1A1D23"
-            radius: 4
-            border.color: cne.depth === 0 ? "#FFB800" : (cne.node.node_type === "AND" ? "#3B82F6" : cne.node.node_type === "OR" ? "#6C5CE7" : "#252830")
-            border.width: 1
+    // ═══ P3.4: 规则导入弹窗 ═══
+    Popup {
+        id: importDialog
+        anchors.centerIn: parent; width: 560; height: 420
+        background: Rectangle { color: "#141420"; radius: 12; border.color: "#252830" }
 
-            Column {
-                id: cneColumn
-                anchors.fill: parent; anchors.margins: 4; spacing: 4
+        Column {
+            anchors.fill: parent; anchors.margins: 16; spacing: 10
 
-                // 头: 类型选择 + 操作
-                Row { spacing: 6; width: parent.width
-                    Rectangle { width: 8; height: 18; radius: 2; color: cne.depth === 0 ? "#FFB800" : "#3B82F6" }
-                    ComboBox {
-                        id: typeCombo
-                        width: 80; height: 22
-                        model: cne.depth === 0 ? ["AND", "OR"] : ["AND", "OR", "LEAF"]
-                        currentIndex: Math.max(0, model.indexOf(cne.node.node_type || "LEAF"))
-                        onActivated: cne.promoteType(model[currentIndex])
-                        background: Rectangle { color: "#252830"; radius: 3 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
-                    }
-                    Text { text: cne.node.node_type === "LEAF" ? "叶子节点 (depth=" + cne.depth + ")" : "组合节点 (depth=" + cne.depth + ", children=" + (cne.node.children ? cne.node.children.length : 0) + ")"; font.pixelSize: 9; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-                    Item { Layout.fillWidth: true }
+            Row {
+                spacing: 8
+                Text { text: "联动规则导入"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Item { width: 280 }
+                AppIcon { name: "close"; size: 16; iconColor: "#8B8FA3"
+                    MouseArea { anchors.fill: parent; onClicked: importDialog.close() } }
+            }
+
+            Text { text: "粘贴 JSON 格式的规则数据:"; font.pixelSize: 12; color: "#8B8FA3" }
+
+            ScrollView {
+                width: parent.width; height: 280; clip: true
+                TextArea {
+                    id: importArea
+                    width: parent.width; height: 280
+                    placeholderText: '{"version":"1.0","rules":[...]}'
+                    color: "#E8E8E8"; font.family: "monospace"; font.pixelSize: 10
+                    background: Rectangle { color: "#0D0F12"; radius: 6; border.color: "#252830" }
+                    wrapMode: TextArea.Wrap
                 }
+            }
 
-                // LEAF 节点: field/op/value 编辑器
-                Column {
-                    visible: cne.node.node_type === "LEAF"
-                    width: parent.width
-                    spacing: 4
-                    Row { spacing: 4
-                        Text { text: "字段:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
-                        ComboBox {
-                            id: fieldCombo; width: 130; height: 24
-                            model: ["event_type", "channel_id", "min_severity", "min_confidence", "region_id", "location_id", "device_group_id", "time"]
-                            currentIndex: Math.max(0, model.indexOf(cne.node.field || ""))
-                            onActivated: { cne.node.field = model[currentIndex]; cne.nodeChanged() }
-                            background: Rectangle { color: "#252830"; radius: 3 }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
-                        }
-                        Text { text: "运算:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
-                        ComboBox {
-                            id: opCombo; width: 70; height: 24
-                            model: ["==", "!=", ">=", "<=", "in", "between"]
-                            currentIndex: Math.max(0, model.indexOf(cne.node.op || "=="))
-                            onActivated: { cne.node.op = model[currentIndex]; cne.nodeChanged() }
-                            background: Rectangle { color: "#252830"; radius: 3 }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
-                        }
-                        Text { text: "值:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 24 }
-                        TextField {
-                            id: valueField; width: 130; height: 24
-                            text: cne.node.value !== undefined ? cne.node.value.toString() : ""
-                            color: "#E8E8E8"; font.pixelSize: 10
-                            background: Rectangle { color: "#252830"; radius: 3 }
-                            onTextChanged: {
-                                var v = text
-                                if (cne.node.field === "min_severity") v = parseInt(text) || 0
-                                else if (cne.node.field === "min_confidence") v = parseFloat(text) || 0
-                                cne.node.value = v
-                                cne.nodeChanged()
+            Row {
+                spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
+                Button {
+                    text: "解析并导入"; font.pixelSize: 12
+                    background: Rectangle { color: "#00D4AA"; radius: 6; width: 120; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        try {
+                            var data = JSON.parse(importArea.text)
+                            if (data.rules && Array.isArray(data.rules)) {
+                                for (var i = 0; i < data.rules.length; i++) {
+                                    linkageController.createLinkage(data.rules[i])
+                                }
+                                importDialog.close()
+                                importArea.text = ""
                             }
+                        } catch(e) {
+                            console.log("Import error:", e)
                         }
                     }
                 }
-
-                // AND/OR 节点: children 递归编辑器
-                Column {
-                    visible: cne.node.node_type === "AND" || cne.node.node_type === "OR"
-                    width: parent.width
-                    spacing: 4
-                    Repeater {
-                        model: cne.node.children || []
-                        delegate: Item {
-                            width: parent.width
-                            height: childEditor.implicitHeight + 4
-                            property int childIndex: index
-                            ConditionNodeEditor {
-                                id: childEditor
-                                anchors.left: parent.left; anchors.right: deleteBtn.left; anchors.rightMargin: 4
-                                node: modelData
-                                depth: cne.depth + 1
-                                onNodeChanged: cne.nodeChanged()
-                            }
-                            Button {
-                                id: deleteBtn
-                                anchors.right: parent.right; anchors.top: parent.top
-                                width: 24; height: 24
-                                text: "🗑"; font.pixelSize: 10
-                                background: Rectangle { color: "transparent" }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71" }
-                                onClicked: cne.deleteChild(parent.parent.childIndex)
-                            }
-                        }
-                    }
-                    Row { spacing: 4
-                        Button { text: "+ LEAF"; font.pixelSize: 9
-                            onClicked: cne.addChild()
-                            background: Rectangle { color: "#3B82F6"; radius: 3; width: 60; height: 22 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                        Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 9
-                            enabled: cne.depth < 2
-                            onClicked: cne.addOrChild()
-                            background: Rectangle { color: enabled ? "#6C5CE7" : "#252830"; radius: 3; width: 90; height: 22 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 9; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    }
+                Button {
+                    text: "取消"; font.pixelSize: 12
+                    background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: importDialog.close()
                 }
             }
         }

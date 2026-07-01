@@ -155,12 +155,13 @@ void DeviceController::refreshDevices(int page, int pageSize,
 
     m_api->get(path,
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("devices").toArray();
+            // 后端响应: {code,message,data:{devices:[...],items:[...],total:N}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "devices"});
             m_devices.clear();
             for (const auto& item : arr)
                 m_devices.append(item.toVariant().toMap());
-            m_total = obj.value("total").toInt(m_devices.size());
+            m_total = data.value("total").toInt(m_devices.size());
             if (m_deviceModel) m_deviceModel->setDevices(m_devices);
             emit devicesUpdated();
             applyFilters();
@@ -175,7 +176,8 @@ void DeviceController::refreshDevices(int page, int pageSize,
 void DeviceController::refreshStats() {
     m_api->get("/api/v1/devices/stats",
         [this](QJsonObject obj) {
-            m_stats = obj.toVariantMap();
+            // 后端响应: {code,message,data:{online:N,offline:N,...}}
+            m_stats = ApiClient::unwrapData(obj).toVariantMap();
             emit statsUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -186,7 +188,8 @@ void DeviceController::refreshGroups() {
     // 这里先用 /api/v1/config 兜底拉取 device_groups
     m_api->get("/api/v1/config",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("device_groups").toArray();
+            // 后端响应: {code,message,data:{device_groups:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"device_groups"});
             m_groups.clear();
             for (const auto& v : arr) m_groups.append(v.toVariant().toMap());
             emit groupsUpdated();
@@ -241,7 +244,12 @@ void DeviceController::discoverDevices(const QString& protocol) {
     setLoading(true);
     QJsonObject body; body["protocol"] = protocol;
     m_api->post("/api/v1/devices/discover", body,
-        [this](QJsonObject) {
+        [this](QJsonObject obj) {
+            // 后端响应信封: {code,message,data:{devices:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"devices", "items", "list"});
+            QVariantList results;
+            for (const auto& v : arr) results.append(v.toVariant());
+            emit deviceDiscovered(results);
             refreshDevices();
             setLoading(false);
         },
@@ -253,7 +261,10 @@ void DeviceController::discoverDevices(const QString& protocol) {
 
 void DeviceController::getDeviceDetail(const QString& deviceId) {
     m_api->get(QString("/api/v1/devices/%1").arg(deviceId),
-        [](QJsonObject) {},
+        [this](QJsonObject obj) {
+            QJsonObject data = ApiClient::unwrapData(obj);
+            emit deviceDetailReady(data.toVariantMap());
+        },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 

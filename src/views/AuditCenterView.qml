@@ -24,7 +24,7 @@ Item {
             recentListView.model = auditController.logs
         }
         function onExportCompleted() {
-            exportStatus.text = "✅ 导出完成"
+            exportStatus.text = "导出完成"
             exportStatusTimer.start()
         }
     }
@@ -36,7 +36,7 @@ Item {
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-            Text { text: "📋 审计中心"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "审计中心"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
 
             TextField {
@@ -57,7 +57,7 @@ Item {
                 id: typeFilter
                 width: 100; model: ["全部类型", "登录", "配置", "设备", "告警", "算法", "系统"]
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
                 onActivated: {
                     auditController.searchLogs({
                         keyword: searchField.text,
@@ -70,7 +70,7 @@ Item {
                 id: levelFilter
                 width: 80; model: ["全部级别", "信息", "警告", "错误", "严重"]
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
                 onActivated: {
                     auditController.searchLogs({
                         keyword: searchField.text,
@@ -81,12 +81,12 @@ Item {
             }
 
             Button {
-                text: "📥 导出"; font.pixelSize: 12
+                text: "导出"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: auditController.exportLogs("csv")
             }
-            Text { id: exportStatus; font.pixelSize: 10; color: "#00D4AA"; visible: text !== "" }
+            Text { id: exportStatus; font.pixelSize: 12; color: "#00D4AA"; visible: text !== "" }
         }
     }
 
@@ -105,7 +105,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "📊 审计概览"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "审计概览"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 Text {
                     text: "共 " + (auditController.totalCount || 0) + " 条记录"
@@ -114,11 +114,11 @@ Item {
 
                 Rectangle { height: 1; color: "#252830"; width: parent.width - 24 }
 
-                Text { text: "🕐 最近操作"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                Text { text: "最近操作"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
                     id: recentListView
-                    width: parent.width - 24; height: parent.height - 120; clip: true; spacing: 2
+                    width: parent.width - 24; height: parent.height - 120; clip: true; spacing: 4
                     model: auditController.logs
 
                     delegate: Rectangle {
@@ -133,11 +133,11 @@ Item {
                                            modelData.level === "warning" ? "#FFB800" : "#3B82F6"
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
-                                Text { text: modelData.time || "-"; font.pixelSize: 9; color: "#4A4D58" }
-                                Text { text: modelData.user || "-"; font.pixelSize: 9; color: "#3B82F6" }
-                                Text { text: modelData.action || "-"; font.pixelSize: 9; color: "#E8E8E8"; font.bold: true }
+                                Text { text: modelData.time || "-"; font.pixelSize: 11; color: "#4A4D58" }
+                                Text { text: modelData.user || "-"; font.pixelSize: 11; color: "#3B82F6" }
+                                Text { text: modelData.action || "-"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true }
                             }
-                            Text { text: modelData.detail || "-"; font.pixelSize: 8; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
+                            Text { text: modelData.detail || "-"; font.pixelSize: 11; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
                         }
                     }
                 }
@@ -161,39 +161,39 @@ Item {
 
                 // 表头
                 Rectangle {
-                    width: parent.width - 24; height: 28; color: "#141720"; radius: 4
+                    width: parent.width - 24; height: 32; color: "#141420"; radius: 4
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 6
-                        Text { text: "时间"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 70 }
-                        Text { text: "用户"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 50 }
-                        Text { text: "类型"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 50 }
-                        Text { text: "操作"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 100 }
-                        Text { text: "详情"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 200 }
-                        Text { text: "IP"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 90 }
-                        Text { text: "结果"; font.pixelSize: 10; font.bold: true; color: "#8B8FA3"; width: 40 }
+                        Text { text: "时间"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 70 }
+                        Text { text: "用户"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
+                        Text { text: "类型"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
+                        Text { text: "操作"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 100 }
+                        Text { text: "详情"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 200 }
+                        Text { text: "IP"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 90 }
+                        Text { text: "结果"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 40 }
                     }
                 }
 
                 ListView {
                     id: detailLogListView
-                    width: parent.width - 24; height: parent.height - 100; clip: true; spacing: 1
+                    width: parent.width - 24; height: parent.height - 100; clip: true; spacing: 3
                     model: auditController.logs
 
                     delegate: Rectangle {
-                        width: ListView.view.width; height: 28; color: index % 2 ? "#0D1015" : "transparent"
+                        width: ListView.view.width; height: 36; color: index % 2 ? "#0D1015" : "transparent"
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 6
-                            Text { text: modelData.time || "-"; font.pixelSize: 10; color: "#4A4D58"; width: 70 }
-                            Text { text: modelData.user || "-"; font.pixelSize: 10; color: "#3B82F6"; width: 50 }
-                            Rectangle { width: 36; height: 14; radius: 3; color: "#1A1D23"
-                                Text { text: modelData.type || "-"; font.pixelSize: 8; color: "#8B8FA3"; anchors.centerIn: parent }
+                            Text { text: modelData.time || "-"; font.pixelSize: 12; color: "#4A4D58"; width: 70 }
+                            Text { text: modelData.user || "-"; font.pixelSize: 12; color: "#3B82F6"; width: 50 }
+                            Rectangle { width: 40; height: 18; radius: 3; color: "#1A1D23"
+                                Text { text: modelData.type || "-"; font.pixelSize: 11; color: "#8B8FA3"; anchors.centerIn: parent }
                             }
-                            Text { text: modelData.action || "-"; font.pixelSize: 10; color: "#E8E8E8"; width: 100 }
-                            Text { text: modelData.detail || "-"; font.pixelSize: 9; color: "#8B8FA3"; width: 200; elide: Text.ElideMiddle }
-                            Text { text: modelData.ip || "-"; font.pixelSize: 9; color: "#4A4D58"; width: 90 }
+                            Text { text: modelData.action || "-"; font.pixelSize: 12; color: "#E8E8E8"; width: 100 }
+                            Text { text: modelData.detail || "-"; font.pixelSize: 11; color: "#8B8FA3"; width: 200; elide: Text.ElideMiddle }
+                            Text { text: modelData.ip || "-"; font.pixelSize: 11; color: "#4A4D58"; width: 90 }
                             Text {
                                 text: modelData.result || "-"
-                                font.pixelSize: 10
+                                font.pixelSize: 11
                                 color: modelData.result === "成功" ? "#00D4AA" :
                                        modelData.result === "异常" ? "#FF3D71" : "#FFB800"
                                 width: 40

@@ -1,0 +1,683 @@
+{
+  "concurrency": 64,
+  "num_streams": 64,
+  "protocols": [
+    "hls",
+    "flv",
+    "webrtc"
+  ],
+  "elapsed_s": 0.24052848300198093,
+  "percentiles": {
+    "count_total": 64,
+    "count_ok": 63,
+    "count_fallback": 1,
+    "count_error": 1,
+    "api_ms": {
+      "p50": 24.717544998566154,
+      "p95": 52.92926509791869,
+      "p99": 65.65472252164916,
+      "min": 15.898976002063137,
+      "max": 83.03946300293319,
+      "mean": 29.14338239670975
+    },
+    "handshake_ms": {
+      "p50": 112.5787639975897,
+      "p95": 159.16109899699222,
+      "p99": 166.95524551949347,
+      "min": 29.46482900006231,
+      "max": 170.8105629986676,
+      "mean": 103.49843409517595
+    },
+    "total_ms": {
+      "p50": 140.8775709969632,
+      "p95": 187.19479339852114,
+      "p99": 200.81034705974167,
+      "min": 60.06342299951939,
+      "max": 211.11039900279138,
+      "mean": 132.6418164918857
+    },
+    "fallback_rate": 0.015625
+  },
+  "samples": [
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0023",
+      "api_latency_ms": 26.2307779994444,
+      "handshake_latency_ms": 33.83264500007499,
+      "total_latency_ms": 60.06342299951939,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0035",
+      "api_latency_ms": 26.897207000729395,
+      "handshake_latency_ms": 34.91503199984436,
+      "total_latency_ms": 61.812239000573754,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0002",
+      "api_latency_ms": 23.40224900035537,
+      "handshake_latency_ms": 62.36158899992006,
+      "total_latency_ms": 85.76383800027543,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0050",
+      "api_latency_ms": 37.226402997475816,
+      "handshake_latency_ms": 29.46482900006231,
+      "total_latency_ms": 66.69123199753813,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0005",
+      "api_latency_ms": 26.03721600098652,
+      "handshake_latency_ms": 63.7460319994716,
+      "total_latency_ms": 89.78324800045812,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0008",
+      "api_latency_ms": 18.708676001551794,
+      "handshake_latency_ms": 70.93854699996882,
+      "total_latency_ms": 89.64722300152062,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0011",
+      "api_latency_ms": 18.911770999693545,
+      "handshake_latency_ms": 69.6210770001926,
+      "total_latency_ms": 88.53284799988614,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0017",
+      "api_latency_ms": 20.193330998154124,
+      "handshake_latency_ms": 69.40237500020885,
+      "total_latency_ms": 89.59570599836297,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0014",
+      "api_latency_ms": 26.074626002809964,
+      "handshake_latency_ms": 63.95678999979282,
+      "total_latency_ms": 90.03141600260278,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0020",
+      "api_latency_ms": 22.564151000551647,
+      "handshake_latency_ms": 68.98886600174592,
+      "total_latency_ms": 91.55301700229757,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0038",
+      "api_latency_ms": 22.515126001962926,
+      "handshake_latency_ms": 65.66021899925545,
+      "total_latency_ms": 88.17534500121837,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0041",
+      "api_latency_ms": 21.731120999902487,
+      "handshake_latency_ms": 65.31908699980704,
+      "total_latency_ms": 87.05020799970953,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0026",
+      "api_latency_ms": 22.719018001225777,
+      "handshake_latency_ms": 70.23363500047708,
+      "total_latency_ms": 92.95265300170286,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0047",
+      "api_latency_ms": 23.367968999082223,
+      "handshake_latency_ms": 63.90755199754494,
+      "total_latency_ms": 87.27552099662717,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0053",
+      "api_latency_ms": 52.96338399784872,
+      "handshake_latency_ms": 34.74350900069112,
+      "total_latency_ms": 87.70689299853984,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0029",
+      "api_latency_ms": 25.499669998680474,
+      "handshake_latency_ms": 73.32239099923754,
+      "total_latency_ms": 98.82206099791802,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0062",
+      "api_latency_ms": 48.29139099820168,
+      "handshake_latency_ms": 30.94594900176162,
+      "total_latency_ms": 79.2373399999633,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0044",
+      "api_latency_ms": 24.79233400299563,
+      "handshake_latency_ms": 71.33462699857773,
+      "total_latency_ms": 96.12696100157336,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0049",
+      "api_latency_ms": 26.269597001373768,
+      "handshake_latency_ms": 70.43301600060659,
+      "total_latency_ms": 96.70261300198035,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0059",
+      "api_latency_ms": 54.999559000862064,
+      "handshake_latency_ms": 36.71478400065098,
+      "total_latency_ms": 91.71434300151304,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0037",
+      "api_latency_ms": 24.721894002141198,
+      "handshake_latency_ms": 79.98261399916373,
+      "total_latency_ms": 104.70450800130493,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0040",
+      "api_latency_ms": 20.418578998942394,
+      "handshake_latency_ms": 84.1472590000194,
+      "total_latency_ms": 104.5658379989618,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0043",
+      "api_latency_ms": 23.652410000067903,
+      "handshake_latency_ms": 81.04371599984006,
+      "total_latency_ms": 104.69612599990796,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0056",
+      "api_latency_ms": 47.8779939985543,
+      "handshake_latency_ms": 59.33999999979278,
+      "total_latency_ms": 107.21799399834708,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "webrtc",
+      "stream_id": "ch_0032",
+      "api_latency_ms": 22.199173999979394,
+      "handshake_latency_ms": 99.41995099870837,
+      "total_latency_ms": 121.61912499868777,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0013",
+      "api_latency_ms": 18.811537000146927,
+      "handshake_latency_ms": 111.7777270010265,
+      "total_latency_ms": 130.58926400117343,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0007",
+      "api_latency_ms": 19.422499997745035,
+      "handshake_latency_ms": 114.82568700012052,
+      "total_latency_ms": 134.24818699786556,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0003",
+      "api_latency_ms": 15.898976002063137,
+      "handshake_latency_ms": 121.99219499962055,
+      "total_latency_ms": 137.8911710016837,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0034",
+      "api_latency_ms": 22.911421001481358,
+      "handshake_latency_ms": 104.43091900015133,
+      "total_latency_ms": 127.34234000163269,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0022",
+      "api_latency_ms": 28.298806999373483,
+      "handshake_latency_ms": 112.5787639975897,
+      "total_latency_ms": 140.8775709969632,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0001",
+      "api_latency_ms": 23.516869001468876,
+      "handshake_latency_ms": 130.34782899921993,
+      "total_latency_ms": 153.8646980006888,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0025",
+      "api_latency_ms": 27.182130001165206,
+      "handshake_latency_ms": 119.87892199977068,
+      "total_latency_ms": 147.0610520009359,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0028",
+      "api_latency_ms": 21.280417997331824,
+      "handshake_latency_ms": 123.07831600264763,
+      "total_latency_ms": 144.35873399997945,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0046",
+      "api_latency_ms": 21.355648997996468,
+      "handshake_latency_ms": 117.39052900156821,
+      "total_latency_ms": 138.74617799956468,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0019",
+      "api_latency_ms": 24.15437699892209,
+      "handshake_latency_ms": 128.54081700061215,
+      "total_latency_ms": 152.69519399953424,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0010",
+      "api_latency_ms": 24.90460699846153,
+      "handshake_latency_ms": 129.87871000223095,
+      "total_latency_ms": 154.78331700069248,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0004",
+      "api_latency_ms": 25.216156001988566,
+      "handshake_latency_ms": 133.30505300109508,
+      "total_latency_ms": 158.52120900308364,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0031",
+      "api_latency_ms": 25.36809999946854,
+      "handshake_latency_ms": 122.6825559970166,
+      "total_latency_ms": 148.05065599648515,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0000",
+      "api_latency_ms": 23.1381479970878,
+      "handshake_latency_ms": 138.02674999897135,
+      "total_latency_ms": 161.16489799605915,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0016",
+      "api_latency_ms": 25.78463899772032,
+      "handshake_latency_ms": 131.8102330005786,
+      "total_latency_ms": 157.5948719982989,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0045",
+      "api_latency_ms": 23.923568998725386,
+      "handshake_latency_ms": 124.34376800229074,
+      "total_latency_ms": 148.26733700101613,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0018",
+      "api_latency_ms": 25.04247299657436,
+      "handshake_latency_ms": 135.5819230011548,
+      "total_latency_ms": 160.62439599772915,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0048",
+      "api_latency_ms": 23.954561998834834,
+      "handshake_latency_ms": 125.15862399959587,
+      "total_latency_ms": 149.1131859984307,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0061",
+      "api_latency_ms": 53.09121900063474,
+      "handshake_latency_ms": 85.52465300090262,
+      "total_latency_ms": 138.61587200153735,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0052",
+      "api_latency_ms": 51.631778998853406,
+      "handshake_latency_ms": 100.37404899776448,
+      "total_latency_ms": 152.00582799661788,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0024",
+      "api_latency_ms": 24.40683199893101,
+      "handshake_latency_ms": 139.9203929977375,
+      "total_latency_ms": 164.32722499666852,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0015",
+      "api_latency_ms": 26.130812999326736,
+      "handshake_latency_ms": 142.04981500006397,
+      "total_latency_ms": 168.1806279993907,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0058",
+      "api_latency_ms": 52.622194998548366,
+      "handshake_latency_ms": 95.78803700060234,
+      "total_latency_ms": 148.4102319991507,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "ch_0055",
+      "api_latency_ms": 48.07806500321021,
+      "handshake_latency_ms": 102.57931200249004,
+      "total_latency_ms": 150.65737700570025,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0036",
+      "api_latency_ms": 25.002157999551855,
+      "handshake_latency_ms": 137.22945399786113,
+      "total_latency_ms": 162.23161199741298,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0009",
+      "api_latency_ms": 30.08663500077091,
+      "handshake_latency_ms": 144.00451599794906,
+      "total_latency_ms": 174.09115099871997,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0012",
+      "api_latency_ms": 22.94256900131586,
+      "handshake_latency_ms": 150.40906699869083,
+      "total_latency_ms": 173.3516360000067,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0033",
+      "api_latency_ms": 24.717544998566154,
+      "handshake_latency_ms": 143.1917190020613,
+      "total_latency_ms": 167.90926400062745,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0006",
+      "api_latency_ms": 21.024017998570343,
+      "handshake_latency_ms": 160.1335469968035,
+      "total_latency_ms": 181.15756499537383,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0042",
+      "api_latency_ms": 24.432389000139665,
+      "handshake_latency_ms": 143.36757700220915,
+      "total_latency_ms": 167.7999660023488,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0039",
+      "api_latency_ms": 23.976230000698706,
+      "handshake_latency_ms": 146.98354199936148,
+      "total_latency_ms": 170.95977200006018,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0021",
+      "api_latency_ms": 21.98086700082058,
+      "handshake_latency_ms": 160.64819000166608,
+      "total_latency_ms": 182.62905700248666,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0027",
+      "api_latency_ms": 23.032419998344267,
+      "handshake_latency_ms": 164.59230899999966,
+      "total_latency_ms": 187.62472899834393,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0030",
+      "api_latency_ms": 23.686848999204813,
+      "handshake_latency_ms": 170.8105629986676,
+      "total_latency_ms": 194.4974119978724,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0060",
+      "api_latency_ms": 28.12407600140432,
+      "handshake_latency_ms": 149.33695299987448,
+      "total_latency_ms": 177.4610290012788,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0063",
+      "api_latency_ms": 50.563515000249026,
+      "handshake_latency_ms": 132.76185799986706,
+      "total_latency_ms": 183.3253730001161,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0054",
+      "api_latency_ms": 49.032888000510866,
+      "handshake_latency_ms": 143.21944499897654,
+      "total_latency_ms": 192.2523329994874,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0051",
+      "api_latency_ms": 38.10277199954726,
+      "handshake_latency_ms": 171.91135399843915,
+      "total_latency_ms": 210.0141259979864,
+      "fallback_triggered": true,
+      "status_code": 503,
+      "error": "http 503"
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "ch_0057",
+      "api_latency_ms": 83.03946300293319,
+      "handshake_latency_ms": 128.0709359998582,
+      "total_latency_ms": 211.11039900279138,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    }
+  ]
+}

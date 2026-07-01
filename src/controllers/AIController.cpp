@@ -126,7 +126,9 @@ void AIController::sendMessage(const QString& text) {
     body["stream"] = true;
     if (!m_currentSessionId.isEmpty()) body["session_id"] = m_currentSessionId;
 
-    m_sseReply = m_api->startSse("/api/v1/ai/chat/stream", body);
+    // 后端 POST /api/v1/ai/chat 返回 SSE 流式响应 (HybridLlmBackend 3-route)
+    // 注意: GET /api/v1/ai/chat/stream 也存在但功能简化, POST /ai/chat 是主端点
+    m_sseReply = m_api->startSse("/api/v1/ai/chat", body);
     connect(m_sseReply, &QNetworkReply::readyRead,
             this, &AIController::onSseReadyRead);
     connect(m_sseReply, &QNetworkReply::finished,
@@ -283,7 +285,8 @@ void AIController::loadConversationHistory(const QString& sessionId) {
     m_api->get(QString("/api/v1/ai/sessions/%1").arg(sessionId),
         [this](QJsonObject obj) {
             m_conversations.clear();
-            QJsonArray arr = obj.value("messages").toArray();
+            // 后端响应: {code:0, data:{messages:[...]}} 或 {messages:[...]}
+            QJsonArray arr = ApiClient::extractArray(obj, {"messages", "history", "data"});
             for (const auto& v : arr) m_conversations.append(v.toVariant().toMap());
             emit conversationsUpdated();
         },
@@ -293,9 +296,9 @@ void AIController::loadConversationHistory(const QString& sessionId) {
 void AIController::refreshSessions() {
     m_api->get("/api/v1/ai/sessions",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("sessions").toArray();
-            if (arr.isEmpty() && obj.value("data").isArray())
-                arr = obj.value("data").toArray();
+            // 后端响应: {code:0, data:{sessions:[...], total:N}}
+            // extractArray 先解包 data 信封, 再查找 sessions 数组
+            QJsonArray arr = ApiClient::extractArray(obj, {"sessions"});
             m_sessions.clear();
             for (const auto& v : arr) m_sessions.append(v.toVariant().toMap());
             emit sessionsUpdated();
@@ -312,9 +315,8 @@ void AIController::deleteSession(const QString& sessionId) {
 void AIController::refreshSuggestions() {
     m_api->get("/api/v1/ai/suggestions",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("data").toArray();
-            if (arr.isEmpty() && obj.value("suggestions").isArray())
-                arr = obj.value("suggestions").toArray();
+            // 后端响应: {code:0, data:["建议1","建议2",...]}
+            QJsonArray arr = ApiClient::extractArray(obj, {"data", "suggestions"});
             m_suggestions.clear();
             for (const auto& v : arr) m_suggestions.append(v.toVariant());
             emit suggestionsUpdated();
@@ -325,9 +327,7 @@ void AIController::refreshSuggestions() {
 void AIController::refreshAgents() {
     m_api->get("/api/v1/ai/agents",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("data").toArray();
-            if (arr.isEmpty() && obj.value("agents").isArray())
-                arr = obj.value("agents").toArray();
+            QJsonArray arr = ApiClient::extractArray(obj, {"agents", "data"});
             m_agents.clear();
             for (const auto& v : arr) m_agents.append(v.toVariant().toMap());
             emit agentsUpdated();
@@ -338,9 +338,7 @@ void AIController::refreshAgents() {
 void AIController::refreshTools() {
     m_api->get("/api/v1/ai/tools",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("data").toArray();
-            if (arr.isEmpty() && obj.value("tools").isArray())
-                arr = obj.value("tools").toArray();
+            QJsonArray arr = ApiClient::extractArray(obj, {"tools", "data"});
             m_tools.clear();
             for (const auto& v : arr) m_tools.append(v.toVariant().toMap());
             emit toolsUpdated();
@@ -351,9 +349,7 @@ void AIController::refreshTools() {
 void AIController::refreshModels() {
     m_api->get("/api/v1/ai/models",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("data").toArray();
-            if (arr.isEmpty() && obj.value("models").isArray())
-                arr = obj.value("models").toArray();
+            QJsonArray arr = ApiClient::extractArray(obj, {"models", "data"});
             m_models.clear();
             for (const auto& v : arr) m_models.append(v.toVariant().toMap());
             emit modelsUpdated();

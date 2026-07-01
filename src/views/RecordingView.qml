@@ -28,16 +28,16 @@ Item {
         function onStreamStarted(sessionId, url) {
             playbackUrl = url || ""
             isPlaying = true
-            playerOverlay.text = "▶ 正在播放..."
+            playerOverlay.text = "正在播放..."
         }
         function onStreamStopped(sessionId) {
             playbackUrl = ""
             isPlaying = false
-            playerOverlay.text = "▶ 点击播放录像"
+            playerOverlay.text = "点击播放录像"
         }
-        function onStreamsUpdated() {
+        function onChannelsUpdated() {
             // streams 列表更新后，重建通道选择器
-            var streamList = mediaController.streams || []
+            var streamList = mediaController.channels || []
             var channelNames = ["全部通道"]
             for (var i = 0; i < streamList.length; i++) {
                 channelNames.push(streamList[i].name || streamList[i].channelName || ("通道" + (i + 1)))
@@ -65,7 +65,8 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
-            Text { text: "📼 录像回放"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            AppIcon { name: "record"; size: 22; iconColor: "#E8E8E8"; Layout.preferredWidth: 24; Layout.preferredHeight: 24 }
+            Text { text: "录像回放"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
 
             // 通道筛选
             ComboBox {
@@ -100,17 +101,47 @@ Item {
                 }
             }
 
+            // P3.5: AI标签筛选 (对标海康录像AI检索)
+            ComboBox {
+                id: aiTagSelect
+                width: 160
+                model: ["全部AI标签", "人员检测", "车辆检测", "安全帽", "火焰/烟雾", "人脸识别", "人群密度", "摔倒检测"]
+                background: Rectangle { color: "#252830"; radius: 6 }
+                contentItem: Text {
+                    text: aiTagSelect.displayText
+                    color: "#E8E8E8"; font.pixelSize: 13
+                    verticalAlignment: Text.AlignVCenter; leftPadding: 10
+                }
+            }
+
+            // P3.5: 最低置信度
+            Row {
+                spacing: 2
+                SpinBox {
+                    id: minConfidenceSpin
+                    width: 80
+                    from: 0; to: 100; value: 0; stepSize: 10
+                    background: Rectangle { color: "#252830"; radius: 6 }
+                    contentItem: Text {
+                        text: minConfidenceSpin.value + "%"
+                        color: "#E8E8E8"; font.pixelSize: 12
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
             Item { Layout.fillWidth: true }
 
             Button {
-                text: "📅 " + selectedDate
+                text: selectedDate
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: calendarPopup.open()
             }
             Button {
-                text: "⏪ 前一天"
+                text: "前一天"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -122,7 +153,7 @@ Item {
                 }
             }
             Button {
-                text: "后一天 ⏩"
+                text: "后一天"
                 font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 72; height: 32 }
                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -184,7 +215,7 @@ Item {
                     Text {
                         id: playerOverlay
                         anchors.centerIn: parent
-                        text: "▶ 点击播放录像"
+                        text: "点击播放录像"
                         font.pixelSize: 16; color: "#4A4D58"
                     }
 
@@ -192,15 +223,15 @@ Item {
                         anchors.fill: parent
                         onDoubleClicked: {
                             if (selectedChannel) {
-                                var streams = mediaController.streams || []
+                                var streams = mediaController.channels || []
                                 for (var i = 0; i < streams.length; i++) {
                                     if (streams[i].name === selectedChannel || streams[i].channelName === selectedChannel) {
                                         mediaController.startStream(streams[i].id || streams[i].channelId || "", "playback")
                                         break
                                     }
                                 }
-                            } else if (mediaController.streams.length > 0) {
-                                var s = mediaController.streams[0]
+                            } else if (mediaController.channels.length > 0) {
+                                var s = mediaController.channels[0]
                                 mediaController.startStream(s.id || s.channelId || "", "playback")
                             }
                         }
@@ -210,7 +241,7 @@ Item {
                     Rectangle {
                         anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8
                         width: 160; height: 24; color: "#99000000"; radius: 4
-                        Text { text: "📹 " + (selectedChannel || "全部通道"); font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent }
+                        Text { text: (selectedChannel || "全部通道"); font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent }
                     }
 
                     // 时间戳叠加
@@ -226,13 +257,13 @@ Item {
                         spacing: 4
 
                         Repeater {
-                            model: Math.min(mediaController.streams.length, 4)
+                            model: Math.min(mediaController.channels.length, 4)
                             delegate: Rectangle {
                                 width: 80; height: 45; color: "#141720"; radius: 4
                                 border.color: index === 0 ? "#00D4AA" : "#252830"; border.width: index === 0 ? 2 : 1
                                 Text {
                                     text: {
-                                        var streamList = mediaController.streams
+                                        var streamList = mediaController.channels
                                         return streamList[index] ? (streamList[index].name || ("CH" + (index+1))) : ("CH" + (index+1))
                                     }
                                     font.pixelSize: 10; color: "#8B8FA3"; anchors.centerIn: parent
@@ -240,7 +271,7 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     onClicked: {
-                                        var streamList = mediaController.streams
+                                        var streamList = mediaController.channels
                                         if (streamList[index]) {
                                             mediaController.startStream(streamList[index].id || streamList[index].channelId || "", "playback")
                                         }
@@ -262,46 +293,46 @@ Item {
                         Row {
                             spacing: 8
                             Button {
-                                text: "⏮"; font.pixelSize: 14
+                                text: "|<"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
                                 contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: playbackPosition = Math.max(0, playbackPosition - 1)
                             }
                             Button {
-                                text: "⏪"; font.pixelSize: 14
+                                text: "<<"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
                                 contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: playbackPosition = Math.max(0, playbackPosition - 0.1)
                             }
                             Button {
-                                text: isPlaying ? "⏸" : "▶"; font.pixelSize: 16
+                                text: isPlaying ? "||" : ">"; font.pixelSize: 14
                                 background: Rectangle { color: "#00D4AA"; radius: 4; width: 40; height: 28 }
                                 contentItem: Text { text: parent.text; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
                                     if (isPlaying) {
                                         mediaController.stopStream(selectedChannel || "")
                                     } else if (selectedChannel) {
-                                        var streamList = mediaController.streams
+                                        var streamList = mediaController.channels
                                         for (var i = 0; i < streamList.length; i++) {
                                             if (streamList[i].name === selectedChannel || streamList[i].channelName === selectedChannel) {
                                                 mediaController.startStream(streamList[i].id || streamList[i].channelId || "", "playback")
                                                 break
                                             }
                                         }
-                                    } else if (mediaController.streams.length > 0) {
-                                        var s = mediaController.streams[0]
+                                    } else if (mediaController.channels.length > 0) {
+                                        var s = mediaController.channels[0]
                                         mediaController.startStream(s.id || s.channelId || "", "playback")
                                     }
                                 }
                             }
                             Button {
-                                text: "⏩"; font.pixelSize: 14
+                                text: ">>"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
                                 contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: playbackPosition = Math.min(24, playbackPosition + 0.1)
                             }
                             Button {
-                                text: "⏭"; font.pixelSize: 14
+                                text: ">|"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
                                 contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: playbackPosition = Math.min(24, playbackPosition + 1)
@@ -323,12 +354,12 @@ Item {
 
                             Item { width: 20 }
                             Button {
-                                text: "📷 截图"; font.pixelSize: 10
+                                text: "截图"; font.pixelSize: 10
                                 background: Rectangle { color: "#252830"; radius: 4; width: 48; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
                                     if (selectedChannel) {
-                                        var streamList = mediaController.streams
+                                        var streamList = mediaController.channels
                                         for (var i = 0; i < streamList.length; i++) {
                                             if (streamList[i].name === selectedChannel || streamList[i].channelName === selectedChannel) {
                                                 mediaController.snapshot(streamList[i].id || streamList[i].channelId || "")
@@ -339,7 +370,7 @@ Item {
                                 }
                             }
                             Button {
-                                text: "💾 下载"; font.pixelSize: 10
+                                text: "下载"; font.pixelSize: 10
                                 background: Rectangle { color: "#252830"; radius: 4; width: 48; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
@@ -350,7 +381,7 @@ Item {
                                 }
                             }
                             Button {
-                                text: lockedRecordings[selectedChannel] ? "🔓 解锁" : "🔒 锁定"; font.pixelSize: 10
+                                text: lockedRecordings[selectedChannel] ? "解锁" : "锁定"; font.pixelSize: 10
                                 background: Rectangle { color: lockedRecordings[selectedChannel] ? "#FFB800" : "#252830"; radius: 4; width: 52; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 10; color: lockedRecordings[selectedChannel] ? "#0D0F12" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
@@ -440,9 +471,9 @@ Item {
                         // 图例
                         Row {
                             spacing: 12
-                            Text { text: "🟢 连续录像"; font.pixelSize: 9; color: "#00D4AA" }
-                            Text { text: "🟡 移动侦测"; font.pixelSize: 9; color: "#FFB800" }
-                            Text { text: "🔴 告警录像"; font.pixelSize: 9; color: "#FF3D71" }
+                            Text { text: "连续录像"; font.pixelSize: 9; color: "#00D4AA" }
+                            Text { text: "移动侦测"; font.pixelSize: 9; color: "#FFB800" }
+                            Text { text: "告警录像"; font.pixelSize: 9; color: "#FF3D71" }
                         }
                     }
                 }
@@ -457,7 +488,7 @@ Item {
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "📋 录像列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "录像列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                 ListView {
                     width: parent.width; height: parent.height - 30
@@ -472,11 +503,11 @@ Item {
                         Row {
                             anchors.fill: parent; anchors.margins: 8; spacing: 12
 
-                            // 状态图标
-                            Text {
-                                text: modelData.type === "alarm" ? "🔴" :
-                                      modelData.type === "motion" ? "🟡" : "🟢"
-                                font.pixelSize: 14
+                            // 状态指示灯
+                            Rectangle {
+                                width: 10; height: 10; radius: 5
+                                color: modelData.type === "alarm" ? "#FF3D71" :
+                                      modelData.type === "motion" ? "#FFB800" : "#00D4AA"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
 
@@ -518,7 +549,7 @@ Item {
 
                             // 播放按钮
                             Button {
-                                text: "▶"; font.pixelSize: 12
+                                text: ">"; font.pixelSize: 12
                                 background: Rectangle { color: "#00D4AA"; radius: 4; width: 28; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
@@ -530,7 +561,7 @@ Item {
 
                             // 锁定按钮
                             Button {
-                                text: "🔒"; font.pixelSize: 12
+                                text: locked ? "L" : ""; font.pixelSize: 12
                                 background: Rectangle { color: lockedRecordings[modelData.id] ? "#FFB800" : "#252830"; radius: 4; width: 28; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: lockedRecordings[modelData.id] ? "#0D0F12" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
@@ -543,7 +574,7 @@ Item {
 
                             // 下载按钮
                             Button {
-                                text: "💾"; font.pixelSize: 12
+                                text: "DL"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 28; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {

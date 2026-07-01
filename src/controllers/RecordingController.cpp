@@ -15,11 +15,12 @@ void RecordingController::query(const QVariantMap& filter) {
     m_api->post("/api/v1/recordings/query",
                 QJsonObject::fromVariantMap(filter),
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("recordings").toArray();
+            // 后端响应: {code,message,data:{items:[...]/recordings:[...],total:N}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "recordings"});
             m_recordings.clear();
             for (const auto& v : arr) m_recordings.append(v.toVariant().toMap());
-            m_total = obj.value("total").toInt(m_recordings.size());
+            m_total = data.value("total").toInt(m_recordings.size());
             emit recordingsUpdated();
             setLoading(false);
         },
@@ -34,11 +35,12 @@ void RecordingController::refreshRecordings(int page, int pageSize) {
     QString path = QString("/api/v1/recordings?page=%1&pageSize=%2").arg(page).arg(pageSize);
     m_api->get(path,
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("recordings").toArray();
+            // 后端响应: {code,message,data:{items:[...]/recordings:[...],total:N}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "recordings"});
             m_recordings.clear();
             for (const auto& v : arr) m_recordings.append(v.toVariant().toMap());
-            m_total = obj.value("total").toInt(m_recordings.size());
+            m_total = data.value("total").toInt(m_recordings.size());
             emit recordingsUpdated();
             setLoading(false);
         },
@@ -51,7 +53,9 @@ void RecordingController::refreshRecordings(int page, int pageSize) {
 void RecordingController::refreshStorage() {
     m_api->get("/api/v1/system/info",
         [this](QJsonObject obj) {
-            m_storageInfo = obj.value("storage").toObject().toVariantMap();
+            // 后端响应: {code,message,data:{storage:{...}}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            m_storageInfo = data.value("storage").toObject().toVariantMap();
             emit storageInfoUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -63,8 +67,10 @@ void RecordingController::play(const QString& recordingId, double startTs) {
     body["start_time"] = startTs;
     m_api->post(QString("/api/v1/recordings/%1/play").arg(recordingId), body,
         [this](QJsonObject obj) {
-            QString callId = obj.value("call_id").toString();
-            emit playStarted(callId, obj.toVariantMap());
+            // 后端响应: {code,message,data:{call_id,urls/stream_url}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString callId = data.value("call_id").toString();
+            emit playStarted(callId, data.toVariantMap());
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
@@ -107,7 +113,9 @@ void RecordingController::stopRecord(const QString& channelId) {
 void RecordingController::download(const QString& recordingId) {
     m_api->get(QString("/api/v1/recordings/%1/download").arg(recordingId),
         [this](QJsonObject obj) {
-            QString url = obj.value("url").toString();
+            // 后端响应: {code,message,data:{url/download_url}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString url = data.value("url").toString();
             emit downloadReady(url);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -120,7 +128,9 @@ void RecordingController::batchDownload(const QVariantList& recordingIds) {
     body["recording_ids"] = arr;
     m_api->post("/api/v1/recordings/download", body,
         [this](QJsonObject obj) {
-            QString url = obj.value("url").toString();
+            // 后端响应: {code,message,data:{url/download_url}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString url = data.value("url").toString();
             emit downloadReady(url);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });

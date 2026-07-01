@@ -87,3 +87,30 @@ endif()
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION /opt/shieldbox/bin
 )
+
+# ---------------------------------------------------------------------------
+# Tests (P0-1, P0-2, ...) - 自动发现 tests/test_*.cpp
+# 验收: ctest -V 或直接运行 ./tests/test_xxx
+# ---------------------------------------------------------------------------
+find_package(Qt6 COMPONENTS Test)
+if(Qt6Test_FOUND)
+    enable_testing()
+    file(GLOB TEST_SOURCES tests/test_*.cpp)
+    file(GLOB TEST_MOCS tests/test_*.moc)
+    foreach(test_src ${TEST_SOURCES})
+        get_filename_component(test_name ${test_src} NAME_WE)
+        add_executable(${test_name} ${test_src} ${TEST_MOCS}
+            src/streaming/WebRTCStreamProvider.cpp
+            src/streaming/StreamingDegradationChain.cpp)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+        target_link_libraries(${test_name} PRIVATE
+            Qt6::Core Qt6::Network Qt6::Test
+            ${CMAKE_THREAD_LIBS_INIT})
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach()
+    message(STATUS "Tests enabled (${TEST_SOURCES})")
+else()
+    message(STATUS "Qt6Test NOT found - tests disabled")
+endif()

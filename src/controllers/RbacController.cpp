@@ -17,10 +17,8 @@ void RbacController::setCurrentUser(const QString& user, const QString& role,
 void RbacController::refreshUsers() {
     m_api->get("/api/v1/users",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("users").toArray();
-            if (arr.isEmpty() && obj.value("data").isArray())
-                arr = obj.value("data").toArray();
+            // 后端响应: {code,message,data:{items/users/data:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "users", "data"});
             m_users.clear();
             for (const auto& v : arr) m_users.append(v.toVariant().toMap());
             emit usersUpdated();
@@ -31,10 +29,8 @@ void RbacController::refreshUsers() {
 void RbacController::refreshRoles() {
     m_api->get("/api/v1/rbac/roles",
         [this](QJsonObject obj) {
-            QJsonArray arr = obj.value("items").toArray();
-            if (arr.isEmpty()) arr = obj.value("roles").toArray();
-            if (arr.isEmpty() && obj.value("data").isArray())
-                arr = obj.value("data").toArray();
+            // 后端响应: {code,message,data:{items/roles/data:[...]}}
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "roles", "data"});
             m_roles.clear();
             for (const auto& v : arr) m_roles.append(v.toVariant().toMap());
             emit rolesUpdated();
@@ -45,7 +41,8 @@ void RbacController::refreshRoles() {
 void RbacController::refreshPermissionTree() {
     m_api->get("/api/v1/rbac/permissions/tree",
         [this](QJsonObject obj) {
-            m_permTree = obj.toVariantMap();
+            // 后端响应: {code,message,data:{...权限树...}}
+            m_permTree = ApiClient::unwrapData(obj).toVariantMap();
             emit permTreeUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -54,9 +51,11 @@ void RbacController::refreshPermissionTree() {
 void RbacController::refreshCurrentUser() {
     m_api->get("/api/v1/auth/me",
         [this](QJsonObject obj) {
-            QString user = obj.value("username").toString();
-            QString role = obj.value("role").toString();
-            QVariantList roles = obj.value("roles").toArray().toVariantList();
+            // 后端响应: {code,message,data:{username,role,roles:[...]}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString user = data.value("username").toString();
+            QString role = data.value("role").toString();
+            QVariantList roles = data.value("roles").toArray().toVariantList();
             setCurrentUser(user, role, roles);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -65,7 +64,9 @@ void RbacController::refreshCurrentUser() {
 void RbacController::createUser(const QVariantMap& body) {
     m_api->post("/api/v1/users", QJsonObject::fromVariantMap(body),
         [this](QJsonObject obj) {
-            QString id = obj.value("user_id").toString();
+            // 后端响应: {code,message,data:{user_id/id}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString id = data.value("user_id").toString();
             emit userCreated(id);
             refreshUsers();
         },
@@ -95,7 +96,9 @@ void RbacController::resetPassword(const QString& userId, const QString& newPwd)
 void RbacController::createRole(const QVariantMap& body) {
     m_api->post("/api/v1/rbac/roles", QJsonObject::fromVariantMap(body),
         [this](QJsonObject obj) {
-            QString id = obj.value("role_id").toString();
+            // 后端响应: {code,message,data:{role_id/id}}
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString id = data.value("role_id").toString();
             emit roleCreated(id);
             refreshRoles();
         },

@@ -9,10 +9,10 @@ Item {
     property string status: "online"  // "online" / "offline" / "warning" / "recording"
 
     readonly property var statusMap: ({
-        "online":    { color: "#00D4AA", text: "在线",   icon: "🟢" },
-        "offline":   { color: "#FF3D71", text: "离线",   icon: "🔴" },
-        "warning":   { color: "#FFB800", text: "重连中", icon: "🟡" },
-        "recording": { color: "#FF6B35", text: "录像中", icon: "🟠" }
+        "online":    { color: "#00D4AA", text: "在线",   icon: "" },
+        "offline":   { color: "#FF3D71", text: "离线",   icon: "" },
+        "warning":   { color: "#FFB800", text: "重连中", icon: "" },
+        "recording": { color: "#FF6B35", text: "录像中", icon: "" }
     })
 
     readonly property color currentColor: (statusMap[status] || statusMap["offline"]).color

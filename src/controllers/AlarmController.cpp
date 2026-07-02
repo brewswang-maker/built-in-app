@@ -73,11 +73,10 @@ AlarmController::AlarmController(ApiClient* api, QObject* parent)
         if (m_router) {
             QObject::connect(m_router, &WsMessageRouter::alarmReceived,
                              this, &AlarmController::onUnifiedAlarmReceived);
-            LOG_INFO("AlarmController", "[P2-B2] Using unified WS channel (recommended), independent connectWebSocket() ignored");
+            qInfo() << "[AlarmController] [P2-B2] Using unified WS channel (recommended), independent connectWebSocket() ignored";
             return;
         }
-        LOG_WARN("AlarmController",
-                 "[P2-B2] WsMessageRouter not available, fallback to independent WS");
+        qWarning() << "[AlarmController] [P2-B2] WsMessageRouter not available, fallback to independent WS";
     }
 
 #ifdef HAS_QT_WEBSOCKETS
@@ -94,7 +93,7 @@ AlarmController::AlarmController(ApiClient* api, QObject* parent)
     connect(ws, &QWebSocket::textMessageReceived,
             this, &AlarmController::onWsTextMessage);
     ws->open(QUrl(wsUrl));
-    LOG_INFO("AlarmController", "[P2-B2] Independent WS channel started (debug mode)");
+    qInfo() << "[AlarmController] [P2-B2] Independent WS channel started (debug mode)";
 #endif
 }
 

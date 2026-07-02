@@ -48,7 +48,8 @@ enum class WsMessageType : int {
     AgentMessage  = 6,   // Hermes Agent 流式消息 → AIController
     ConfigUpdate  = 7,   // 配置热更新通知 → 触发全量刷新
     StreamEvent   = 8,   // 流媒体启停/故障 → StreamingController
-    Error         = 9    // 服务端推送的错误 → 错误中心
+    Error         = 9,   // 服务端推送的错误 → 错误中心
+    AlarmMapMarker = 10  // [Audit-Add] 地图联动标记 → SituationView/AlarmController
 };
 
 inline const char* wsMessageTypeToString(WsMessageType t) {
@@ -62,6 +63,7 @@ inline const char* wsMessageTypeToString(WsMessageType t) {
         case WsMessageType::ConfigUpdate:  return "config_update";
         case WsMessageType::StreamEvent:   return "stream_event";
         case WsMessageType::Error:         return "error";
+        case WsMessageType::AlarmMapMarker:return "system.alarm_map_marker";
         default:                            return "unknown";
     }
 }
@@ -75,7 +77,8 @@ inline WsMessageType wsMessageTypeFromString(const QString& s) {
     if (s == "agent_message")   return WsMessageType::AgentMessage;
     if (s == "config_update")   return WsMessageType::ConfigUpdate;
     if (s == "stream_event")    return WsMessageType::StreamEvent;
-    if (s == "error")           return WsMessageType::Error;
+    if (s == "error" || s == "system.error") return WsMessageType::Error;
+    if (s == "system.alarm_map_marker")       return WsMessageType::AlarmMapMarker;
     return WsMessageType::Unknown;
 }
 
@@ -138,6 +141,8 @@ signals:
     void configUpdateReceived(const QJsonObject& payload);
     void streamEventReceived(const QJsonObject& payload);
     void errorReceived(const QJsonObject& payload);
+    // [Audit-Add] 地图联动标记信号 (CLIENT_SHOW_MAP executor 推送 GPS 坐标)
+    void mapMarkerReceived(const QJsonObject& payload);
 
     // ── 状态信号 ──
     void stateChanged();

@@ -59,6 +59,32 @@ Item {
         }
     }
 
+    // [Audit-Add] 地图联动: WsMessageRouter.mapMarkerReceived → 场景地图告警闪烁
+    //   后端 CLIENT_SHOW_MAP executor 查询设备 GPS 坐标后推送 alarm_map_marker
+    //   此处监听并在 3D 厂区地图上实时渲染告警位置闪烁动画
+    property var activeMapMarkers: []
+    Connections {
+        target: WsMessageRouter ? WsMessageRouter.instance() : null
+        function onMapMarkerReceived(payload) {
+            if (!payload || !payload.has_gps) return
+            var marker = {
+                lat: payload.latitude,
+                lng: payload.longitude,
+                type: payload.alarm_type || "alarm",
+                severity: payload.severity || 3,
+                deviceId: payload.device_id || "",
+                timestamp: payload.timestamp_ms || Date.now()
+            }
+            var markers = activeMapMarkers
+            markers.push(marker)
+            // 限制最多 20 个标记
+            if (markers.length > 20) markers.shift()
+            activeMapMarkers = markers
+            // 触发地图重绘
+            scene3d.requestPaint()
+        }
+    }
+
     function computeTrendData(alarms) {
         var counts = []
         for (var i = 0; i < 12; i++) counts.push(0)

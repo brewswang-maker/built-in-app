@@ -297,7 +297,10 @@ void WsMessageRouter::onWsTextMessage(const QString& message) {
 
     QString typeStr = env.value("type").toString();
     QString messageId = env.value("messageId").toString();
+    // [Audit-Fix] 兼容后端 pushSystemEvent 的 "data" 字段和 pushAlarm 的 "alarm" 字段
     QJsonObject payload = env.value("payload").toObject();
+    if (payload.isEmpty()) payload = env.value("data").toObject();
+    if (payload.isEmpty()) payload = env.value("alarm").toObject();
 
     // 持久化 lastEventId, 用于断线重连时续传
     if (!messageId.isEmpty()) {
@@ -346,6 +349,10 @@ void WsMessageRouter::dispatchMessage(WsMessageType type, const QJsonObject& pay
             break;
         case WsMessageType::Error:
             emit errorReceived(payload);
+            break;
+        case WsMessageType::AlarmMapMarker:
+            // [Audit-Add] 地图联动标记分发 → SituationView 告警位置渲染
+            emit mapMarkerReceived(payload);
             break;
         default:
             qWarning() << "[WsMessageRouter] dispatch skipped for unknown type";

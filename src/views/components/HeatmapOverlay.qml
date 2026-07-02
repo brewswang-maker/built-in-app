@@ -175,14 +175,14 @@ Item {
             Button {
                 width: 70; height: 26
                 text: "热力图"
-                font.pixelSize: 10
+                font.pixelSize: 12
                 highlighted: heatRoot.showHeatmap
                 background: Rectangle {
                     color: heatRoot.showHeatmap ? "#00D4AA" : "#252830"
                     radius: 4
                 }
                 contentItem: Text {
-                    text: parent.text; font.pixelSize: 10
+                    text: parent.text; font.pixelSize: 12
                     color: heatRoot.showHeatmap ? "#0D0F12" : "#8B8FA3"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -197,14 +197,14 @@ Item {
             Button {
                 width: 70; height: 26
                 text: "轨迹"
-                font.pixelSize: 10
+                font.pixelSize: 12
                 highlighted: heatRoot.showTrajectory
                 background: Rectangle {
                     color: heatRoot.showTrajectory ? "#3B82F6" : "#252830"
                     radius: 4
                 }
                 contentItem: Text {
-                    text: parent.text; font.pixelSize: 10
+                    text: parent.text; font.pixelSize: 12
                     color: heatRoot.showTrajectory ? "#FFF" : "#8B8FA3"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -267,12 +267,12 @@ Item {
             // 速度选择
             ComboBox {
                 width: 60; height: 24
-                font.pixelSize: 10
+                font.pixelSize: 12
                 model: ["0.5x", "1x", "2x", "4x"]
                 currentIndex: 1
                 background: Rectangle { color: "#252830"; radius: 4 }
                 contentItem: Text {
-                    text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"
+                    text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"
                     verticalAlignment: Text.AlignVCenter; leftPadding: 4
                 }
                 onActivated: {
@@ -298,7 +298,7 @@ Item {
             anchors.centerIn: parent
             spacing: 2
 
-            Text { text: "告警密度"; font.pixelSize: 9; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter }
+            Text { text: "告警密度"; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter }
 
             Row {
                 spacing: 2

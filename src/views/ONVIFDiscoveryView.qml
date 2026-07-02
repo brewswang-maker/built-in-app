@@ -170,9 +170,9 @@ Item {
                     Column {
                         anchors.fill: parent; anchors.margins: 8; spacing: 4
                         Text { text: "网络信息"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                        Text { text: "子网: " + (configController.networkConfig.subnet || "192.168.1.0/24"); font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "本机: " + (configController.networkConfig.hostIp || "192.168.1.200"); font.pixelSize: 11; color: "#8B8FA3" }
-                        Text { text: "扫描范围: 192.168.1.1 - 192.168.1.254"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "子网: " + (configController.networkConfig.subnet || "192.168.1.0/24"); font.pixelSize: 12; color: "#8B8FA3" }
+                        Text { text: "本机: " + (configController.networkConfig.hostIp || "192.168.1.200"); font.pixelSize: 12; color: "#8B8FA3" }
+                        Text { text: "扫描范围: 192.168.1.1 - 192.168.1.254"; font.pixelSize: 12; color: "#8B8FA3" }
                     }
                 }
             }
@@ -209,31 +209,31 @@ Item {
                                 spacing: 8
                                 Rectangle { width: 6; height: 6; radius: 3; color: devData.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
                                 Text { text: devData.name || ""; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-                                Text { text: devData.type || "IPC"; font.pixelSize: 11; color: "#3B82F6" }
+                                Text { text: devData.type || "IPC"; font.pixelSize: 12; color: "#3B82F6" }
                                 Rectangle {
                                     width: 36; height: 16; radius: 3
                                     color: devData.status === "online" ? "#0A2A1A" : "#2A0A10"
-                                    Text { text: devData.status || "unknown"; font.pixelSize: 9; color: devData.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.centerIn: parent }
+                                    Text { text: devData.status || "unknown"; font.pixelSize: 12; color: devData.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.centerIn: parent }
                                 }
                                 Item { width: 20 }
                                 Button {
-                                    text: "添加"; font.pixelSize: 10
+                                    text: "添加"; font.pixelSize: 12
                                     background: Rectangle { color: "#00D4AA"; radius: 4; width: 36; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: deviceController.addDevice("onvif", devData.ip, 80, "", "")
                                 }
                                 Button {
-                                    text: "配置"; font.pixelSize: 10
+                                    text: "配置"; font.pixelSize: 12
                                     background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: deviceController.getDeviceDetail(devData.deviceId)
                                 }
                             }
                             Row {
                                 spacing: 12
-                                Text { text: "IP: " + (devData.ip || ""); font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: "MAC: " + (devData.mac || ""); font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: "服务: " + (devData.services || "-"); font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "IP: " + (devData.ip || ""); font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: "MAC: " + (devData.mac || ""); font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: "服务: " + (devData.services || "-"); font.pixelSize: 12; color: "#8B8FA3" }
                             }
                         }
                     }
@@ -268,8 +268,8 @@ Item {
 
                 Row {
                     spacing: 8
-                    TextField { id: soapUser; width: 80; placeholderText: "用户名"; font.pixelSize: 11; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
-                    TextField { id: soapPass; width: 80; placeholderText: "密码"; echoMode: TextInput.Password; font.pixelSize: 11; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField { id: soapUser; width: 80; placeholderText: "用户名"; font.pixelSize: 12; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
+                    TextField { id: soapPass; width: 80; placeholderText: "密码"; echoMode: TextInput.Password; font.pixelSize: 12; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
                 }
 
                 Button {
@@ -290,7 +290,7 @@ Item {
                     TextArea {
                         id: soapResponseArea
                         text: "等待请求..."
-                        font.pixelSize: 10; color: "#00D4AA"
+                        font.pixelSize: 12; color: "#00D4AA"
                         font.family: "monospace"
                         wrapMode: Text.WordWrap
                         background: Rectangle { color: "#0A0C10"; radius: 4 }

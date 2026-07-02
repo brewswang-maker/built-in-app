@@ -261,23 +261,23 @@ Popup {
                     Row {
                         width: parent.width; height: 26; spacing: 4
                         Button {
-                            text: "|<"; font.pixelSize: 10; width: 30; height: 22
+                            text: "|<"; font.pixelSize: 12; width: 30; height: 22
                             background: Rectangle { color: "#252830"; radius: 3 }
-                            contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: alarmPopup.replayRequested(currentAlarm.id || "")
                         }
-                        Text { text: "0:00 / 0:03"; font.pixelSize: 9; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "0:00 / 0:03"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                         Item { width: 10 }
                         Button {
-                            text: "截图"; font.pixelSize: 9; height: 22
+                            text: "截图"; font.pixelSize: 12; height: 22
                             background: Rectangle { color: "#252830"; radius: 3; width: 42 }
-                            contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 9; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: mediaController.snapshot(currentAlarm.channelId || "")
                         }
                         Button {
-                            text: "对讲"; font.pixelSize: 9; height: 22
+                            text: "对讲"; font.pixelSize: 12; height: 22
                             background: Rectangle { color: "#252830"; radius: 3; width: 42 }
-                            contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 9; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; color: "#E8E8E8"; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
                 }
@@ -298,7 +298,7 @@ Popup {
                         Row {
                             spacing: 6
                             Rectangle { width: 28; height: 16; radius: 3; color: "#FF3D71"
-                                Text { text: currentAlarm.level || "高"; font.pixelSize: 9; color: "#FFF"; font.bold: true; anchors.centerIn: parent }
+                                Text { text: currentAlarm.level || "高"; font.pixelSize: 12; color: "#FFF"; font.bold: true; anchors.centerIn: parent }
                             }
                             Text { text: currentAlarm.type || "入侵检测"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                         }
@@ -307,10 +307,10 @@ Popup {
 
                         // 详细信息
                         Column { spacing: 3; width: parent.width
-                            Row { Text { text: "通道: "; font.pixelSize: 11; color: "#8B8FA3" } Text { text: currentAlarm.channel || "CAM-01"; font.pixelSize: 11; color: "#3B82F6" } }
-                            Row { Text { text: "时间: "; font.pixelSize: 11; color: "#8B8FA3" } Text { text: currentAlarm.time || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                            Row { Text { text: "区域: "; font.pixelSize: 11; color: "#8B8FA3" } Text { text: currentAlarm.zone || "A区围栏"; font.pixelSize: 11; color: "#E8E8E8" } }
-                            Row { Text { text: "置信度: "; font.pixelSize: 11; color: "#8B8FA3" } Text { text: currentAlarm.confidence || "87%"; font.pixelSize: 11; color: "#00D4AA" } }
+                            Row { Text { text: "通道: "; font.pixelSize: 12; color: "#8B8FA3" } Text { text: currentAlarm.channel || "CAM-01"; font.pixelSize: 12; color: "#3B82F6" } }
+                            Row { Text { text: "时间: "; font.pixelSize: 12; color: "#8B8FA3" } Text { text: currentAlarm.time || "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                            Row { Text { text: "区域: "; font.pixelSize: 12; color: "#8B8FA3" } Text { text: currentAlarm.zone || "A区围栏"; font.pixelSize: 12; color: "#E8E8E8" } }
+                            Row { Text { text: "置信度: "; font.pixelSize: 12; color: "#8B8FA3" } Text { text: currentAlarm.confidence || "87%"; font.pixelSize: 12; color: "#00D4AA" } }
                         }
 
                         Rectangle { height: 1; color: "#252830"; width: parent.width }
@@ -318,19 +318,19 @@ Popup {
                         // AI研判
                         Text { text: "AI研判"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Column { spacing: 2; width: parent.width
-                            Text { text: currentAlarm.aiVerdict || "检测到人员越界，非动物/树枝触发"; font.pixelSize: 10; color: "#8B8FA3"; wrapMode: Text.WordWrap; width: parent.width }
-                            Text { text: "建议: " + (currentAlarm.suggestion || "立即派人现场确认"); font.pixelSize: 10; color: "#FFB800"; wrapMode: Text.WordWrap; width: parent.width }
+                            Text { text: currentAlarm.aiVerdict || "检测到人员越界，非动物/树枝触发"; font.pixelSize: 12; color: "#8B8FA3"; wrapMode: Text.WordWrap; width: parent.width }
+                            Text { text: "建议: " + (currentAlarm.suggestion || "立即派人现场确认"); font.pixelSize: 12; color: "#FFB800"; wrapMode: Text.WordWrap; width: parent.width }
                         }
 
                         Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                         // 关联告警
-                        Text { text: "关联告警 (" + (currentAlarm.relatedCount || 2) + ")"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "关联告警 (" + (currentAlarm.relatedCount || 2) + ")"; font.pixelSize: 12; color: "#8B8FA3" }
                         Repeater {
                             model: Math.min(currentAlarm.relatedCount || 0, 3)
                             delegate: Text {
                                 text: "  • " + (currentAlarm.relatedAlarms ? currentAlarm.relatedAlarms[index] : "同区域告警 " + (index+1))
-                                font.pixelSize: 9; color: "#4A4D58"
+                                font.pixelSize: 12; color: "#4A4D58"
                             }
                         }
 
@@ -340,11 +340,11 @@ Popup {
                         Column { spacing: 2; width: parent.width
                             Row { spacing: 4
                                 Rectangle { width: 10; height: 10; radius: 5; color: currentAlarm.linkageStatus === "executed" ? "#00D4AA" : "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: "录像已触发"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "录像已触发"; font.pixelSize: 12; color: "#8B8FA3" }
                             }
                             Row { spacing: 4
                                 Rectangle { width: 10; height: 10; radius: 5; color: currentAlarm.linkageSnapshot === "done" ? "#00D4AA" : "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: "抓图已执行"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "抓图已执行"; font.pixelSize: 12; color: "#8B8FA3" }
                             }
                         }
                     }
@@ -397,7 +397,7 @@ Popup {
                 Item { Layout.fillWidth: true }
                 Text {
                     text: "详情 "
-                    font.pixelSize: 11; color: "#3B82F6"
+                    font.pixelSize: 12; color: "#3B82F6"
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: alarmPopup.close() }
                 }
             }

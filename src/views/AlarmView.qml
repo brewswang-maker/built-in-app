@@ -37,7 +37,7 @@ Item {
                     alarmPage.levelFilter = map[currentText] || ""
                 }
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
             }
             ComboBox {
                 id: typeCombo
@@ -45,7 +45,7 @@ Item {
                 model: ["全部类型", "周界入侵", "绊线检测", "烟火检测", "安全帽", "人脸识别", "人群聚集", "车辆"]
                 onCurrentTextChanged: { alarmPage.typeFilter = currentText === "全部类型" ? "" : currentText }
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
             }
             ComboBox {
                 id: statusCombo
@@ -56,13 +56,13 @@ Item {
                     alarmPage.statusFilter = map[currentText] || ""
                 }
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
             }
             ComboBox {
                 width: 90; height: 30
                 model: ["今天", "近1小时", "近24小时", "近7天", "近30天"]
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
             }
 
             Item { Layout.fillWidth: true }
@@ -84,9 +84,9 @@ Item {
             }
 
             Button {
-                text: "导出"; font.pixelSize: 11
+                text: "导出"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 64; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     exportDialog.format = alarmController.supportedExportFormats()[0]
                     exportDialog.filter = {
@@ -98,9 +98,9 @@ Item {
                 }
             }
             Button {
-                text: "刷新"; font.pixelSize: 11
+                text: "刷新"; font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: alarmController.refreshAlarms(200)
             }
         }
@@ -129,13 +129,13 @@ Item {
                             else alarmPage.selectedAlarms = []
                         }
                     }
-                    Text { text: "级别"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
-                    Text { text: "类型"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 80 }
-                    Text { text: "通道"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 90 }
-                    Text { text: "时间"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 70 }
-                    Text { text: "置信度"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
-                    Text { text: "状态"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 60 }
-                    Text { text: "操作"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 70 }
+                    Text { text: "级别"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 50 }
+                    Text { text: "类型"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 80 }
+                    Text { text: "通道"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 90 }
+                    Text { text: "时间"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 70 }
+                    Text { text: "置信度"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 50 }
+                    Text { text: "状态"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 60 }
+                    Text { text: "操作"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 70 }
                 }
             }
 
@@ -178,22 +178,22 @@ Item {
                         Text { text: modelData.confidence ? (modelData.confidence * 100).toFixed(0) + "%" : "—"; font.pixelSize: 12; color: "#00D4AA"; width: 50 }
                         Rectangle { width: 52; height: 18; radius: 3; color: "#1A1D23"
                             Text { text: modelData.status === "confirmed" ? "已确认" : modelData.status === "false_alarm" ? "误报" : modelData.status === "muted" ? "已静音" : "未处理"
-                                font.pixelSize: 11; color: modelData.status === "unhandled" ? "#FFB800" : "#8B8FA3"; anchors.centerIn: parent }
+                                font.pixelSize: 12; color: modelData.status === "unhandled" ? "#FFB800" : "#8B8FA3"; anchors.centerIn: parent }
                         }
                         Row { spacing: 2
-                            Button { width: 32; height: 26; text: "ç¡®è®¤"; font.pixelSize: 11
+                            Button { width: 32; height: 26; text: "ç¡®è®¤"; font.pixelSize: 12
                                 background: Rectangle { color: "#1A2A1A"; radius: 3 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: alarmController.confirmAlarm(modelData.alarm_id)
                             }
-                            Button { width: 32; height: 26; text: "è¯¯æ\u008a¥"; font.pixelSize: 11
+                            Button { width: 32; height: 26; text: "è¯¯æ\u008a¥"; font.pixelSize: 12
                                 background: Rectangle { color: "#2A1A1A"; radius: 3 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: alarmController.markFalseAlarm(modelData.alarm_id)
                             }
-                            Button { width: 32; height: 26; text: "è¯¦æ\u0083\u0085"; font.pixelSize: 11
+                            Button { width: 32; height: 26; text: "è¯¦æ\u0083\u0085"; font.pixelSize: 12
                                 background: Rectangle { color: "#1A1D23"; radius: 3 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: { detailPanel.alarm = modelData; detailPanel.visible = true }
                             }
                         }
@@ -237,16 +237,16 @@ Item {
 
                 // 详情
                 Grid { columns: 2; columnSpacing: 12; rowSpacing: 4; width: parent.width
-                    Text { text: "时间:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: detailPanel.alarm.timestamp || "—"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "通道:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: detailPanel.alarm.channel_id || "—"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "位置:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: detailPanel.alarm.location || "—"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "置信度:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: detailPanel.alarm.confidence ? (detailPanel.alarm.confidence * 100).toFixed(1) + "%" : "—"; font.pixelSize: 11; color: "#00D4AA" }
-                    Text { text: "AI研判:"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: detailPanel.alarm.ai_analysis || detailPanel.alarm.aiVerdict || "—"; font.pixelSize: 11; color: "#00D4AA"; wrapMode: Text.WordWrap; width: 180 }
+                    Text { text: "时间:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: detailPanel.alarm.timestamp || "—"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "通道:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: detailPanel.alarm.channel_id || "—"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "位置:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: detailPanel.alarm.location || "—"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "置信度:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: detailPanel.alarm.confidence ? (detailPanel.alarm.confidence * 100).toFixed(1) + "%" : "—"; font.pixelSize: 12; color: "#00D4AA" }
+                    Text { text: "AI研判:"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: detailPanel.alarm.ai_analysis || detailPanel.alarm.aiVerdict || "—"; font.pixelSize: 12; color: "#00D4AA"; wrapMode: Text.WordWrap; width: 180 }
                 }
 
                 Rectangle { height: 1; color: "#252830"; width: parent.width }
@@ -380,7 +380,7 @@ Item {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                 Text { text: "告警导出"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
                 Item { Layout.fillWidth: true }
-                Text { text: alarmController.defaultExportDir(); color: "#4A4D58"; font.pixelSize: 11; elide: Text.ElideMiddle; Layout.maximumWidth: 280 }
+                Text { text: alarmController.defaultExportDir(); color: "#4A4D58"; font.pixelSize: 12; elide: Text.ElideMiddle; Layout.maximumWidth: 280 }
             }
         }
 
@@ -390,7 +390,7 @@ Item {
             // 格式选择
             RowLayout {
                 Layout.fillWidth: true
-                Text { text: "格式"; color: "#8B8FA3"; font.pixelSize: 11; Layout.preferredWidth: 60 }
+                Text { text: "格式"; color: "#8B8FA3"; font.pixelSize: 12; Layout.preferredWidth: 60 }
                 ComboBox {
                     id: fmtCombo
                     Layout.fillWidth: true
@@ -404,7 +404,7 @@ Item {
                                fmtCombo.model[fmtCombo.currentIndex] === "xlsx" ? "Excel 工作表" :
                                fmtCombo.model[fmtCombo.currentIndex] === "json" ? "结构化 JSON" :
                                                                             "可打印报告")
-                        color: "#E8E8E8"; font.pixelSize: 11
+                        color: "#E8E8E8"; font.pixelSize: 12
                         verticalAlignment: Text.AlignVCenter; leftPadding: 6
                     }
                 }
@@ -417,7 +417,7 @@ Item {
                       (alarmPage.levelFilter || "全部级别") + " · " +
                       (alarmPage.typeFilter || "全部类型") + " · " +
                       (alarmPage.statusFilter || "全部状态")
-                color: "#8B8FA3"; font.pixelSize: 11; wrapMode: Text.WordWrap
+                color: "#8B8FA3"; font.pixelSize: 12; wrapMode: Text.WordWrap
             }
 
             // 进度条
@@ -431,12 +431,12 @@ Item {
                         text: alarmController.exportProgress >= 0 && alarmController.exportProgress <= 1
                               ? Math.round(alarmController.exportProgress * 100) + "%"
                               : "下载中 (chunked)"
-                        color: "#00D4AA"; font.pixelSize: 11; font.bold: true
+                        color: "#00D4AA"; font.pixelSize: 12; font.bold: true
                     }
                     Item { Layout.fillWidth: true }
                     Text {
                         text: "格式: " + alarmController.exportFormat
-                        color: "#8B8FA3"; font.pixelSize: 11
+                        color: "#8B8FA3"; font.pixelSize: 12
                     }
                 }
                 ProgressBar {
@@ -455,7 +455,7 @@ Item {
                 }
                 Text {
                     text: alarmController.exportFilePath
-                    color: "#4A4D58"; font.pixelSize: 11; elide: Text.ElideMiddle
+                    color: "#4A4D58"; font.pixelSize: 12; elide: Text.ElideMiddle
                     Layout.fillWidth: true
                 }
             }
@@ -475,16 +475,16 @@ Item {
                         Text { text: "导出完成"; color: "#00D4AA"; font.pixelSize: 12; font.bold: true }
                         Text {
                             text: alarmController.exportFilePath
-                            color: "#8B8FA3"; font.pixelSize: 11; elide: Text.ElideMiddle
+                            color: "#8B8FA3"; font.pixelSize: 12; elide: Text.ElideMiddle
                             Layout.fillWidth: true
                         }
                     }
                     Button {
                         text: "打开文件所在目录"
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         onClicked: Qt.openUrlExternally("file://" + alarmController.exportFilePath)
                         background: Rectangle { color: "#252830"; radius: 4; width: 130; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                 }
             }
@@ -497,7 +497,7 @@ Item {
                 Text {
                     anchors.fill: parent; anchors.margins: 10
                     text: parent.exportError
-                    color: "#FF3D71"; font.pixelSize: 11; verticalAlignment: Text.AlignVCenter
+                    color: "#FF3D71"; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter
                     wrapMode: Text.WordWrap
                 }
             }
@@ -506,22 +506,22 @@ Item {
         footer: RowLayout {
             Item { Layout.fillWidth: true }
             Button {
-                text: "取消"; font.pixelSize: 11
+                text: "取消"; font.pixelSize: 12
                 visible: alarmController.exporting
                 onClicked: { alarmController.cancelExport(); exportDialog.close() }
                 background: Rectangle { color: "#252830"; radius: 4; width: 64; height: 28 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
             Button {
-                text: "关闭"; font.pixelSize: 11
+                text: "关闭"; font.pixelSize: 12
                 visible: !alarmController.exporting
                 onClicked: exportDialog.close()
                 background: Rectangle { color: "#252830"; radius: 4; width: 64; height: 28 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
             Button {
                 text: alarmController.exporting ? "导出中..." : "开始导出"
-                font.pixelSize: 11; font.bold: true
+                font.pixelSize: 12; font.bold: true
                 enabled: !alarmController.exporting
                 onClicked: alarmController.exportAlarms(exportDialog.format, exportDialog.filter)
                 background: Rectangle {
@@ -529,7 +529,7 @@ Item {
                     width: 84; height: 28
                 }
                 contentItem: Text {
-                    text: parent.text; font.pixelSize: 11
+                    text: parent.text; font.pixelSize: 12
                     color: alarmController.exporting ? "#8B8FA3" : "#0D0F12"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter

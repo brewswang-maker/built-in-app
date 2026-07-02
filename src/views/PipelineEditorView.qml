@@ -653,7 +653,7 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 8
                     text: modelData.status || "就绪"
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     color: modelData.status === "运行中" ? "#00D4AA" : "#8B8FA3"
                 }
 
@@ -664,7 +664,7 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: 8
                     text: modelData.fps ? modelData.fps + " FPS" : ""
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     color: "#FFB800"
                 }
 
@@ -801,7 +801,7 @@ Item {
                     Column {
                         spacing: 8; width: parent.width
 
-                        Text { text: "BModel 文件"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "BModel 文件"; font.pixelSize: 12; color: "#8B8FA3" }
                         TextField {
                             id: modelFileField
                             width: parent.width
@@ -811,7 +811,7 @@ Item {
                             background: Rectangle { color: "#252830"; radius: 4; height: 32 }
                         }
 
-                        Text { text: "置信度阈值"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "置信度阈值"; font.pixelSize: 12; color: "#8B8FA3" }
                         Row {
                             spacing: 8
                             Slider {
@@ -826,7 +826,7 @@ Item {
                             }
                         }
 
-                        Text { text: "NMS阈值"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "NMS阈值"; font.pixelSize: 12; color: "#8B8FA3" }
                         Row {
                             spacing: 8
                             Slider {
@@ -874,7 +874,7 @@ Item {
                     Column {
                         spacing: 8; width: parent.width
 
-                        Text { text: "告警级别"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "告警级别"; font.pixelSize: 12; color: "#8B8FA3" }
                         ComboBox {
                             id: alertLevelCombo
                             width: parent.width
@@ -896,7 +896,7 @@ Item {
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" }
                         }
 
-                        Text { text: "冷却时间(秒)"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "冷却时间(秒)"; font.pixelSize: 12; color: "#8B8FA3" }
                         SpinBox {
                             id: cooldownSpin
                             from: 5; to: 300
@@ -931,30 +931,30 @@ Item {
 
                         Row {
                             spacing: 8
-                            Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "状态:"; font.pixelSize: 12; color: "#8B8FA3" }
                             Text {
                                 text: currentPipelineDetail && currentPipelineDetail.running ? "运行中" : "停止"
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 color: currentPipelineDetail && currentPipelineDetail.running ? "#00D4AA" : "#8B8FA3"
                                 font.bold: true
                             }
                         }
                         Row {
                             spacing: 8
-                            Text { text: "节点数:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: pipelineNodes.length + ""; font.pixelSize: 11; color: "#E8E8E8" }
+                            Text { text: "节点数:"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: pipelineNodes.length + ""; font.pixelSize: 12; color: "#E8E8E8" }
                         }
                         Row {
                             spacing: 8
-                            Text { text: "连接数:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: pipelineConnections.length + ""; font.pixelSize: 11; color: "#E8E8E8" }
+                            Text { text: "连接数:"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: pipelineConnections.length + ""; font.pixelSize: 12; color: "#E8E8E8" }
                         }
                         Row {
                             spacing: 8
-                            Text { text: "延迟:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "延迟:"; font.pixelSize: 12; color: "#8B8FA3" }
                             Text {
                                 text: currentPipelineDetail ? (currentPipelineDetail.latency || "-") : "-"
-                                font.pixelSize: 11; color: "#00D4AA"
+                                font.pixelSize: 12; color: "#00D4AA"
                             }
                         }
                     }
@@ -978,12 +978,12 @@ Item {
             anchors.rightMargin: 16
             spacing: 24
 
-            Text { id: statusNodes; text: "节点: 0"; font.pixelSize: 11; color: "#8B8FA3" }
-            Text { id: statusConns; text: "连接: 0"; font.pixelSize: 11; color: "#8B8FA3" }
+            Text { id: statusNodes; text: "节点: 0"; font.pixelSize: 12; color: "#8B8FA3" }
+            Text { id: statusConns; text: "连接: 0"; font.pixelSize: 12; color: "#8B8FA3" }
 
             Item { Layout.fillWidth: true }
 
-            Text { id: statusPipelineName; text: "Pipeline: -"; font.pixelSize: 11; color: "#4A4D58" }
+            Text { id: statusPipelineName; text: "Pipeline: -"; font.pixelSize: 12; color: "#4A4D58" }
         }
     }
 }

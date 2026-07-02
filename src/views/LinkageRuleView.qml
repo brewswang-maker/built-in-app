@@ -356,7 +356,7 @@ Item {
 
             AppIcon { name: "linkage"; size: 22; iconColor: "#E8E8E8"; Layout.preferredWidth: 24; Layout.preferredHeight: 24 }
             Text { text: "事件联动"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-            Text { text: "配置告警触发条件和联动动作"; font.pixelSize: 11; color: "#4A4D58" }
+            Text { text: "配置告警触发条件和联动动作"; font.pixelSize: 12; color: "#4A4D58" }
 
             Item { Layout.fillWidth: true }
 
@@ -398,7 +398,7 @@ Item {
                     background: Rectangle { color: "#252830"; radius: 6 } }
                 ComboBox { width: 72; height: 32; model: ["全部", "启用", "停用"]
                     background: Rectangle { color: "#252830"; radius: 6 }
-                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
             }
 
             ListView {
@@ -423,26 +423,26 @@ Item {
                             Row { spacing: 6
                                 Text { text: modelData.name || "-"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                                 Rectangle { width: 24; height: 16; radius: 8; color: "#1A2A1A"
-                                    Text { text: "P" + (modelData.priority || 0); font.pixelSize: 9; color: "#00D4AA"; anchors.centerIn: parent } }
+                                    Text { text: "P" + (modelData.priority || 0); font.pixelSize: 12; color: "#00D4AA"; anchors.centerIn: parent } }
                             }
                             Row { spacing: 12
-                                Text { text: (modelData.eventTypes || "-"); font.pixelSize: 10; color: "#6C5CE7" }
-                                Text { text: (modelData.actions || "-"); font.pixelSize: 10; color: "#8B8FA3"; elide: Text.ElideRight; width: 200 }
+                                Text { text: (modelData.eventTypes || "-"); font.pixelSize: 12; color: "#6C5CE7" }
+                                Text { text: (modelData.actions || "-"); font.pixelSize: 12; color: "#8B8FA3"; elide: Text.ElideRight; width: 200 }
                             }
                         }
 
-                        Button { text: "编辑"; font.pixelSize: 10
+                        Button { text: "编辑"; font.pixelSize: 12
                             background: Rectangle { color: "transparent" }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#8B8FA3" }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3" }
                             onClicked: {
                                 editingRule = modelData
                                 populateForm(modelData)
                                 ruleEditor.visible = true
                             }
                         }
-                        Button { text: "删除"; font.pixelSize: 10
+                        Button { text: "删除"; font.pixelSize: 12
                             background: Rectangle { color: "transparent" }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FF3D71" }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71" }
                             onClicked: linkageController.deleteRule(modelData.id)
                         }
                     }
@@ -469,14 +469,14 @@ Item {
                 Row { spacing: 8
                     Text { text: editingRule ? "编辑联动规则" : "新建联动规则"; font.pixelSize: 15; font.bold: true; color: "#E8E8E8" }
                     Item { width: 100 }
-                    Button { text: "关闭"; font.pixelSize: 11
+                    Button { text: "关闭"; font.pixelSize: 12
                         background: Rectangle { color: "transparent" }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FF6B35" }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF6B35" }
                         onClicked: ruleEditor.visible = false
                     }
                 }
 
-                Text { text: "规则名称"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "规则名称"; font.pixelSize: 12; color: "#8B8FA3" }
                 TextField {
                     id: ruleNameField
                     width: parent.width; height: 32; placeholderText: "例: 周界入侵联动"
@@ -491,7 +491,7 @@ Item {
                 }
 
                 // 规则 ID (规范 72d2dd9b: 必须字段, 提交时强制非空 + 唯一)
-                Text { text: "规则 ID (唯一标识,提交后不可改)"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "规则 ID (唯一标识,提交后不可改)"; font.pixelSize: 12; color: "#8B8FA3" }
                 TextField {
                     id: ruleIdField
                     width: parent.width; height: 32
@@ -519,10 +519,10 @@ Item {
                         AppIcon { name: "warning"; size: 16; iconColor: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: validationError; font.pixelSize: 11; color: "#FF8080"; font.bold: true }
+                            Text { text: validationError; font.pixelSize: 12; color: "#FF8080"; font.bold: true }
                             Text {
                                 text: "字段: " + validationField + "  |  错误码: " + validationCode
-                                font.pixelSize: 9; color: "#8B4A4A"
+                                font.pixelSize: 12; color: "#8B4A4A"
                                 visible: validationField !== ""
                             }
                         }
@@ -538,11 +538,11 @@ Item {
 
                 Row { spacing: 12
                     Column { spacing: 2
-                        Text { text: "优先级 (1-100)"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "优先级 (1-100)"; font.pixelSize: 12; color: "#8B8FA3" }
                         SpinBox { id: prioritySpinBox; from: 1; to: 100; value: editingRule ? editingRule.priority || 50 : 50; width: 100 }
                     }
                     Column { spacing: 2
-                        Text { text: "冷却时间(ms)"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "冷却时间(ms)"; font.pixelSize: 12; color: "#8B8FA3" }
                         SpinBox { id: cooldownSpinBox; from: 1000; to: 60000; value: editingRule ? editingRule.cooldown || 5000 : 5000; stepSize: 1000; width: 120 }
                     }
                 }
@@ -560,14 +560,14 @@ Item {
 
                     Column { spacing: 6; width: parent.width
                         Row { spacing: 4
-                            Text { text: "从"; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "从"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                             TextField { id: timeFromField; text: "08:00"; width: 70; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
-                            Text { text: "至"; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "至"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                             TextField { id: timeToField; text: "20:00"; width: 70; height: 28; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 4 } }
                         }
                         Row { spacing: 4
                             Repeater { id: dayRepeater; model: ["一","二","三","四","五","六","日"]
-                                delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#8B8FA3" } checked: index < 5 }
+                                delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3" } checked: index < 5 }
                             }
                         }
                     }
@@ -580,15 +580,15 @@ Item {
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 6; width: parent.width
-                        Text { text: "物理位置"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "物理位置"; font.pixelSize: 12; color: "#8B8FA3" }
                         ComboBox { id: locationCombo; width: parent.width; height: 28; model: ["全部位置", "3号厂区", "东围墙", "2号车间", "1号大门"]; background: Rectangle { color: "#252830"; radius: 4 }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                        Text { text: "ROI区域 (算法检测区)"; font.pixelSize: 11; color: "#8B8FA3" }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                        Text { text: "ROI区域 (算法检测区)"; font.pixelSize: 12; color: "#8B8FA3" }
                         ComboBox { id: roiCombo; width: parent.width; height: 28; model: ["全部区域", "周界线A", "绊线B", "区域C"]; background: Rectangle { color: "#252830"; radius: 4 }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                        Text { text: "设备分组"; font.pixelSize: 11; color: "#8B8FA3" }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                        Text { text: "设备分组"; font.pixelSize: 12; color: "#8B8FA3" }
                         ComboBox { id: groupCombo; width: parent.width; height: 28; model: ["全部分组", "东区摄像头", "室内摄像头", "室外摄像头"]; background: Rectangle { color: "#252830"; radius: 4 }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                     }
                 }
 
@@ -601,18 +601,18 @@ Item {
                     Column { spacing: 4; width: parent.width
                         Row { spacing: 4
                             Repeater { id: eventTypeRepeater; model: ["周界入侵","绊线","烟火","安全帽","人脸","车牌","人群","摔倒"]
-                                delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8" } }
+                                delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
                             }
                         }
                         Row { spacing: 12
                             Column { spacing: 2
-                                Text { text: "最低严重度"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "最低严重度"; font.pixelSize: 12; color: "#8B8FA3" }
                                 ComboBox { id: severityCombo; width: 100; height: 28; model: ["1-提示","2-低","3-中","4-高","5-紧急"]; background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
                             }
                             Column { spacing: 2
-                                Text { text: "最低置信度"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Row { Slider { id: confidenceSlider; width: 120; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.05 } Text { text: Math.round(confidenceSlider.value * 100) + "%"; font.pixelSize: 10; color: "#E8E8E8" } }
+                                Text { text: "最低置信度"; font.pixelSize: 12; color: "#8B8FA3" }
+                                Row { Slider { id: confidenceSlider; width: 120; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.05 } Text { text: Math.round(confidenceSlider.value * 100) + "%"; font.pixelSize: 12; color: "#E8E8E8" } }
                             }
                         }
                     }
@@ -625,10 +625,10 @@ Item {
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 6; width: parent.width
-                        Text { text: "选择通道 (留空=全部)"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "选择通道 (留空=全部)"; font.pixelSize: 12; color: "#8B8FA3" }
                         Row { spacing: 4
                             Repeater { id: channelRepeater; model: ["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08"]
-                                delegate: CheckBox { text: modelData; checked: index < 4; contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8" } }
+                                delegate: CheckBox { text: modelData; checked: index < 4; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
                             }
                         }
                     }
@@ -641,20 +641,20 @@ Item {
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 6; width: parent.width
-                        CheckBox { id: mergeEnabledCheck; text: "启用自动合并"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8" } }
+                        CheckBox { id: mergeEnabledCheck; text: "启用自动合并"; checked: false; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }
                         Row { spacing: 12
                             Column { spacing: 2
-                                Text { text: "合并窗口(ms, 0-60000)"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "合并窗口(ms, 0-60000)"; font.pixelSize: 12; color: "#8B8FA3" }
                                 SpinBox { id: mergeWindowSpin; from: 0; to: 60000; value: 10000; stepSize: 1000; width: 120 }
                             }
                             Column { spacing: 2
-                                Text { text: "最大合并数 (0-1000)"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "最大合并数 (0-1000)"; font.pixelSize: 12; color: "#8B8FA3" }
                                 SpinBox { id: mergeMaxSpin; from: 0; to: 1000; value: 10; width: 80 }
                             }
                             Column { spacing: 2
-                                Text { text: "合并维度 (channel/type/location)"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "合并维度 (channel/type/location)"; font.pixelSize: 12; color: "#8B8FA3" }
                                 ComboBox { id: mergeDimensionCombo; width: 110; height: 28; model: ["","channel","type","location"]; background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter } }
                             }
                         }
                     }
@@ -667,23 +667,23 @@ Item {
                     background: Rectangle { color: "#0D0F12"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 6; width: parent.width
-                        Text { text: "互斥组 (同组规则同时只触发优先级最高一条, 留空 = 不参与互斥)"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "互斥组 (同组规则同时只触发优先级最高一条, 留空 = 不参与互斥)"; font.pixelSize: 12; color: "#8B8FA3" }
                         TextField {
                             id: mutexGroupField
                             width: parent.width; height: 28
                             placeholderText: "例: perimeter_alarm_group"
-                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 11
+                            placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12
                             background: Rectangle { color: "#252830"; radius: 4 }
                             text: linkagePage.mutexGroup
                             onTextChanged: linkagePage.mutexGroup = text
                         }
-                        Text { text: "抑制链 (本规则被指定规则触发后抑制)"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "抑制链 (本规则被指定规则触发后抑制)"; font.pixelSize: 12; color: "#8B8FA3" }
                         ComboBox {
                             id: suppressAfterCombo
                             width: parent.width; height: 28
                             model: [""].concat(linkageController.allRuleIds(editingRule ? (editingRule.id || editingRule.rule_id || "") : ""))
                             background: Rectangle { color: "#252830"; radius: 4 }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
                             currentIndex: Math.max(0, model.indexOf(linkagePage.suppressAfterRule))
                             onActivated: linkagePage.suppressAfterRule = model[currentIndex]
                         }
@@ -692,7 +692,7 @@ Item {
                             text: "触发后抑制同组低优先级规则"
                             checked: linkagePage.suppressLowerPriority
                             onToggled: linkagePage.suppressLowerPriority = checked
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 32 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 32 }
                         }
                     }
                 }
@@ -710,7 +710,7 @@ Item {
                                 text: "启用条件树 (开后以上面 LEAF 为快照, 后端会优先使用本树)"
                                 checked: linkagePage.useTreeMode
                                 onToggled: linkagePage.useTreeMode = checked
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#8B8FA3"; leftPadding: 32; wrapMode: Text.WordWrap; width: 380 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; leftPadding: 32; wrapMode: Text.WordWrap; width: 380 }
                             }
                         }
                         Rectangle {
@@ -740,7 +740,7 @@ Item {
                             }
                         }
                         Row { spacing: 6
-                            Button { text: "+ 添加 LEAF 子节点"; font.pixelSize: 10
+                            Button { text: "+ 添加 LEAF 子节点"; font.pixelSize: 12
                                 enabled: linkagePage.useTreeMode
                                 onClicked: {
                                     if (!linkagePage.conditionTree.children) linkagePage.conditionTree.children = []
@@ -748,8 +748,8 @@ Item {
                                     treeRootEditor.refresh(linkagePage.conditionTree)
                                 }
                                 background: Rectangle { color: enabled ? "#3B82F6" : "#252830"; radius: 4; width: 150; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 10
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 12
                                 enabled: linkagePage.useTreeMode
                                 onClicked: {
                                     if (!linkagePage.conditionTree.children) linkagePage.conditionTree.children = []
@@ -757,15 +757,15 @@ Item {
                                     treeRootEditor.refresh(linkagePage.conditionTree)
                                 }
                                 background: Rectangle { color: enabled ? "#6C5CE7" : "#252830"; radius: 4; width: 150; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "从上面表单生成快照"; font.pixelSize: 10
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "从上面表单生成快照"; font.pixelSize: 12
                                 enabled: linkagePage.useTreeMode
                                 onClicked: {
                                     linkagePage.conditionTree = linkagePage.buildTreeFromFlat()
                                     treeRootEditor.refresh(linkagePage.conditionTree)
                                 }
                                 background: Rectangle { color: enabled ? "#FFB800" : "#252830"; radius: 4; width: 150; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: enabled ? "#0D0F12" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: enabled ? "#0D0F12" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                         }
                     }
                 }
@@ -781,20 +781,20 @@ Item {
                     width: parent.width; height: 32
                     background: Rectangle { color: "#0D0F12"; radius: 4 }
 
-                    TabButton { text: "客户端"; font.pixelSize: 10
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 0 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    TabButton { text: "客户端"; font.pixelSize: 12
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: actionTabBar.currentIndex === 0 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 0 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "Web端"; font.pixelSize: 10
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 1 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    TabButton { text: "Web端"; font.pixelSize: 12
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: actionTabBar.currentIndex === 1 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 1 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "APP"; font.pixelSize: 10
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 2 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    TabButton { text: "APP"; font.pixelSize: 12
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: actionTabBar.currentIndex === 2 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 2 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "小程序"; font.pixelSize: 10
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 3 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    TabButton { text: "小程序"; font.pixelSize: 12
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: actionTabBar.currentIndex === 3 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 3 ? "#1A1D23" : "transparent"; radius: 4 } }
-                    TabButton { text: "系统"; font.pixelSize: 10
-                        contentItem: Text { text: parent.text; font.pixelSize: 10; color: actionTabBar.currentIndex === 4 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    TabButton { text: "系统"; font.pixelSize: 12
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: actionTabBar.currentIndex === 4 ? "#00D4AA" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         background: Rectangle { color: actionTabBar.currentIndex === 4 ? "#1A1D23" : "transparent"; radius: 4 } }
                 }
 
@@ -805,34 +805,34 @@ Item {
                     ScrollView { clip: true
                         Column { id: clientActionColumn; width: 412; spacing: 2
 
-                            Text { text: "视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "视频联动"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
                             ActionCheckRow { text: "弹出指定监控点实时视频"; icon: "camera"; actionType: "CLIENT_SHOW_LIVE" }
                             ActionCheckRow { text: "弹出指定监控点录像回放"; icon: "record"; actionType: "CLIENT_SHOW_PLAYBACK" }
                             ActionCheckRow { text: "弹出事件图片"; icon: "image"; actionType: "CLIENT_SHOW_IMAGE" }
                             ActionCheckRow { text: "弹窗视频画面叠加事件信息"; icon: "folder"; actionType: "CLIENT_OVERLAY_INFO" }
 
-                            Text { text: "音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "音频联动"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
                             ActionCheckRow { text: "控制指定对讲通道语音对讲"; icon: "device"; actionType: "CLIENT_VOICE_TALK" }
                             ActionCheckRow { text: "播放提示音"; icon: "bell"; actionType: "CLIENT_PLAY_TONE" }
                             ActionCheckRow { text: "语音播报事件信息 (重复N次)"; icon: "bell"; actionType: "CLIENT_TTS_BROADCAST" }
 
-                            Text { text: "显示联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "显示联动"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
                             ActionCheckRow { text: "联动地图位置"; icon: "map"; actionType: "CLIENT_SHOW_MAP" }
                             ActionCheckRow { text: "指定监控点上电视墙 (持续N秒)"; icon: "device"; actionType: "CLIENT_TV_WALL" }
                             ActionCheckRow { text: "发生预警不弹窗 (静默)"; icon: "info"; actionType: "CLIENT_SUPPRESS_POPUP" }
                             ActionCheckRow { text: "执行事件处理预案"; icon: "folder"; actionType: "CLIENT_EXECUTE_PLAN" }
 
-                            Text { text: "录像与抓图"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "录像与抓图"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
                             ActionCheckRow { text: "视频录像 (持续N秒)"; icon: "record"; actionType: "CLIENT_RECORD_VIDEO" }
                             ActionCheckRow { text: "指定监控点事件录像"; icon: "camera"; actionType: "CLIENT_RECORD_EVENT" }
                             ActionCheckRow { text: "添加录像标记 (类型+描述)"; icon: "folder"; actionType: "CLIENT_ADD_BOOKMARK" }
                             ActionCheckRow { text: "间隔N秒抓图M次"; icon: "snapshot"; actionType: "CLIENT_CAPTURE_IMAGE" }
 
-                            Text { text: "设备控制"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "设备控制"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
                             ActionCheckRow { text: "控制指定报警输出"; icon: "alarm"; actionType: "CLIENT_ALARM_OUTPUT" }
                             ActionCheckRow { text: "控制云台"; icon: "tool"; actionType: "CLIENT_PTZ_CONTROL" }
@@ -842,7 +842,7 @@ Item {
                             ActionCheckRow { text: "调用轨迹"; icon: "stream"; actionType: "CLIENT_PTZ_TRACK" }
                             ActionCheckRow { text: "指定门禁点开门"; icon: "lock"; actionType: "CLIENT_ACCESS_OPEN" }
 
-                            Text { text: "通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "通知"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
 
                             ActionCheckRow { text: "发送短信给指定用户"; icon: "send"; actionType: "CLIENT_SEND_SMS" }
                             ActionCheckRow { text: "发送邮件给指定用户"; icon: "send"; actionType: "CLIENT_SEND_EMAIL" }
@@ -854,23 +854,23 @@ Item {
                     // ─── Web端 ───
                     ScrollView { clip: true
                         Column { id: webActionColumn; width: 412; spacing: 2
-                            Text { text: "基础通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "基础通知"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "Web端弹窗通知"; icon: "send"; actionType: "WEB_POPUP" }
                             ActionCheckRow { text: "发送邮件"; icon: "send"; actionType: "WEB_EMAIL" }
                             ActionCheckRow { text: "HTTP回调 (WebHook)"; icon: "linkage"; actionType: "WEB_WEBHOOK" }
                             ActionCheckRow { text: "Dashboard嵌入告警"; icon: "statistics"; actionType: "WEB_DASHBOARD_ALERT" }
 
-                            Text { text: "视频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "视频联动"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "Web端弹出实时视频"; icon: "camera"; actionType: "WEB_SHOW_LIVE" }
                             ActionCheckRow { text: "Web端弹出录像回放"; icon: "record"; actionType: "WEB_SHOW_PLAYBACK" }
                             ActionCheckRow { text: "Web端弹出事件图片"; icon: "image"; actionType: "WEB_SHOW_IMAGE" }
                             ActionCheckRow { text: "Web端事件录像"; icon: "camera"; actionType: "WEB_RECORD_EVENT" }
 
-                            Text { text: "音频联动"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "音频联动"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "Web端播放提示音"; icon: "bell"; actionType: "WEB_PLAY_TONE" }
                             ActionCheckRow { text: "Web端语音播报"; icon: "bell"; actionType: "WEB_TTS_BROADCAST" }
 
-                            Text { text: "抓图与通知"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "抓图与通知"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "Web端抓图"; icon: "snapshot"; actionType: "WEB_CAPTURE_IMAGE" }
                             ActionCheckRow { text: "Web端发送短信"; icon: "send"; actionType: "WEB_SEND_SMS" }
                         }
@@ -899,18 +899,18 @@ Item {
                     // ─── 系统 ───
                     ScrollView { clip: true
                         Column { id: sysActionColumn; width: 412; spacing: 2
-                            Text { text: "工业协议"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "工业协议"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "MQTT消息发布"; icon: "gb28181"; actionType: "SYS_MQTT_PUBLISH" }
                             ActionCheckRow { text: "Modbus写寄存器"; icon: "onvif"; actionType: "SYS_MODBUS_WRITE" }
                             ActionCheckRow { text: "ONVIF事件触发"; icon: "linkage"; actionType: "SYS_ONVIF_TRIGGER" }
                             ActionCheckRow { text: "继电器开关"; icon: "alarm"; actionType: "SYS_RELAY_SWITCH" }
 
-                            Text { text: "上层转发"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true; topPadding: 4 }
+                            Text { text: "上层转发"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "HTTP回调"; icon: "federation"; actionType: "SYS_HTTP_CALLBACK" }
                             ActionCheckRow { text: "转发到云端"; icon: "upload"; actionType: "SYS_CLOUD_FORWARD" }
 
                             // 端到端闭环: 告警触发推理回写事件 (规范 a45b219c Hermes v6.0)
-                            Text { text: "推理/流闭环 (Hermes v6.0)"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true; topPadding: 4 }
+                            Text { text: "推理/流闭环 (Hermes v6.0)"; font.pixelSize: 12; color: "#00D4AA"; font.bold: true; topPadding: 4 }
                             ActionCheckRow { text: "启动推理通道"; icon: "play"; actionType: "SYS_START_INFERENCE" }
                             ActionCheckRow { text: "停止推理通道"; icon: "stop"; actionType: "SYS_STOP_INFERENCE" }
                             ActionCheckRow { text: "启动拉流"; icon: "download"; actionType: "SYS_START_STREAM" }
@@ -963,10 +963,10 @@ Item {
 
         CheckBox { id: cb; anchors.verticalCenter: parent.verticalCenter }
         AppIcon { name: actionRow.icon; size: 14; iconColor: cb.checked ? "#00D4AA" : "#4A4D58"; visible: actionRow.icon !== ""; anchors.verticalCenter: parent.verticalCenter }
-        Text { text: actionRow.text; font.pixelSize: 11; color: cb.checked ? "#E8E8E8" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter; width: 300; elide: Text.ElideRight }
-        Button { text: "配置"; font.pixelSize: 9; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
+        Text { text: actionRow.text; font.pixelSize: 12; color: cb.checked ? "#E8E8E8" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter; width: 300; elide: Text.ElideRight }
+        Button { text: "配置"; font.pixelSize: 12; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
             background: Rectangle { color: "transparent" }
-            contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#3B82F6" }
+            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#3B82F6" }
         }
     }
 
@@ -1003,7 +1003,7 @@ Item {
                     width: parent.width; height: 340
                     readOnly: true
                     text: exportDialog.exportText
-                    color: "#00D4AA"; font.family: "monospace"; font.pixelSize: 10
+                    color: "#00D4AA"; font.family: "monospace"; font.pixelSize: 12
                     background: Rectangle { color: "#0D0F12"; radius: 6; border.color: "#252830" }
                     wrapMode: TextArea.Wrap
                 }
@@ -1052,7 +1052,7 @@ Item {
                     id: importArea
                     width: parent.width; height: 280
                     placeholderText: '{"version":"1.0","rules":[...]}'
-                    color: "#E8E8E8"; font.family: "monospace"; font.pixelSize: 10
+                    color: "#E8E8E8"; font.family: "monospace"; font.pixelSize: 12
                     background: Rectangle { color: "#0D0F12"; radius: 6; border.color: "#252830" }
                     wrapMode: TextArea.Wrap
                 }

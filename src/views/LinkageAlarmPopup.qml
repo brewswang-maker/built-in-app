@@ -150,12 +150,12 @@ Window {
                         font.pixelSize: 15; font.bold: true; color: "#FF3D71"
                     }
                     Text { text: currentAlarm ? (currentAlarm.location_name || currentAlarm.location || "") : ""; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: currentAlarm ? (currentAlarm.device_name || currentAlarm.channel || "") : ""; font.pixelSize: 11; color: "#4A4D58" }
+                    Text { text: currentAlarm ? (currentAlarm.device_name || currentAlarm.channel || "") : ""; font.pixelSize: 12; color: "#4A4D58" }
                     Item { Layout.fillWidth: true }
-                    Text { text: currentAlarm ? (currentAlarm.time || currentAlarm.timestamp || "") : ""; font.pixelSize: 11; color: "#4A4D58" }
+                    Text { text: currentAlarm ? (currentAlarm.time || currentAlarm.timestamp || "") : ""; font.pixelSize: 12; color: "#4A4D58" }
 
                     // 倒计时
-                    Text { id: countdownText; text: "15s"; font.pixelSize: 11; color: "#FF6B35"; font.bold: true }
+                    Text { id: countdownText; text: "15s"; font.pixelSize: 12; color: "#FF6B35"; font.bold: true }
                     Button { text: "X"; font.pixelSize: 14
                         background: Rectangle { color: "transparent" }
                         contentItem: Text { text: parent.text; font.pixelSize: 14; color: "#4A4D58" }
@@ -231,7 +231,7 @@ Window {
                             Rectangle { anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8; width: 200; height: 28; color: "#B3000000"; radius: 4
                                 Text {
                                     text: currentAlarm ? "" + (currentAlarm.device_name || "") + " | CH" + (currentAlarm.channel_id || "?") : ""
-                                    font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent
+                                    font.pixelSize: 12; color: "#E8E8E8"; anchors.centerIn: parent
                                 }
                             }
 
@@ -242,7 +242,7 @@ Window {
                                         SequentialAnimation on opacity { running: true; loops: Animation.Infinite
                                             NumberAnimation { from: 1; to: 0; duration: 500 }
                                             NumberAnimation { from: 0; to: 1; duration: 500 } } }
-                                    Text { text: "LIVE"; font.pixelSize: 9; color: "#FFF"; font.bold: true }
+                                    Text { text: "LIVE"; font.pixelSize: 12; color: "#FFF"; font.bold: true }
                                 }
                             }
 
@@ -273,22 +273,22 @@ Window {
                             RowLayout {
                                 anchors.fill: parent; anchors.margins: 4; spacing: 4
 
-                                Text { text: "联动:"; font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: "联动:"; font.pixelSize: 12; color: "#8B8FA3" }
 
                                 Repeater {
                                     model: linkageActions
                                     delegate: Rectangle { width: 68; height: 20; radius: 4
                                         color: modelData.active ? "#0A3A2A" : "#1A1A2A"
                                         Row { anchors.centerIn: parent; spacing: 2
-                                            Text { text: modelData.icon || ""; font.pixelSize: 9 }
+                                            Text { text: modelData.icon || ""; font.pixelSize: 12 }
                                             Text { text: modelData.label || "-"; font.pixelSize: 8; color: modelData.active ? "#00D4AA" : "#4A4D58" }
                                         }
                                     }
                                 }
                                 Item { Layout.fillWidth: true }
-                                Button { text: "回放"; font.pixelSize: 9
+                                Button { text: "回放"; font.pixelSize: 12
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: {
                                         if (currentAlarm && currentAlarm.channel_id) {
                                             mediaController.startStream(currentAlarm.channel_id, "playback")
@@ -311,7 +311,7 @@ Window {
                             width: 264; spacing: 6; padding: 8
 
                             // 联动抓图区域 (占位)
-                            Text { text: "联动抓图"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
+                            Text { text: "联动抓图"; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                             Rectangle { width: 260; height: 146; color: "#0A0C10"; radius: 6
                                 Text {
                                     anchors.centerIn: parent
@@ -321,24 +321,24 @@ Window {
                             }
 
                             // 告警信息
-                            Text { text: "告警信息"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
+                            Text { text: "告警信息"; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                             Grid { columns: 2; columnSpacing: 8; rowSpacing: 2; width: parent.width
-                                Text { text: "类型:"; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: currentAlarm ? (currentAlarm.alarm_type || currentAlarm.type || "-") : "-"; font.pixelSize: 10; color: "#E8E8E8" }
-                                Text { text: "级别:"; font.pixelSize: 10; color: "#4A4D58" }
+                                Text { text: "类型:"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: currentAlarm ? (currentAlarm.alarm_type || currentAlarm.type || "-") : "-"; font.pixelSize: 12; color: "#E8E8E8" }
+                                Text { text: "级别:"; font.pixelSize: 12; color: "#4A4D58" }
                                 Text {
                                     text: currentAlarm ? (levelLabels[currentAlarm.level || currentAlarm.severity] || "—") : "-"
-                                    font.pixelSize: 10
+                                    font.pixelSize: 12
                                     color: currentAlarm && (currentAlarm.level === "critical" || currentAlarm.severity >= 4) ? "#FF3D71" : "#FFB800"
                                 }
-                                Text { text: "通道:"; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: currentAlarm ? ("CH" + (currentAlarm.channel_id || "-")) : "-"; font.pixelSize: 10; color: "#E8E8E8" }
-                                Text { text: "位置:"; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: currentAlarm ? (currentAlarm.location_name || currentAlarm.location || "-") : "-"; font.pixelSize: 10; color: "#E8E8E8" }
-                                Text { text: "置信度:"; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: currentAlarm ? ((currentAlarm.confidence * 100 || 0).toFixed(1) + "%") : "-"; font.pixelSize: 10; color: "#00D4AA" }
-                                Text { text: "目标:"; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: currentAlarm ? (currentAlarm.target_label || "-") : "-"; font.pixelSize: 10; color: "#E8E8E8" }
+                                Text { text: "通道:"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: currentAlarm ? ("CH" + (currentAlarm.channel_id || "-")) : "-"; font.pixelSize: 12; color: "#E8E8E8" }
+                                Text { text: "位置:"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: currentAlarm ? (currentAlarm.location_name || currentAlarm.location || "-") : "-"; font.pixelSize: 12; color: "#E8E8E8" }
+                                Text { text: "置信度:"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: currentAlarm ? ((currentAlarm.confidence * 100 || 0).toFixed(1) + "%") : "-"; font.pixelSize: 12; color: "#00D4AA" }
+                                Text { text: "目标:"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: currentAlarm ? (currentAlarm.target_label || "-") : "-"; font.pixelSize: 12; color: "#E8E8E8" }
                             }
 
                             readonly property var levelLabels: ({ "critical": "严重", "warning": "警告", "info": "信息" })
@@ -346,25 +346,25 @@ Window {
                             Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                             // AI研判
-                            Text { text: "AI研判"; font.pixelSize: 11; color: "#6C5CE7"; font.bold: true }
+                            Text { text: "AI研判"; font.pixelSize: 12; color: "#6C5CE7"; font.bold: true }
                             Rectangle { width: 260; height: 48; color: "#0A0A2A"; radius: 6
                                 Text {
                                     text: currentAlarm ? (currentAlarm.ai_analysis || currentAlarm.aiVerdict || "分析中...") : "分析中..."
-                                    font.pixelSize: 10; color: "#B8B8FF"; wrapMode: Text.WordWrap; width: 244; anchors.centerIn: parent
+                                    font.pixelSize: 12; color: "#B8B8FF"; wrapMode: Text.WordWrap; width: 244; anchors.centerIn: parent
                                 }
                             }
 
                             // 建议处置
-                            Text { text: "建议处置"; font.pixelSize: 11; color: "#FFB800"; font.bold: true }
+                            Text { text: "建议处置"; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                             Text {
                                 text: currentAlarm ? (currentAlarm.suggested_action || currentAlarm.suggestion || "-") : "-"
-                                font.pixelSize: 10; color: "#FFB800"
+                                font.pixelSize: 12; color: "#FFB800"
                             }
 
                             Rectangle { height: 1; color: "#252830"; width: parent.width }
 
                             // 联动执行状态 — 从 linkageController.logs 获取
-                            Text { text: "联动执行状态"; font.pixelSize: 11; color: "#00D4AA"; font.bold: true }
+                            Text { text: "联动执行状态"; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
                             Column {
                                 id: linkageStatusCol
                                 spacing: 2; width: parent.width
@@ -374,9 +374,9 @@ Window {
                                     model: linkageLogs
 
                                     delegate: Row { spacing: 4
-                                        Text { text: modelData.status === "done" ? "OK" : modelData.status === "running" ? "..." : "-"; font.pixelSize: 10 }
-                                        Text { text: modelData.icon || ""; font.pixelSize: 10 }
-                                        Text { text: modelData.text || modelData.action || "-"; font.pixelSize: 10; color: modelData.status === "running" ? "#FFB800" : "#8B8FA3" }
+                                        Text { text: modelData.status === "done" ? "OK" : modelData.status === "running" ? "..." : "-"; font.pixelSize: 12 }
+                                        Text { text: modelData.icon || ""; font.pixelSize: 12 }
+                                        Text { text: modelData.text || modelData.action || "-"; font.pixelSize: 12; color: modelData.status === "running" ? "#FFB800" : "#8B8FA3" }
                                     }
                                 }
                             }
@@ -446,7 +446,7 @@ Window {
 
                     Item { Layout.fillWidth: true }
 
-                    Text { text: "自动关闭: " + autoCloseTimer.countdown + "s"; font.pixelSize: 10; color: "#4A4D58" }
+                    Text { text: "自动关闭: " + autoCloseTimer.countdown + "s"; font.pixelSize: 12; color: "#4A4D58" }
                 }
             }
         }

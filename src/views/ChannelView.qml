@@ -83,9 +83,9 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
             Text { text: "Channel Mgmt"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-            Text { text: deviceController.deviceCount + " devices"; font.pixelSize: 11; color: "#8B8FA3" }
+            Text { text: deviceController.deviceCount + " devices"; font.pixelSize: 12; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
-            Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
+            Text { text: statusMsg; font.pixelSize: 12; color: "#FFB800"; visible: statusMsg !== "" }
 
             Button {
                 text: "Batch Config (" + selectedChannels.length + ")"; font.pixelSize: 12
@@ -123,7 +123,7 @@ Item {
                 TextField {
                     width: parent.width - 24; height: 28
                     placeholderText: "Search..."; placeholderTextColor: "#4A4D58"
-                    color: "#E8E8E8"; font.pixelSize: 11
+                    color: "#E8E8E8"; font.pixelSize: 12
                     background: Rectangle { color: "#252830"; radius: 4 }
                 }
 
@@ -225,14 +225,14 @@ Item {
                             Row { spacing: 8
                                 Text { text: selectedChannel ? selectedChannel.name : ""; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
                                 Rectangle { width: 8; height: 8; radius: 4; color: selectedChannel && selectedChannel.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: selectedChannel ? ("(" + selectedChannel.deviceName + ")") : ""; font.pixelSize: 11; color: "#8B8FA3" }
+                                Text { text: selectedChannel ? ("(" + selectedChannel.deviceName + ")") : ""; font.pixelSize: 12; color: "#8B8FA3" }
                             }
 
                             Grid { columns: 4; spacing: 12; rowSpacing: 8; width: parent.width
                                 Text { text: "Stream:"; font.pixelSize: 12; color: "#8B8FA3" }
                                 ComboBox { width: 120; height: 28; model: ["Main", "Sub", "Third"]
                                     background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
 
                                 Text { text: "Enabled:"; font.pixelSize: 12; color: "#8B8FA3" }
                                 Switch { checked: selectedChannel ? selectedChannel.enabled : false }
@@ -240,12 +240,12 @@ Item {
                                 Text { text: "Codec:"; font.pixelSize: 12; color: "#8B8FA3" }
                                 ComboBox { width: 120; height: 28; model: ["H.265", "H.264", "MJPEG"]
                                     background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
 
                                 Text { text: "Resolution:"; font.pixelSize: 12; color: "#8B8FA3" }
                                 ComboBox { width: 120; height: 28; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
                                     background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
 
                                 Text { text: "FPS:"; font.pixelSize: 12; color: "#8B8FA3" }
                                 SpinBox { from: 1; to: 30; value: selectedChannel ? selectedChannel.fps : 25; height: 28 }
@@ -255,22 +255,22 @@ Item {
                             }
 
                             Row { spacing: 8
-                                Button { text: "Preview"; font.pixelSize: 11
+                                Button { text: "Preview"; font.pixelSize: 12
                                     onClicked: { if (selectedChannel) mediaController.startStream(selectedChannel.channelId, "main") }
                                     background: Rectangle { color: "#00D4AA"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Snapshot"; font.pixelSize: 11
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Snapshot"; font.pixelSize: 12
                                     onClicked: { if (selectedChannel) mediaController.snapshot(selectedChannel.channelId) }
                                     background: Rectangle { color: "#252830"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Record"; font.pixelSize: 11
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Record"; font.pixelSize: 12
                                     onClicked: { if (selectedChannel) mediaController.startRecording(selectedChannel.channelId) }
                                     background: Rectangle { color: "#FF3D71"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Stop Rec"; font.pixelSize: 11
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Stop Rec"; font.pixelSize: 12
                                     onClicked: { if (selectedChannel) mediaController.stopRecording(selectedChannel.channelId) }
                                     background: Rectangle { color: "#252830"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                             }
                         }
                     }
@@ -303,20 +303,20 @@ Item {
                                 }
                                 Column { spacing: 4; anchors.verticalCenter: parent.verticalCenter
                                     Row { spacing: 4
-                                        Button { text: "Z+"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomIn", 0.3) }
+                                        Button { text: "Z+"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomIn", 0.3) }
                                             background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                        Button { text: "Z-"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomOut", 0.3) }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                        Button { text: "Z-"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomOut", 0.3) }
                                             background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                                     }
                                     Row { spacing: 4
-                                        Button { text: "F+"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusNear", 0.3) }
+                                        Button { text: "F+"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusNear", 0.3) }
                                             background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                        Button { text: "F-"; font.pixelSize: 10; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusFar", 0.3) }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                        Button { text: "F-"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusFar", 0.3) }
                                             background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                                     }
                                 }
                             }
@@ -331,10 +331,10 @@ Item {
                             anchors.fill: parent; anchors.margins: 12; spacing: 4
                             Text { text: "Stream Info"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                             Row { spacing: 20
-                                Text { text: "Res: " + (selectedChannel ? (selectedChannel.resolution || "-") : "-"); font.pixelSize: 11; color: "#8B8FA3" }
-                                Text { text: "FPS: " + (selectedChannel ? (selectedChannel.fps || 0) : 0); font.pixelSize: 11; color: "#8B8FA3" }
-                                Text { text: "Codec: " + (selectedChannel ? (selectedChannel.codec || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
-                                Text { text: "Bitrate: " + (selectedChannel ? (selectedChannel.bitrate || 0) : 0) + " Kbps"; font.pixelSize: 11; color: "#FFB800" }
+                                Text { text: "Res: " + (selectedChannel ? (selectedChannel.resolution || "-") : "-"); font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: "FPS: " + (selectedChannel ? (selectedChannel.fps || 0) : 0); font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: "Codec: " + (selectedChannel ? (selectedChannel.codec || "-") : "-"); font.pixelSize: 12; color: "#00D4AA" }
+                                Text { text: "Bitrate: " + (selectedChannel ? (selectedChannel.bitrate || 0) : 0) + " Kbps"; font.pixelSize: 12; color: "#FFB800" }
                             }
                         }
                     }
@@ -351,16 +351,16 @@ Item {
                                 anchors.fill: parent; anchors.margins: 8; spacing: 12
                                 Rectangle { width: 6; height: 6; radius: 3; color: modelData.active ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
                                 Text { text: modelData.name; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; width: 180 }
-                                Text { text: "Interval:" + modelData.interval + "s"; font.pixelSize: 11; color: "#8B8FA3" }
-                                Text { text: modelData.layout + "-grid"; font.pixelSize: 11; color: "#3B82F6" }
-                                Text { text: modelData.channels + " ch"; font.pixelSize: 11; color: "#8B8FA3" }
+                                Text { text: "Interval:" + modelData.interval + "s"; font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: modelData.layout + "-grid"; font.pixelSize: 12; color: "#3B82F6" }
+                                Text { text: modelData.channels + " ch"; font.pixelSize: 12; color: "#8B8FA3" }
                                 Item { width: 20 }
-                                Button { text: modelData.active ? "Stop" : "Start"; font.pixelSize: 10
+                                Button { text: modelData.active ? "Stop" : "Start"; font.pixelSize: 12
                                     background: Rectangle { color: modelData.active ? "#FF3D71" : "#00D4AA"; radius: 4; width: 48; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: modelData.active ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Edit"; font.pixelSize: 10
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: modelData.active ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Edit"; font.pixelSize: 12
                                     background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                             }
                         }
                     }
@@ -386,11 +386,11 @@ Item {
                     Text { text: "Codec:"; font.pixelSize: 12; color: "#8B8FA3" }
                     ComboBox { width: 200; height: 28; model: ["H.265", "H.264", "MJPEG"]
                         background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                     Text { text: "Resolution:"; font.pixelSize: 12; color: "#8B8FA3" }
                     ComboBox { width: 200; height: 28; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
                         background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                     Text { text: "FPS:"; font.pixelSize: 12; color: "#8B8FA3" }
                     SpinBox { from: 1; to: 30; value: batchFps; onValueChanged: batchFps = value; height: 28 }
                     Text { text: "Bitrate(K):"; font.pixelSize: 12; color: "#8B8FA3" }
@@ -430,7 +430,7 @@ Item {
                     Text { text: "Layout:"; font.pixelSize: 12; color: "#8B8FA3" }
                     ComboBox { width: 200; height: 28; model: ["1-grid", "4-grid", "9-grid", "16-grid"]
                         background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                 }
                 Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
                     Button { text: "Cancel"; font.pixelSize: 13; onClicked: showPatrolDialog = false

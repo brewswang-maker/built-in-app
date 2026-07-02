@@ -49,7 +49,7 @@ Item {
             id: unreadBadge
             anchors.centerIn: parent
             text: unreadCount > 99 ? "99+" : unreadCount
-            font.pixelSize: 9; font.bold: true; color: "#FFF"
+            font.pixelSize: 12; font.bold: true; color: "#FFF"
         }
     }
 

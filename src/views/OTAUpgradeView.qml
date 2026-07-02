@@ -140,7 +140,7 @@ Item {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
 
                         Text { text: otaController.latestVersion || "v2.2.0"; font.pixelSize: 13; font.bold: true; color: "#3B82F6" }
-                        Text { text: "点击「下载并安装」开始升级"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "点击「下载并安装」开始升级"; font.pixelSize: 12; color: "#8B8FA3" }
                     }
                 }
 
@@ -179,9 +179,9 @@ Item {
                             anchors.fill: parent; anchors.margins: 10; spacing: 12
 
                             Text { text: modelData.version || "-"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; width: 60 }
-                            Text { text: modelData.date || "-"; font.pixelSize: 11; color: "#8B8FA3"; width: 80 }
-                            Text { text: modelData.size || "-"; font.pixelSize: 11; color: "#8B8FA3"; width: 50 }
-                            Text { text: modelData.partition ? "分区:" + modelData.partition : ""; font.pixelSize: 11; color: "#8B8FA3"; width: 50 }
+                            Text { text: modelData.date || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 80 }
+                            Text { text: modelData.size || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 50 }
+                            Text { text: modelData.partition ? "分区:" + modelData.partition : ""; font.pixelSize: 12; color: "#8B8FA3"; width: 50 }
 
                             Rectangle {
                                 width: 60; height: 20; radius: 4
@@ -189,7 +189,7 @@ Item {
                                        modelData.status === "可回滚" ? "#2A2A0A" : "#141720"
                                 Text {
                                     text: modelData.status || "-"
-                                    font.pixelSize: 10; font.bold: true
+                                    font.pixelSize: 12; font.bold: true
                                     color: modelData.status === "当前" ? "#00D4AA" :
                                            modelData.status === "可回滚" ? "#FFB800" : "#4A4D58"
                                     anchors.centerIn: parent
@@ -197,10 +197,10 @@ Item {
                             }
 
                             Button {
-                                text: "回滚"; font.pixelSize: 10
+                                text: "回滚"; font.pixelSize: 12
                                 visible: modelData.status === "可回滚"
                                 background: Rectangle { color: "#FFB800"; radius: 4; width: 40; height: 20 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: otaController.rollback(modelData.version)
                             }
                         }

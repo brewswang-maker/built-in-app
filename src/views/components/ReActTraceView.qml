@@ -66,7 +66,7 @@ Rectangle {
                     id: statusText
                     anchors.centerIn: parent
                     text: "推理中..."
-                    font.pixelSize: 10
+                    font.pixelSize: 12
                     color: "#0D0F12"
                 }
 
@@ -83,7 +83,7 @@ Rectangle {
             // 步骤计数
             Text {
                 text: aiController.thoughtSteps.length + " 步"
-                font.pixelSize: 11
+                font.pixelSize: 12
                 color: "#4A4D58"
             }
 
@@ -137,7 +137,7 @@ Rectangle {
             readOnly: true
             selectByMouse: true
             font.family: "Menlo, Consolas, monospace"
-            font.pixelSize: 11
+            font.pixelSize: 12
             color: "#55EFC4"
             background: Rectangle { color: "#0D0F12" }
             text: {
@@ -186,7 +186,7 @@ Rectangle {
 
                     Text {
                         text: "发送消息后，AI 的思维链将在此展示"
-                        font.pixelSize: 11
+                        font.pixelSize: 12
                         color: "#4A4D58"
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
@@ -244,7 +244,7 @@ Rectangle {
                                 Text {
                                     anchors.centerIn: parent
                                     text: (index + 1)
-                                    font.pixelSize: 11; font.bold: true
+                                    font.pixelSize: 12; font.bold: true
                                     color: stepDelegate.isExpanded ? "#FFF" : "#8B8FA3"
                                 }
                             }
@@ -276,7 +276,7 @@ Rectangle {
                                         if (t === "observation" || t === "tool_result") return "Observe"
                                         return "Thought"
                                     }
-                                    font.pixelSize: 9; font.bold: true
+                                    font.pixelSize: 12; font.bold: true
                                     color: {
                                         var t = stepData.type || "thought"
                                         if (t === "action" || t === "tool_call") return "#FFB800"
@@ -291,7 +291,7 @@ Rectangle {
                                 width: parent.width - 24 - 60 - 16
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: (stepData.content || stepData.thought || "").substring(0, 60)
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 color: "#8B8FA3"
                                 elide: Text.ElideRight
                             }
@@ -348,7 +348,7 @@ Rectangle {
                                 visible: stepData.tool_params || stepData.params
                                 width: parent.width
                                 text: "   参数: " + (JSON.stringify(stepData.tool_params || stepData.params || {}))
-                                font.pixelSize: 11; font.family: "Menlo, monospace"
+                                font.pixelSize: 12; font.family: "Menlo, monospace"
                                 color: "#FFEAA7"
                                 wrapMode: Text.Wrap
                             }
@@ -367,7 +367,7 @@ Rectangle {
                             Text {
                                 visible: stepData.duration_ms
                                 text: stepData.duration_ms + "ms"
-                                font.pixelSize: 10
+                                font.pixelSize: 12
                                 color: "#4A4D58"
                             }
                         }

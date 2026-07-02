@@ -38,7 +38,7 @@ Item {
             // ReAct 面板切换按钮
             Button {
                 Layout.preferredWidth: 100; Layout.preferredHeight: 28
-                font.pixelSize: 11
+                font.pixelSize: 12
                 background: Rectangle {
                     color: aiChatPage.showReactPanel ? "#6C5CE7" : "#252830"
                     radius: 6
@@ -50,7 +50,7 @@ Item {
                     anchors.centerIn: parent
                     AppIcon { name: "brain"; size: 14; iconColor: aiChatPage.showReactPanel ? "#FFF" : "#8B8FA3" }
                     Text {
-                        text: "ReAct 回放"; font.pixelSize: 11
+                        text: "ReAct 回放"; font.pixelSize: 12
                         color: aiChatPage.showReactPanel ? "#FFF" : "#8B8FA3"
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -152,7 +152,7 @@ Item {
                         Row { spacing: 6
                             AppIcon { name: "brain"; size: 13; iconColor: "#6C5CE7" }
                             Text { text: modelData.agent_name || "Agent 思考中"; font.pixelSize: 12; color: "#6C5CE7"; font.bold: true }
-                            Text { text: modelData.agent_role || ""; font.pixelSize: 11; color: "#4A4D58" }
+                            Text { text: modelData.agent_role || ""; font.pixelSize: 12; color: "#4A4D58" }
                         }
                         Text { text: modelData.content || ""; font.pixelSize: 12; color: "#A29BFE"; wrapMode: Text.Wrap; width: parent.width; lineHeight: 1.3 }
 
@@ -162,7 +162,7 @@ Item {
                                 model: (modelData.steps || [])
                                 delegate: Rectangle {
                                     width: 20; height: 20; radius: 10; color: "#6C5CE7"
-                                    Text { text: index + 1; font.pixelSize: 11; color: "#FFF"; anchors.centerIn: parent }
+                                    Text { text: index + 1; font.pixelSize: 12; color: "#FFF"; anchors.centerIn: parent }
                                 }
                             }
                         }
@@ -279,7 +279,7 @@ Item {
             // 语音输入按钮
             Button {
                 Layout.preferredWidth: 36; Layout.fillHeight: true
-                text: "语音"; font.pixelSize: 10; enabled: false
+                text: "语音"; font.pixelSize: 12; enabled: false
                 background: Rectangle { color: "#252830"; radius: 8 }
                 contentItem: Text { text: parent.text; font.pixelSize: 16; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 ToolTip.visible: pressed; ToolTip.text: "语音输入即将上线"

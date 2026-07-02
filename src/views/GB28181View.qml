@@ -106,7 +106,7 @@ Item {
                 Grid {
                     columns: 2; spacing: 6; width: parent.width - 24
 
-                    Text { text: "SIP域:"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "SIP域:"; font.pixelSize: 12; color: "#8B8FA3" }
                     TextField {
                         id: sipDomainField
                         text: sipDomain; font.pixelSize: 12; color: "#E8E8E8"; width: 160
@@ -114,7 +114,7 @@ Item {
                         onAccepted: configController.saveConfig("sip_domain", text)
                     }
 
-                    Text { text: "SIP ID:"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "SIP ID:"; font.pixelSize: 12; color: "#8B8FA3" }
                     TextField {
                         id: sipIdField
                         text: sipId; font.pixelSize: 12; color: "#E8E8E8"; width: 160
@@ -122,7 +122,7 @@ Item {
                         onAccepted: configController.saveConfig("sip_id", text)
                     }
 
-                    Text { text: "端口:"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "端口:"; font.pixelSize: 12; color: "#8B8FA3" }
                     TextField {
                         id: sipPortField
                         text: sipPort; font.pixelSize: 12; color: "#E8E8E8"; width: 160
@@ -130,7 +130,7 @@ Item {
                         onAccepted: configController.saveConfig("sip_port", text)
                     }
 
-                    Text { text: "密码:"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "密码:"; font.pixelSize: 12; color: "#8B8FA3" }
                     TextField {
                         id: sipPasswordField
                         text: sipPassword; echoMode: TextInput.Password; font.pixelSize: 12; color: "#E8E8E8"; width: 160
@@ -138,7 +138,7 @@ Item {
                         onAccepted: configController.saveConfig("sip_password", text)
                     }
 
-                    Text { text: "流媒体:"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "流媒体:"; font.pixelSize: 12; color: "#8B8FA3" }
                     TextField {
                         id: mediaServerField
                         text: mediaServer; font.pixelSize: 12; color: "#E8E8E8"; width: 160
@@ -174,9 +174,9 @@ Item {
                         width: ListView.view.width; height: 22; color: "transparent"
                         Row {
                             spacing: 6
-                            Text { text: model.time; font.pixelSize: 9; color: "#4A4D58"; width: 50 }
-                            Text { text: model.msg; font.pixelSize: 10; color: false ? "#3B82F6" : "#00D4AA"; width: 140 }
-                            Text { text: model.status; font.pixelSize: 9; color: "#FFB800" }
+                            Text { text: model.time; font.pixelSize: 12; color: "#4A4D58"; width: 50 }
+                            Text { text: model.msg; font.pixelSize: 12; color: false ? "#3B82F6" : "#00D4AA"; width: 140 }
+                            Text { text: model.status; font.pixelSize: 12; color: "#FFB800" }
                         }
                     }
                 }
@@ -203,13 +203,13 @@ Item {
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                         spacing: 8
-                        Text { text: "设备ID"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 180 }
-                        Text { text: "名称"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 100 }
-                        Text { text: "厂商"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 80 }
-                        Text { text: "通道数"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
-                        Text { text: "状态"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
-                        Text { text: "注册时间"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 100 }
-                        Text { text: "操作"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 160 }
+                        Text { text: "设备ID"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 180 }
+                        Text { text: "名称"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 100 }
+                        Text { text: "厂商"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 80 }
+                        Text { text: "通道数"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 50 }
+                        Text { text: "状态"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 50 }
+                        Text { text: "注册时间"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 100 }
+                        Text { text: "操作"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 160 }
                     }
                 }
 
@@ -228,40 +228,40 @@ Item {
                             anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
                             spacing: 8; anchors.verticalCenter: parent.verticalCenter
 
-                            Text { text: deviceData.deviceId || ""; font.pixelSize: 11; color: "#E8E8E8"; width: 180; elide: Text.ElideMiddle }
-                            Text { text: deviceData.name || ""; font.pixelSize: 11; color: "#E8E8E8"; width: 100 }
-                            Text { text: deviceData.manufacturer || ""; font.pixelSize: 11; color: "#8B8FA3"; width: 80 }
-                            Text { text: (deviceData.channels !== undefined) ? deviceData.channels : "0"; font.pixelSize: 11; color: "#E8E8E8"; width: 50 }
+                            Text { text: deviceData.deviceId || ""; font.pixelSize: 12; color: "#E8E8E8"; width: 180; elide: Text.ElideMiddle }
+                            Text { text: deviceData.name || ""; font.pixelSize: 12; color: "#E8E8E8"; width: 100 }
+                            Text { text: deviceData.manufacturer || ""; font.pixelSize: 12; color: "#8B8FA3"; width: 80 }
+                            Text { text: (deviceData.channels !== undefined) ? deviceData.channels : "0"; font.pixelSize: 12; color: "#E8E8E8"; width: 50 }
                             Rectangle {
                                 width: 50; height: 20; radius: 4
                                 color: deviceData.status === "online" ? "#0A2A1A" : "#2A0A10"
                                 Text {
                                     text: deviceData.status === "online" ? "在线" : "离线"
-                                    font.pixelSize: 10; font.bold: true
+                                    font.pixelSize: 12; font.bold: true
                                     color: deviceData.status === "online" ? "#00D4AA" : "#FF3D71"
                                     anchors.centerIn: parent
                                 }
                             }
-                            Text { text: deviceData.registerTime || ""; font.pixelSize: 10; color: "#8B8FA3"; width: 100 }
+                            Text { text: deviceData.registerTime || ""; font.pixelSize: 12; color: "#8B8FA3"; width: 100 }
 
                             Row {
                                 spacing: 4
                                 Button {
-                                    text: "预览"; font.pixelSize: 10
+                                    text: "预览"; font.pixelSize: 12
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 22 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: mediaController.startStream(deviceData.deviceId, "ch1")
                                 }
                                 Button {
-                                    text: "目录"; font.pixelSize: 10
+                                    text: "目录"; font.pixelSize: 12
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 22 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: deviceController.getDeviceDetail(deviceData.deviceId)
                                 }
                                 Button {
-                                    text: "录像"; font.pixelSize: 10
+                                    text: "录像"; font.pixelSize: 12
                                     background: Rectangle { color: "#252830"; radius: 4; width: 40; height: 22 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: mediaController.startStream(deviceData.deviceId, "record")
                                 }
                             }

@@ -173,7 +173,7 @@ Item {
             ComboBox {
                 id: protocolSelector
                 width: 140; height: 30
-                font.pixelSize: 11
+                font.pixelSize: 12  // [Audit-Fix P1] 11→12 (规范最小)
                 model: [
                     { text: "RTSP (优先)", value: ["rtsp", "flv", "ws-flv", "hls", "webrtc"] },
                     { text: "FLV (Web)", value: ["flv", "ws-flv", "hls", "rtsp", "webrtc"] },
@@ -187,7 +187,7 @@ Item {
                 background: Rectangle { color: "#252830"; radius: 6 }
                 contentItem: Text {
                     text: protocolSelector.model[protocolSelector.currentIndex].text
-                    color: "#E8E8E8"; font.pixelSize: 11
+                    color: "#E8E8E8"; font.pixelSize: 12
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 8
                 }
@@ -204,13 +204,13 @@ Item {
             ComboBox {
                 id: rateSelector
                 width: 70; height: 30
-                font.pixelSize: 11
+                font.pixelSize: 12  // [Audit-Fix P1] 11→12 (规范最小)
                 model: mediaController.supportedPlaybackRates()
                 currentIndex: 0
                 background: Rectangle { color: "#252830"; radius: 6 }
                 contentItem: Text {
                     text: parseFloat(mediaController.supportedPlaybackRates()[rateSelector.currentIndex]) + "x"
-                    color: "#E8E8E8"; font.pixelSize: 11
+                    color: "#E8E8E8"; font.pixelSize: 12
                     verticalAlignment: Text.AlignVCenter
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -226,7 +226,7 @@ Item {
             Button {
                 id: pipButton
                 text: pipActive ? "退出画中画" : "画中画"
-                font.pixelSize: 11
+                font.pixelSize: 12  // [Audit-Fix P1] 11→12 (规范最小)
                 enabled: activeSlot >= 0
                 onClicked: {
                     if (pipActive) {
@@ -242,7 +242,7 @@ Item {
                     radius: 6; width: 90; height: 30
                 }
                 contentItem: Text {
-                    text: pipButton.text; font.pixelSize: 11
+                    text: pipButton.text; font.pixelSize: 12
                     color: pipActive ? "#0D0F12" : "#E8E8E8"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -251,24 +251,24 @@ Item {
 
             // 操作按钮
             Button {
-                text: "抓帧"; font.pixelSize: 11
+                text: "抓帧"; font.pixelSize: 12
                 enabled: activeSlot >= 0
                 onClicked: mediaController.snapshotToFile(
                     videoGridPage.slotChannelId(activeSlot))
                 background: Rectangle { color: "#252830"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
-            Button { text: mediaController.isRecording ? "停止" : "录像"; font.pixelSize: 11
+            Button { text: mediaController.isRecording ? "停止" : "录像"; font.pixelSize: 12
                 onClicked: mediaController.isRecording ? mediaController.stopRecording(slotChannelId(activeSlot)) : mediaController.startRecording(slotChannelId(activeSlot))
                 background: Rectangle { color: mediaController.isRecording ? "#FF3D71" : "#252830"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: mediaController.isRecording ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: mediaController.isRecording ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
             Button {
                 id: talkBtn
                 property bool talkActive: false
-                text: talkActive ? "停止" : "对讲"; font.pixelSize: 11
+                text: talkActive ? "停止" : "对讲"; font.pixelSize: 12
                 background: Rectangle { color: talkBtn.talkActive ? "#FF3D71" : "#252830"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: talkBtn.text; font.pixelSize: 11; color: talkBtn.talkActive ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: talkBtn.text; font.pixelSize: 12; color: talkBtn.talkActive ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     if (talkBtn.talkActive) {
                         mediaController.stopTalk()
@@ -281,9 +281,9 @@ Item {
                     }
                 }
             }
-            Button { text: "全屏"; font.pixelSize: 11
+            Button { text: "全屏"; font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     isFullscreen = !isFullscreen
                     if (isFullscreen && activeSlot >= 0) mediaController.currentLayout = 1
@@ -323,7 +323,7 @@ Item {
                             anchors.fill: parent; anchors.margins: 6; spacing: 6
                             Rectangle { width: 8; height: 8; radius: 4; color: modelData.status === "online" ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
                             Text { text: modelData.name || modelData.device_name || ("CH" + (index + 1)); font.pixelSize: 12; color: videoGridPage.activeSlot === index ? "#00D4AA" : "#E8E8E8"; width: 100; elide: Text.ElideRight }
-                            Text { text: modelData.status === "online" ? "●" : "○"; font.pixelSize: 10; color: modelData.status === "online" ? "#00D4AA" : "#4A4D58" }
+                            Text { text: modelData.status === "online" ? "●" : "○"; font.pixelSize: 12; color: modelData.status === "online" ? "#00D4AA" : "#4A4D58" }
                         }
                         MouseArea { anchors.fill: parent; onClicked: videoGridPage.activeSlot = index }
                     }
@@ -452,10 +452,10 @@ Item {
                         }
                     }
 
-                    Text { text: "速度: " + ptzSpeed.value.toFixed(1); font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "速度: " + ptzSpeed.value.toFixed(1); font.pixelSize: 12; color: "#8B8FA3" }
                     Slider { id: ptzSpeed; width: 140; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.1 }
 
-                    Text { text: "变倍 Zoom"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "变倍 Zoom"; font.pixelSize: 12; color: "#8B8FA3" }
                     Row { spacing: 4
                         Button { width: 60; height: 26; text: "-"; font.pixelSize: 12
                             onClicked: mediaController.ptzControl(activeSlot, "zoom_out", 0.3)
@@ -468,17 +468,17 @@ Item {
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
-                    Text { text: "焦距 Focus"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "焦距 Focus"; font.pixelSize: 12; color: "#8B8FA3" }
                     Row { spacing: 4
-                        Button { width: 60; height: 26; text: "近"; font.pixelSize: 11
+                        Button { width: 60; height: 26; text: "近"; font.pixelSize: 12
                             onClicked: mediaController.ptzControl(activeSlot, "focus_near", 0.3)
                             background: Rectangle { color: "#252830"; radius: 4 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
-                        Button { width: 60; height: 26; text: "远"; font.pixelSize: 11
+                        Button { width: 60; height: 26; text: "远"; font.pixelSize: 12
                             onClicked: mediaController.ptzControl(activeSlot, "focus_far", 0.3)
                             background: Rectangle { color: "#252830"; radius: 4 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
 
@@ -492,10 +492,10 @@ Item {
                             model: 6
                             delegate: Button {
                                 width: 42; height: 28; text: "P" + (index + 1)
-                                font.pixelSize: 11
+                                font.pixelSize: 12  // [Audit-Fix P1] 11→12 (规范最小)
                                 onClicked: mediaController.ptzGotoPreset(activeSlot, index + 1)
                                 background: Rectangle { color: "#252830"; radius: 4 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onPressAndHold: mediaController.ptzSetPreset(activeSlot, index + 1)
                             }
                         }
@@ -506,33 +506,33 @@ Item {
                     // 轮巡/巡航
                     Text { text: "轮巡/巡航"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                     Row { spacing: 4
-                        Button { text: "开始"; font.pixelSize: 11
+                        Button { text: "开始"; font.pixelSize: 12
                             onClicked: mediaController.startPatrol(slotDeviceId(activeSlot))
                             background: Rectangle { color: "#00D4AA"; radius: 4; width: 50; height: 26 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
-                        Button { text: "停止"; font.pixelSize: 11
+                        Button { text: "停止"; font.pixelSize: 12
                             onClicked: mediaController.stopPatrol(slotDeviceId(activeSlot))
                             background: Rectangle { color: "#FF3D71"; radius: 4; width: 50; height: 26 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
                     // 巡航路径选择 (P0-2 对标海康 PTZ)
                     Row { spacing: 4
-                        Button { text: "路径1"; font.pixelSize: 10
+                        Button { text: "路径1"; font.pixelSize: 12  // [Audit-Fix P1] 10→12 (规范最小)
                             onClicked: mediaController.ptzControl(activeSlot, "cruise_start", 1)
                             background: Rectangle { color: "#252830"; radius: 4; width: 46; height: 24 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
-                        Button { text: "路径2"; font.pixelSize: 10
+                        Button { text: "路径2"; font.pixelSize: 12  // [Audit-Fix P1] 10→12 (规范最小)
                             onClicked: mediaController.ptzControl(activeSlot, "cruise_start", 2)
                             background: Rectangle { color: "#252830"; radius: 4; width: 46; height: 24 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
-                        Button { text: "轨迹1"; font.pixelSize: 10
+                        Button { text: "轨迹1"; font.pixelSize: 12  // [Audit-Fix P1] 10→12 (规范最小)
                             onClicked: mediaController.ptzControl(activeSlot, "track_start", 1)
                             background: Rectangle { color: "#252830"; radius: 4; width: 46; height: 24 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
                     }
                 }
@@ -558,7 +558,7 @@ Item {
             }
             Text {
                 text: statusController.networkStatus === "Connected" ? "系统正常" : "连接断开"
-                font.pixelSize: 11; color: statusController.networkStatus === "Connected" ? "#00D4AA" : "#FF3D71"
+                font.pixelSize: 12; color: statusController.networkStatus === "Connected" ? "#00D4AA" : "#FF3D71"
                 Layout.alignment: Qt.AlignVCenter
             }
 
@@ -566,9 +566,9 @@ Item {
 
             // CPU
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "CPU"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "CPU"; font.pixelSize: 12; color: "#8B8FA3" }
                 Text { text: (statusController.cpuUsage * 100).toFixed(0) + "%"
-                    font.pixelSize: 11; font.bold: true
+                    font.pixelSize: 12; font.bold: true
                     color: statusController.cpuUsage > 0.9 ? "#FF3D71" : statusController.cpuUsage > 0.7 ? "#FFB800" : "#00D4AA"
                 }
                 ProgressBar {
@@ -587,9 +587,9 @@ Item {
 
             // 内存
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "MEM"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "MEM"; font.pixelSize: 12; color: "#8B8FA3" }
                 Text { text: (statusController.memoryUsage * 100).toFixed(0) + "%"
-                    font.pixelSize: 11; font.bold: true
+                    font.pixelSize: 12; font.bold: true
                     color: statusController.memoryUsage > 0.9 ? "#FF3D71" : statusController.memoryUsage > 0.7 ? "#FFB800" : "#00D4AA"
                 }
                 ProgressBar {
@@ -608,9 +608,9 @@ Item {
 
             // TPU
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "TPU"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "TPU"; font.pixelSize: 12; color: "#8B8FA3" }
                 Text { text: (statusController.tpuUtilization * 100).toFixed(0) + "%"
-                    font.pixelSize: 11; font.bold: true
+                    font.pixelSize: 12; font.bold: true
                     color: statusController.tpuUtilization > 0.9 ? "#FF3D71" : statusController.tpuUtilization > 0.7 ? "#FFB800" : "#00D4AA"
                 }
                 ProgressBar {
@@ -629,9 +629,9 @@ Item {
 
             // 温度
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "TEMP"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "TEMP"; font.pixelSize: 12; color: "#8B8FA3" }
                 Text { text: statusController.temperature.toFixed(1) + "°C"
-                    font.pixelSize: 11; font.bold: true
+                    font.pixelSize: 12; font.bold: true
                     color: statusController.temperature > 75 ? "#FF3D71" : statusController.temperature > 60 ? "#FFB800" : "#00D4AA"
                 }
             }
@@ -640,14 +640,14 @@ Item {
 
             // 模型数
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "模型"; font.pixelSize: 11; color: "#8B8FA3" }
-                Text { text: statusController.activeModels + " 活跃"; font.pixelSize: 11; color: "#3B82F6"; font.bold: true }
+                Text { text: "模型"; font.pixelSize: 12; color: "#8B8FA3" }
+                Text { text: statusController.activeModels + " 活跃"; font.pixelSize: 12; color: "#3B82F6"; font.bold: true }
             }
 
             // 运行时间
             Row { spacing: 4; Layout.alignment: Qt.AlignVCenter
-                Text { text: "运行"; font.pixelSize: 11; color: "#8B8FA3" }
-                Text { text: statusController.uptime || "--"; font.pixelSize: 11; color: "#8B8FA3" }
+                Text { text: "运行"; font.pixelSize: 12; color: "#8B8FA3" }
+                Text { text: statusController.uptime || "--"; font.pixelSize: 12; color: "#8B8FA3" }
             }
 
             Item { Layout.fillWidth: true }
@@ -655,7 +655,7 @@ Item {
             // 时间
             Text {
                 text: statusController.systemTime || Qt.formatDateTime(new Date(), "yyyy-MM-dd HH:mm:ss")
-                font.pixelSize: 11; color: "#8B8FA3"
+                font.pixelSize: 12; color: "#8B8FA3"
                 Layout.alignment: Qt.AlignVCenter
             }
         }
@@ -766,7 +766,7 @@ Item {
 
         Text {
             anchors.fill: parent; anchors.margins: 8
-            text: toastText; color: "#E8E8E8"; font.pixelSize: 11
+            text: toastText; color: "#E8E8E8"; font.pixelSize: 12
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }

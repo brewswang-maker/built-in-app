@@ -70,7 +70,7 @@ Item {
             Text { text: "TPU Slots: " + activeSlotCount() + "/" + slotCount; font.pixelSize: 12; color: "#FFB800" }
             Text { text: "Storage: " + totalStorage() + "/4096 MB"; font.pixelSize: 12; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
-            Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
+            Text { text: statusMsg; font.pixelSize: 12; color: "#FFB800"; visible: statusMsg !== "" }
 
             Button {
                 text: "Compare (" + selectedModels.length + ")"; font.pixelSize: 12
@@ -124,7 +124,7 @@ Item {
                             anchors.fill: parent; anchors.margins: 4; spacing: 1
                             Text { text: "S" + slotIdx; font.pixelSize: 8; color: "#4A4D58" }
                             Text { text: slotModel ? (slotModel.name || slotModel.algoId) : "Empty"; font.pixelSize: 8; color: slotModel ? "#E8E8E8" : "#4A4D58"; elide: Text.ElideRight; width: parent.width }
-                            Text { text: slotModel && slotModel.usage ? slotModel.usage + "%" : ""; font.pixelSize: 9; color: slotModel ? "#3B82F6" : "#4A4D58"; font.bold: true }
+                            Text { text: slotModel && slotModel.usage ? slotModel.usage + "%" : ""; font.pixelSize: 12; color: slotModel ? "#3B82F6" : "#4A4D58"; font.bold: true }
                         }
 
                         // Click to select/deselect slot
@@ -152,19 +152,19 @@ Item {
                 Column { id: compareCol1; spacing: 4
                     property var m1: getModelByAlgoId(selectedModels[0])
                     Text { text: compareCol1.m1 ? (compareCol1.m1.name || compareCol1.m1.algoId) : "N/A"; font.pixelSize: 12; font.bold: true; color: "#3B82F6" }
-                    Text { text: "FPS: " + (compareCol1.m1 ? (compareCol1.m1.fps || 0) : 0); font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Latency: " + (compareCol1.m1 ? (compareCol1.m1.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Precision: " + (compareCol1.m1 ? (compareCol1.m1.precision || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
-                    Text { text: "Size: " + (compareCol1.m1 ? (compareCol1.m1.size || 0) : 0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "FPS: " + (compareCol1.m1 ? (compareCol1.m1.fps || 0) : 0); font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Latency: " + (compareCol1.m1 ? (compareCol1.m1.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Precision: " + (compareCol1.m1 ? (compareCol1.m1.precision || "-") : "-"); font.pixelSize: 12; color: "#00D4AA" }
+                    Text { text: "Size: " + (compareCol1.m1 ? (compareCol1.m1.size || 0) : 0) + "MB"; font.pixelSize: 12; color: "#8B8FA3" }
                 }
 
                 Column { id: compareCol2; spacing: 4
                     property var m2: getModelByAlgoId(selectedModels[1])
                     Text { text: compareCol2.m2 ? (compareCol2.m2.name || compareCol2.m2.algoId) : "N/A"; font.pixelSize: 12; font.bold: true; color: "#FFB800" }
-                    Text { text: "FPS: " + (compareCol2.m2 ? (compareCol2.m2.fps || 0) : 0); font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Latency: " + (compareCol2.m2 ? (compareCol2.m2.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 11; color: "#E8E8E8" }
-                    Text { text: "Precision: " + (compareCol2.m2 ? (compareCol2.m2.precision || "-") : "-"); font.pixelSize: 11; color: "#00D4AA" }
-                    Text { text: "Size: " + (compareCol2.m2 ? (compareCol2.m2.size || 0) : 0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "FPS: " + (compareCol2.m2 ? (compareCol2.m2.fps || 0) : 0); font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Latency: " + (compareCol2.m2 ? (compareCol2.m2.inferenceMs || 0) : 0) + "ms"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "Precision: " + (compareCol2.m2 ? (compareCol2.m2.precision || "-") : "-"); font.pixelSize: 12; color: "#00D4AA" }
+                    Text { text: "Size: " + (compareCol2.m2 ? (compareCol2.m2.size || 0) : 0) + "MB"; font.pixelSize: 12; color: "#8B8FA3" }
                 }
             }
         }
@@ -202,7 +202,7 @@ Item {
                             width: 24; height: 24; radius: 4
                             color: modelInfo.slot > 0 ? "#1A3A2A" : "#1A1D23"
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: modelInfo.slot > 0 ? "S" + modelInfo.slot : "-"; font.pixelSize: 9; color: modelInfo.slot > 0 ? "#00D4AA" : "#4A4D58"; anchors.centerIn: parent }
+                            Text { text: modelInfo.slot > 0 ? "S" + modelInfo.slot : "-"; font.pixelSize: 12; color: modelInfo.slot > 0 ? "#00D4AA" : "#4A4D58"; anchors.centerIn: parent }
                             MouseArea { anchors.fill: parent; onClicked: toggleModelSelect(modelInfo.algoId) }
                         }
 
@@ -215,10 +215,10 @@ Item {
                                     Text { text: modelInfo.precision || "INT8"; font.pixelSize: 8; color: "#00D4AA"; anchors.centerIn: parent } }
                             }
                             Row { spacing: 8
-                                Text { text: "Input: " + (modelInfo.inputSize || "-"); font.pixelSize: 9; color: "#8B8FA3" }
-                                Text { text: (modelInfo.size || 0) + "MB"; font.pixelSize: 9; color: "#4A4D58" }
-                                Text { text: modelInfo.fps > 0 ? modelInfo.fps + " FPS" : ""; font.pixelSize: 9; color: "#00D4AA" }
-                                Text { text: modelInfo.inferenceMs ? modelInfo.inferenceMs + "ms" : ""; font.pixelSize: 9; color: "#FFB800" }
+                                Text { text: "Input: " + (modelInfo.inputSize || "-"); font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: (modelInfo.size || 0) + "MB"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: modelInfo.fps > 0 ? modelInfo.fps + " FPS" : ""; font.pixelSize: 12; color: "#00D4AA" }
+                                Text { text: modelInfo.inferenceMs ? modelInfo.inferenceMs + "ms" : ""; font.pixelSize: 12; color: "#FFB800" }
                             }
                         }
 
@@ -229,23 +229,23 @@ Item {
                             width: 52; height: 18; radius: 4
                             color: modelInfo.status === "active" ? "#0A2A1A" : modelInfo.status === "loaded" ? "#2A2A0A" : "#1A1D23"
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: modelInfo.status === "active" ? "Active" : modelInfo.status === "loaded" ? "Loaded" : "Unloaded"; font.pixelSize: 9; font.bold: true; color: modelInfo.status === "active" ? "#00D4AA" : modelInfo.status === "loaded" ? "#FFB800" : "#4A4D58"; anchors.centerIn: parent }
+                            Text { text: modelInfo.status === "active" ? "Active" : modelInfo.status === "loaded" ? "Loaded" : "Unloaded"; font.pixelSize: 12; font.bold: true; color: modelInfo.status === "active" ? "#00D4AA" : modelInfo.status === "loaded" ? "#FFB800" : "#4A4D58"; anchors.centerIn: parent }
                         }
 
                         // Actions
                         Row { spacing: 4; anchors.verticalCenter: parent.verticalCenter
                             Button {
-                                text: modelInfo.status === "unloaded" ? "Activate" : "Deactivate"; font.pixelSize: 9
+                                text: modelInfo.status === "unloaded" ? "Activate" : "Deactivate"; font.pixelSize: 12
                                 onClicked: configController.configureAlgorithm(modelInfo.algoId, { "action": modelInfo.status === "unloaded" ? "activate" : "deactivate" })
                                 background: Rectangle { color: modelInfo.status === "unloaded" ? "#3B82F6" : "#FF3D71"; radius: 4; width: 48; height: 18 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             }
-                            Button { text: "Bench"; font.pixelSize: 9
+                            Button { text: "Bench"; font.pixelSize: 12
                                 background: Rectangle { color: "#8B5CF6"; radius: 4; width: 36; height: 18 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                            Button { text: "Delete"; font.pixelSize: 9
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            Button { text: "Delete"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 18 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                         }
                     }
                 }
@@ -274,7 +274,7 @@ Item {
                     Text { text: "Precision:"; font.pixelSize: 12; color: "#8B8FA3" }
                     ComboBox { width: 240; height: 28; model: ["INT8", "FP16", "FP32"]
                         background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                 }
                 Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
                     Button { text: "Cancel"; font.pixelSize: 13; onClicked: showUploadDialog = false
@@ -333,14 +333,14 @@ Item {
                 Rectangle { height: 1; width: parent.width; color: "#252830" }
 
                 Row { spacing: 8
-                    Button { text: detailModel && detailModel.status === "unloaded" ? "Activate" : "Deactivate"; font.pixelSize: 11
+                    Button { text: detailModel && detailModel.status === "unloaded" ? "Activate" : "Deactivate"; font.pixelSize: 12
                         onClicked: { if (detailModel) { configController.configureAlgorithm(detailModel.algoId, { "action": detailModel.status === "unloaded" ? "activate" : "deactivate" }); showModelDetail = false } }
                         background: Rectangle { color: detailModel && detailModel.status === "unloaded" ? "#3B82F6" : "#FF3D71"; radius: 6; width: 90; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "Run Benchmark"; font.pixelSize: 11
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Run Benchmark"; font.pixelSize: 12
                         onClicked: { if (detailModel) { configController.configureAlgorithm(detailModel.algoId, { "action": "benchmark" }); statusMsg = "Benchmark running..."; statusTimer.start() } }
                         background: Rectangle { color: "#8B5CF6"; radius: 6; width: 100; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
             }
         }

@@ -63,9 +63,9 @@ Column {
                     currentIndex: Math.max(0, model.indexOf(cne.node.node_type || "LEAF"))
                     onActivated: cne.promoteType(model[currentIndex])
                     background: Rectangle { color: "#252830"; radius: 3 }
-                    contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
+                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
                 }
-                Text { text: cne.node.node_type === "LEAF" ? "叶子节点 (depth=" + cne.depth + ")" : "组合节点 (depth=" + cne.depth + ", children=" + (cne.node.children ? cne.node.children.length : 0) + ")"; font.pixelSize: 9; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: cne.node.node_type === "LEAF" ? "叶子节点 (depth=" + cne.depth + ")" : "组合节点 (depth=" + cne.depth + ", children=" + (cne.node.children ? cne.node.children.length : 0) + ")"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                 Item { Layout.fillWidth: true }
             }
 
@@ -75,29 +75,29 @@ Column {
                 width: parent.width
                 spacing: 4
                 Row { spacing: 4
-                    Text { text: "字段:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
+                    Text { text: "字段:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
                     ComboBox {
                         id: fieldCombo; width: 130; height: 24
                         model: ["event_type", "channel_id", "min_severity", "min_confidence", "region_id", "location_id", "device_group_id", "time"]
                         currentIndex: Math.max(0, model.indexOf(cne.node.field || ""))
                         onActivated: { cne.node.field = model[currentIndex]; cne.nodeChanged() }
                         background: Rectangle { color: "#252830"; radius: 3 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
                     }
-                    Text { text: "运算:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
+                    Text { text: "运算:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 32 }
                     ComboBox {
                         id: opCombo; width: 70; height: 24
                         model: ["==", "!=", ">=", "<=", "in", "between"]
                         currentIndex: Math.max(0, model.indexOf(cne.node.op || "=="))
                         onActivated: { cne.node.op = model[currentIndex]; cne.nodeChanged() }
                         background: Rectangle { color: "#252830"; radius: 3 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 10; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 4; verticalAlignment: Text.AlignVCenter }
                     }
-                    Text { text: "值:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 24 }
+                    Text { text: "值:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter; width: 24 }
                     TextField {
                         id: valueField; width: 130; height: 24
                         text: cne.node.value !== undefined ? cne.node.value.toString() : ""
-                        color: "#E8E8E8"; font.pixelSize: 10
+                        color: "#E8E8E8"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 3 }
                         onTextChanged: {
                             var v = text
@@ -136,7 +136,7 @@ Column {
                             id: deleteBtn
                             anchors.right: parent.right; anchors.top: parent.top
                             width: 24; height: 24
-                            text: "X"; font.pixelSize: 10
+                            text: "X"; font.pixelSize: 12
                             background: Rectangle { color: "transparent" }
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71" }
                             onClicked: cne.deleteChild(parent.parent.childIndex)
@@ -144,15 +144,15 @@ Column {
                     }
                 }
                 Row { spacing: 4
-                    Button { text: "+ LEAF"; font.pixelSize: 9
+                    Button { text: "+ LEAF"; font.pixelSize: 12
                         onClicked: cne.addChild()
                         background: Rectangle { color: "#3B82F6"; radius: 3; width: 60; height: 22 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 9
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "+ 嵌入 OR 子组"; font.pixelSize: 12
                         enabled: cne.depth < 2
                         onClicked: cne.addOrChild()
                         background: Rectangle { color: enabled ? "#6C5CE7" : "#252830"; radius: 3; width: 90; height: 22 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: enabled ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
             }
         }

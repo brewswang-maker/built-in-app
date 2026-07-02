@@ -29,6 +29,8 @@ Item {
             source: root.streamUrl.length > 0 ? root.streamUrl : ""
             videoOutput: videoOutput
             autoPlay: true
+            // [Audit-Fix P1] autoPlay=true 已在 source 变更时自动播放,
+            //   onStreamUrlChanged 中不再显式调 play(), 避免 stop→play→黑屏 双触发
             onErrorOccurred: function(error, errorString) {
                 console.warn("MediaPlayer[" + root.deviceId + "] ERROR:", error, errorString)
             }
@@ -101,7 +103,7 @@ Item {
                     id: labelText
                     text: (modelData.label || "unknown") + " " + Math.round((modelData.confidence || 0) * 100) + "%"
                     color: "#FFFFFF"
-                    font.pixelSize: 9
+                    font.pixelSize: 12  // [Audit-Fix P1] 9→12 (QtQuick.Controls 2 最小规范)
                     font.bold: true
                     font.family: "PingFang SC"
                     anchors.centerIn: parent
@@ -145,7 +147,7 @@ Item {
             Text {
                 text: root.algorithmTag
                 color: "#0D0F12"
-                font.pixelSize: 11
+                font.pixelSize: 12  // [Audit-Fix P1] 11→12 (规范最小)
                 font.bold: true
                 font.family: "PingFang SC"
                 anchors.centerIn: parent
@@ -166,7 +168,7 @@ Item {
         Text {
             text: root.fps + " FPS"
             color: "#8B8FA3"
-            font.pixelSize: 11
+            font.pixelSize: 12  // [Audit-Fix P1] 11→12 (规范最小)
             font.family: "PingFang SC"
             anchors.bottom: parent.bottom
             anchors.right: parent.right
@@ -187,11 +189,10 @@ Item {
         }
     }
 
-    // Auto-play/stop when URL changes
+    // [Audit-Fix P1] 仅在 URL 清空时显式 stop();
+    //   URL 设置时由 autoPlay=true 自动播放, 不再显式 play() 避免 double-trigger
     onStreamUrlChanged: {
-        if (root.streamUrl.length > 0) {
-            mediaPlayer.play()
-        } else {
+        if (root.streamUrl.length === 0) {
             mediaPlayer.stop()
         }
     }

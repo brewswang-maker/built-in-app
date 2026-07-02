@@ -45,8 +45,8 @@ Item {
                         }
                         Row { spacing: 4; visible: modelData.trend !== ""
                             anchors.horizontalCenter: parent.horizontalCenter
-                            Text { text: modelData.trendUp ? "+" : "-"; font.pixelSize: 11; color: modelData.trendUp ? "#00D4AA" : "#FF3D71" }
-                            Text { text: modelData.trend; font.pixelSize: 11; color: modelData.trendUp ? "#00D4AA" : "#FF3D71" }
+                            Text { text: modelData.trendUp ? "+" : "-"; font.pixelSize: 12; color: modelData.trendUp ? "#00D4AA" : "#FF3D71" }
+                            Text { text: modelData.trend; font.pixelSize: 12; color: modelData.trendUp ? "#00D4AA" : "#FF3D71" }
                         }
                     }
                 }
@@ -93,14 +93,14 @@ Item {
                     AppIcon { name: "ai"; size: 16; iconColor: "#00D4AA" }
                     Text { text: "AI助手: 输入指令或点击预设问题..."; font.pixelSize: 12; color: "#4A4D58"; Layout.fillWidth: true }
                     Row { spacing: 4
-                        Button { text: "告警统计"; font.pixelSize: 11
+                        Button { text: "告警统计"; font.pixelSize: 12
                             background: Rectangle { color: "#252830"; radius: 12; width: 72; height: 28; border.color: "#4A4D58"; border.width: 1 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: aiController.sendMessage("查看今日告警统计")
                         }
-                        Button { text: "设备状态"; font.pixelSize: 11
+                        Button { text: "设备状态"; font.pixelSize: 12
                             background: Rectangle { color: "#252830"; radius: 12; width: 72; height: 28; border.color: "#4A4D58"; border.width: 1 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: aiController.sendMessage("查看所有设备状态")
                         }
                     }
@@ -190,8 +190,8 @@ Item {
                                             NumberAnimation { from: 0.3; to: 1; duration: 1200 }
                                         }
                                     }
-                                    Text { text: modelData.status === "active" ? "运行中" : "空闲"; font.pixelSize: 11; color: modelData.color }
-                                    Text { text: modelData.desc; font.pixelSize: 11; color: "#4A4D58"; width: 100; elide: Text.ElideRight }
+                                    Text { text: modelData.status === "active" ? "运行中" : "空闲"; font.pixelSize: 12; color: modelData.color }
+                                    Text { text: modelData.desc; font.pixelSize: 12; color: "#4A4D58"; width: 100; elide: Text.ElideRight }
                                 }
                             }
                         }
@@ -210,7 +210,7 @@ Item {
                                     "Round " + federationController.currentRound + "/" + federationController.rounds + " — 训练中" :
                                     "联邦学习 — 空闲"
                                     ; font.pixelSize: 12; color: federationController.federating ? "#00D4AA" : "#8B8FA3"; font.bold: true }
-                                Text { text: "参与: " + federationController.nodes.length + " 节点"; font.pixelSize: 11; color: "#8B8FA3" }
+                                Text { text: "参与: " + federationController.nodes.length + " 节点"; font.pixelSize: 12; color: "#8B8FA3" }
                             }
                         }
                     }
@@ -227,10 +227,10 @@ Item {
                                 width: 268; height: 28; color: "#0D0F12"; radius: 4
                                 Row { anchors.fill: parent; anchors.margins: 6; spacing: 6
                                     Rectangle { width: 6; height: 6; radius: 3; color: alarm.level === "critical" ? "#FF3D71" : alarm.level === "warning" ? "#FF6B35" : "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: alarm.type || alarm.alarm_type || "-"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true; width: 60; elide: Text.ElideRight }
-                                    Text { text: alarm.location || alarm.zone || "-"; font.pixelSize: 11; color: "#8B8FA3"; width: 90; elide: Text.ElideRight }
-                                    Text { text: alarm.time || "-"; font.pixelSize: 11; color: "#4A4D58"; width: 40 }
-                                    Text { text: alarm.status === "confirmed" ? "已确认" : alarm.status === "false_alarm" ? "误报" : "待处理"; font.pixelSize: 11; color: alarm.status === "confirmed" ? "#00D4AA" : alarm.status === "false_alarm" ? "#FFB800" : "#FF6B35" }
+                                    Text { text: alarm.type || alarm.alarm_type || "-"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true; width: 60; elide: Text.ElideRight }
+                                    Text { text: alarm.location || alarm.zone || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 90; elide: Text.ElideRight }
+                                    Text { text: alarm.time || "-"; font.pixelSize: 12; color: "#4A4D58"; width: 40 }
+                                    Text { text: alarm.status === "confirmed" ? "已确认" : alarm.status === "false_alarm" ? "误报" : "待处理"; font.pixelSize: 12; color: alarm.status === "confirmed" ? "#00D4AA" : alarm.status === "false_alarm" ? "#FFB800" : "#FF6B35" }
                                 }
                             }
                         }
@@ -249,17 +249,17 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 24
 
-            Text { text: "CPU: " + statusController.cpuUsage.toFixed(1) + "%"; font.pixelSize: 11; color: statusController.cpuUsage > 80 ? "#FF3D71" : "#8B8FA3" }
-            Text { text: "GPU: " + statusController.gpuUsage.toFixed(1) + "%"; font.pixelSize: 11; color: statusController.gpuUsage > 80 ? "#FF3D71" : "#8B8FA3" }
-            Text { text: "TPU: " + statusController.tpuUtilization.toFixed(1) + "%"; font.pixelSize: 11; color: statusController.tpuUtilization > 90 ? "#FF3D71" : "#00D4AA" }
-            Text { text: "内存: " + statusController.memoryUsage.toFixed(1) + "%"; font.pixelSize: 11; color: statusController.memoryUsage > 85 ? "#FF6B35" : "#8B8FA3" }
-            Text { text: "温度: " + statusController.temperature.toFixed(0) + "°C"; font.pixelSize: 11; color: statusController.temperature > 70 ? "#FF3D71" : "#8B8FA3" }
-            Text { text: "DDR: " + statusController.tpuMemoryUsed.toFixed(0) + "MB"; font.pixelSize: 11; color: "#8B8FA3" }
+            Text { text: "CPU: " + statusController.cpuUsage.toFixed(1) + "%"; font.pixelSize: 12; color: statusController.cpuUsage > 80 ? "#FF3D71" : "#8B8FA3" }
+            Text { text: "GPU: " + statusController.gpuUsage.toFixed(1) + "%"; font.pixelSize: 12; color: statusController.gpuUsage > 80 ? "#FF3D71" : "#8B8FA3" }
+            Text { text: "TPU: " + statusController.tpuUtilization.toFixed(1) + "%"; font.pixelSize: 12; color: statusController.tpuUtilization > 90 ? "#FF3D71" : "#00D4AA" }
+            Text { text: "内存: " + statusController.memoryUsage.toFixed(1) + "%"; font.pixelSize: 12; color: statusController.memoryUsage > 85 ? "#FF6B35" : "#8B8FA3" }
+            Text { text: "温度: " + statusController.temperature.toFixed(0) + "°C"; font.pixelSize: 12; color: statusController.temperature > 70 ? "#FF3D71" : "#8B8FA3" }
+            Text { text: "DDR: " + statusController.tpuMemoryUsed.toFixed(0) + "MB"; font.pixelSize: 12; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
-            Text { text: "模型: " + statusController.activeModels + " | 运行: " + statusController.uptime; font.pixelSize: 11; color: "#4A4D58" }
+            Text { text: "模型: " + statusController.activeModels + " | 运行: " + statusController.uptime; font.pixelSize: 12; color: "#4A4D58" }
 
             // 30秒自动刷新
-            Text { id: refreshCountdown; text: "30s"; font.pixelSize: 11; color: "#4A4D58" }
+            Text { id: refreshCountdown; text: "30s"; font.pixelSize: 12; color: "#4A4D58" }
         }
     }
 

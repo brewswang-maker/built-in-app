@@ -134,7 +134,7 @@ Item {
                 width: 100; height: 30
                 model: ["今天", "近7天", "近30天", "自定义"]
                 background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
                 onCurrentTextChanged: {
                     dateRange = currentText === "今天" ? "today" :
                                 currentText === "近7天" ? "7d" :
@@ -149,7 +149,7 @@ Item {
             TextField {
                 id: customStartField; width: 100; height: 30
                 placeholderText: "开始日期"; placeholderTextColor: "#4A4D58"
-                color: "#E8E8E8"; font.pixelSize: 11
+                color: "#E8E8E8"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6 }
                 visible: false
                 onAccepted: customStart = text
@@ -157,7 +157,7 @@ Item {
             TextField {
                 id: customEndField; width: 100; height: 30
                 placeholderText: "结束日期"; placeholderTextColor: "#4A4D58"
-                color: "#E8E8E8"; font.pixelSize: 11
+                color: "#E8E8E8"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6 }
                 visible: false
                 onAccepted: customEnd = text
@@ -166,15 +166,15 @@ Item {
             Item { Layout.fillWidth: true }
 
             Button {
-                text: "导出CSV"; font.pixelSize: 11
+                text: "导出CSV"; font.pixelSize: 12
                 background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: configController.exportConfig("statistics", "csv")
             }
             Button {
-                text: "刷新"; font.pixelSize: 11
+                text: "刷新"; font.pixelSize: 12
                 background: Rectangle { color: "#3B82F6"; radius: 6; width: 56; height: 30 }
-                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     statusController.refresh()
                     alarmController.refreshAlarms(200)
@@ -205,10 +205,10 @@ Item {
                     anchors.fill: parent; anchors.margins: 10; spacing: 2
                     Row { spacing: 4
                         Text { text: model.icon; font.pixelSize: 14 }
-                        Text { text: model.label; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: model.label; font.pixelSize: 12; color: "#8B8FA3" }
                     }
                     Text { text: model.value; font.pixelSize: 22; font.bold: true; color: model.color }
-                    Text { text: model.sub; font.pixelSize: 10; color: "#8B8FA3" }
+                    Text { text: model.sub; font.pixelSize: 12; color: "#8B8FA3" }
                 }
             }
         }
@@ -235,7 +235,7 @@ Item {
                     Row {
                         spacing: 16
                         Text { text: "告警趋势 (24h)"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-                        Text { text: "总计: " + totalAlarms + "条"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "总计: " + totalAlarms + "条"; font.pixelSize: 12; color: "#8B8FA3" }
                     }
 
                     Canvas {
@@ -309,7 +309,7 @@ Item {
                     }
 
                     Row { spacing: 16
-                        Row { spacing: 4; Rectangle { width: 12; height: 3; radius: 1; color: "#FF3D71" } Text { text: "告警数"; font.pixelSize: 10; color: "#FF3D71" } }
+                        Row { spacing: 4; Rectangle { width: 12; height: 3; radius: 1; color: "#FF3D71" } Text { text: "告警数"; font.pixelSize: 12; color: "#FF3D71" } }
                     }
                 }
             }
@@ -408,9 +408,9 @@ Item {
                             }
                         }
                         Row { spacing: 8
-                            Text { text: "TPU"; font.pixelSize: 9; color: "#FFB800"; width: 50; horizontalAlignment: Text.AlignHCenter }
-                            Text { text: "内存"; font.pixelSize: 9; color: "#3B82F6"; width: 50; horizontalAlignment: Text.AlignHCenter }
-                            Text { text: "CPU"; font.pixelSize: 9; color: "#10B981"; width: 50; horizontalAlignment: Text.AlignHCenter }
+                            Text { text: "TPU"; font.pixelSize: 12; color: "#FFB800"; width: 50; horizontalAlignment: Text.AlignHCenter }
+                            Text { text: "内存"; font.pixelSize: 12; color: "#3B82F6"; width: 50; horizontalAlignment: Text.AlignHCenter }
+                            Text { text: "CPU"; font.pixelSize: 12; color: "#10B981"; width: 50; horizontalAlignment: Text.AlignHCenter }
                         }
                     }
                 }

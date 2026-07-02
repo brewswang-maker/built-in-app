@@ -84,22 +84,22 @@ Item {
                     // 基本信息
                     Text { text: "基本信息"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                     Column { spacing: 4; width: parent.width
-                        Row { spacing: 6; Text { text: "型号:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.model || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "序列号:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.id || deviceDetail.serialNumber || "-"; font.pixelSize: 11; color: "#3B82F6" } }
-                        Row { spacing: 6; Text { text: "固件:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.firmware || deviceDetail.firmwareVersion || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "IP:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.ip || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "MAC:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.mac || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "协议:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.protocol || "-"; font.pixelSize: 11; color: "#8B5CF6" } }
+                        Row { spacing: 6; Text { text: "型号:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.model || "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "序列号:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.id || deviceDetail.serialNumber || "-"; font.pixelSize: 12; color: "#3B82F6" } }
+                        Row { spacing: 6; Text { text: "固件:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.firmware || deviceDetail.firmwareVersion || "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "IP:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.ip || "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "MAC:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.mac || "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "协议:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.protocol || "-"; font.pixelSize: 12; color: "#8B5CF6" } }
                     }
 
                     // 运行状态
                     Text { text: "运行状态"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                     Column { spacing: 4; width: parent.width
-                        Row { spacing: 6; Text { text: "温度:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.temperature != null ? (deviceDetail.temperature + "°C") : "-"; font.pixelSize: 11; color: (deviceDetail.temperature || 0) > 70 ? "#FF3D71" : "#00D4AA" } }
-                        Row { spacing: 6; Text { text: "CPU:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.cpuUsage || "-") + "%"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "内存:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.memoryUsage || "-") + "%"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "运行时间:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.uptime || "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 6; Text { text: "通道数:"; font.pixelSize: 11; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.channelCount || "0"; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "温度:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.temperature != null ? (deviceDetail.temperature + "°C") : "-"; font.pixelSize: 12; color: (deviceDetail.temperature || 0) > 70 ? "#FF3D71" : "#00D4AA" } }
+                        Row { spacing: 6; Text { text: "CPU:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.cpuUsage || "-") + "%"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "内存:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: (deviceDetail.memoryUsage || "-") + "%"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "运行时间:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.uptime || "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 6; Text { text: "通道数:"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 } Text { text: deviceDetail.channelCount || "0"; font.pixelSize: 12; color: "#E8E8E8" } }
                     }
 
                     // 操作
@@ -125,7 +125,7 @@ Item {
                 Row {
                     spacing: 12
                     Text { text: "通道列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                    Text { text: (deviceDetail.channels || 0) + " 路"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: (deviceDetail.channels || 0) + " 路"; font.pixelSize: 12; color: "#8B8FA3" }
                 }
 
                 // 视频预览区
@@ -155,18 +155,18 @@ Item {
                         Row {
                             anchors.fill: parent; anchors.margins: 8; spacing: 6
                             Rectangle { width: 4; height: 4; radius: 2; color: modelData.streaming ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: modelData.name || "CH" + (index+1); font.pixelSize: 11; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: modelData.name || "CH" + (index+1); font.pixelSize: 12; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
                             Item { width: 10 }
                             Button {
-                                text: ">"; font.pixelSize: 10
+                                text: ">"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 3; width: 22; height: 18 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: mediaController.startStream(modelData.channelId || "", "live")
                             }
                             Button {
-                                text: "截"; font.pixelSize: 10
+                                text: "截"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 3; width: 22; height: 18 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: mediaController.snapshot(modelData.channelId || "")
                             }
                         }
@@ -203,23 +203,23 @@ Item {
                 }
 
                 Column { spacing: 2; width: parent.width - 20
-                    Text { text: "变倍"; font.pixelSize: 10; color: "#8B8FA3" }
+                    Text { text: "变倍"; font.pixelSize: 12; color: "#8B8FA3" }
                     Slider { width: parent.width; from: 1; to: 20; value: 1; onMoved: mediaController.ptzControl(deviceId, "zoom", value/20) }
                 }
                 Column { spacing: 2; width: parent.width - 20
-                    Text { text: "聚焦"; font.pixelSize: 10; color: "#8B8FA3" }
+                    Text { text: "聚焦"; font.pixelSize: 12; color: "#8B8FA3" }
                     Slider { width: parent.width; from: 0; to: 100; value: 50; onMoved: mediaController.ptzControl(deviceId, "focus", value/100) }
                 }
 
-                Text { text: "预置点"; font.pixelSize: 11; color: "#E8E8E8" }
+                Text { text: "预置点"; font.pixelSize: 12; color: "#E8E8E8" }
                 Grid { columns: 4; spacing: 3
                     Repeater {
                         model: 8
                         delegate: Button {
-                            text: "P" + (index+1); font.pixelSize: 9
+                            text: "P" + (index+1); font.pixelSize: 12
                             width: 34; height: 22
                             background: Rectangle { color: "#252830"; radius: 3 }
-                            contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             onClicked: mediaController.ptzControl(deviceId, "preset_" + (index+1), 0)
                         }
                     }
@@ -228,7 +228,7 @@ Item {
                 Button {
                     text: "截图"; width: parent.width - 20
                     background: Rectangle { color: "#00D4AA"; radius: 6; height: 30 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: mediaController.snapshot(deviceId)
                 }
             }

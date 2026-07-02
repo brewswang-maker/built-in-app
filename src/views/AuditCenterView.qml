@@ -133,11 +133,11 @@ Item {
                                            modelData.level === "warning" ? "#FFB800" : "#3B82F6"
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
-                                Text { text: modelData.time || "-"; font.pixelSize: 11; color: "#4A4D58" }
-                                Text { text: modelData.user || "-"; font.pixelSize: 11; color: "#3B82F6" }
-                                Text { text: modelData.action || "-"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true }
+                                Text { text: modelData.time || "-"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: modelData.user || "-"; font.pixelSize: 12; color: "#3B82F6" }
+                                Text { text: modelData.action || "-"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true }
                             }
-                            Text { text: modelData.detail || "-"; font.pixelSize: 11; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
+                            Text { text: modelData.detail || "-"; font.pixelSize: 12; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
                         }
                     }
                 }
@@ -156,7 +156,7 @@ Item {
                     spacing: 12; width: parent.width
                     Text { text: "操作日志 (详细)"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
                     Item { width: 20 }
-                    Text { text: "共 " + (auditController.totalCount || 0) + " 条"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "共 " + (auditController.totalCount || 0) + " 条"; font.pixelSize: 12; color: "#8B8FA3" }
                 }
 
                 // 表头
@@ -164,13 +164,13 @@ Item {
                     width: parent.width - 24; height: 32; color: "#141420"; radius: 4
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 6
-                        Text { text: "时间"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 70 }
-                        Text { text: "用户"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
-                        Text { text: "类型"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 50 }
-                        Text { text: "操作"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 100 }
-                        Text { text: "详情"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 200 }
-                        Text { text: "IP"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 90 }
-                        Text { text: "结果"; font.pixelSize: 11; font.bold: true; color: "#8B8FA3"; width: 40 }
+                        Text { text: "时间"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 70 }
+                        Text { text: "用户"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 50 }
+                        Text { text: "类型"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 50 }
+                        Text { text: "操作"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 100 }
+                        Text { text: "详情"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 200 }
+                        Text { text: "IP"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 90 }
+                        Text { text: "结果"; font.pixelSize: 12; font.bold: true; color: "#8B8FA3"; width: 40 }
                     }
                 }
 
@@ -186,14 +186,14 @@ Item {
                             Text { text: modelData.time || "-"; font.pixelSize: 12; color: "#4A4D58"; width: 70 }
                             Text { text: modelData.user || "-"; font.pixelSize: 12; color: "#3B82F6"; width: 50 }
                             Rectangle { width: 40; height: 18; radius: 3; color: "#1A1D23"
-                                Text { text: modelData.type || "-"; font.pixelSize: 11; color: "#8B8FA3"; anchors.centerIn: parent }
+                                Text { text: modelData.type || "-"; font.pixelSize: 12; color: "#8B8FA3"; anchors.centerIn: parent }
                             }
                             Text { text: modelData.action || "-"; font.pixelSize: 12; color: "#E8E8E8"; width: 100 }
-                            Text { text: modelData.detail || "-"; font.pixelSize: 11; color: "#8B8FA3"; width: 200; elide: Text.ElideMiddle }
-                            Text { text: modelData.ip || "-"; font.pixelSize: 11; color: "#4A4D58"; width: 90 }
+                            Text { text: modelData.detail || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 200; elide: Text.ElideMiddle }
+                            Text { text: modelData.ip || "-"; font.pixelSize: 12; color: "#4A4D58"; width: 90 }
                             Text {
                                 text: modelData.result || "-"
-                                font.pixelSize: 11
+                                font.pixelSize: 12
                                 color: modelData.result === "成功" ? "#00D4AA" :
                                        modelData.result === "异常" ? "#FF3D71" : "#FFB800"
                                 width: 40
@@ -207,10 +207,10 @@ Item {
                     spacing: 8; anchors.horizontalCenter: parent.horizontalCenter
 
                     Button {
-                        text: "上一页"; font.pixelSize: 11
+                        text: "上一页"; font.pixelSize: 12
                         enabled: auditCenter.currentPage > 1
                         background: Rectangle { color: enabled ? "#252830" : "#1A1D23"; radius: 4; width: 60; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: enabled ? "#E8E8E8" : "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: enabled ? "#E8E8E8" : "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
                             auditCenter.currentPage--
                             auditController.refreshLogs(auditCenter.currentPage, auditCenter.pageSize)
@@ -218,13 +218,13 @@ Item {
                     }
                     Text {
                         text: "第 " + auditCenter.currentPage + " 页"
-                        font.pixelSize: 11; color: "#8B8FA3"
+                        font.pixelSize: 12; color: "#8B8FA3"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Button {
-                        text: "下一页"; font.pixelSize: 11
+                        text: "下一页"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 4; width: 60; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
                             auditCenter.currentPage++
                             auditController.refreshLogs(auditCenter.currentPage, auditCenter.pageSize)

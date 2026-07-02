@@ -26,7 +26,7 @@ Item {
         Text {
             text: root._overflow ? "99+" : root.count.toString()
             color: "#FFFFFF"
-            font.pixelSize: 11
+            font.pixelSize: 12
             font.bold: true
             font.family: "PingFang SC"
             anchors.centerIn: parent

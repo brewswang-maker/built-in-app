@@ -74,7 +74,7 @@ Item {
             anchors.fill: parent; anchors.margins: 12; spacing: 12
             Text { text: "Settings"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Item { Layout.fillWidth: true }
-            Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
+            Text { text: statusMsg; font.pixelSize: 12; color: "#FFB800"; visible: statusMsg !== "" }
 
             Button { text: "Export"; font.pixelSize: 12; onClicked: configController.exportConfig()
                 background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
@@ -163,11 +163,11 @@ Item {
                 Text { text: "Display & Sound"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
                 Row { spacing: 20; width: parent.width
                     Column { spacing: 4
-                        Text { text: "Screen Brightness"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "Screen Brightness"; font.pixelSize: 12; color: "#8B8FA3" }
                         Slider { width: 200; from: 10; to: 100; value: configController.config.screenBrightness || 80; onValueChanged: configController.saveConfig("screenBrightness", value) }
                     }
                     Column { spacing: 4
-                        Text { text: "Alert Volume"; font.pixelSize: 11; color: "#8B8FA3" }
+                        Text { text: "Alert Volume"; font.pixelSize: 12; color: "#8B8FA3" }
                         Slider { width: 200; from: 0; to: 100; value: configController.config.alertVolume || 60; onValueChanged: configController.saveConfig("alertVolume", value) }
                     }
                 }
@@ -348,22 +348,22 @@ Item {
                         width: ListView.view.width; height: 48; color: "#0D0F12"; radius: 4
                         Row { anchors.fill: parent; anchors.margins: 8; spacing: 10
                             Rectangle { width: 24; height: 24; radius: 12; color: modelData.status === "active" ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter
-                                Text { text: "S" + (modelData.slot || 0); font.pixelSize: 9; color: "#0D0F12"; font.bold: true; anchors.centerIn: parent } }
-                            Text { text: modelData.name || modelData.algoId; font.pixelSize: 11; color: "#E8E8E8"; width: 180; elide: Text.ElideRight }
-                            Text { text: modelData.precision || "INT8"; font.pixelSize: 10; color: "#6C5CE7"; width: 40 }
-                            Text { text: (modelData.size || 0) + "MB"; font.pixelSize: 10; color: "#8B8FA3"; width: 50 }
-                            Text { text: (modelData.inferenceMs || 0) + "ms"; font.pixelSize: 10; color: "#FFB800"; width: 40 }
+                                Text { text: "S" + (modelData.slot || 0); font.pixelSize: 12; color: "#0D0F12"; font.bold: true; anchors.centerIn: parent } }
+                            Text { text: modelData.name || modelData.algoId; font.pixelSize: 12; color: "#E8E8E8"; width: 180; elide: Text.ElideRight }
+                            Text { text: modelData.precision || "INT8"; font.pixelSize: 12; color: "#6C5CE7"; width: 40 }
+                            Text { text: (modelData.size || 0) + "MB"; font.pixelSize: 12; color: "#8B8FA3"; width: 50 }
+                            Text { text: (modelData.inferenceMs || 0) + "ms"; font.pixelSize: 12; color: "#FFB800"; width: 40 }
                             Button {
-                                text: modelData.status === "active" ? "Deactivate" : "Activate"; font.pixelSize: 10
+                                text: modelData.status === "active" ? "Deactivate" : "Activate"; font.pixelSize: 12
                                 onClicked: configController.configureAlgorithm(modelData.algoId, { "action": modelData.status === "active" ? "deactivate" : "activate" })
                                 background: Rectangle { color: modelData.status === "active" ? "#2A1A1A" : "#1A2A1A"; radius: 4; width: 60; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: modelData.status === "active" ? "#FF6B35" : "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: modelData.status === "active" ? "#FF6B35" : "#00D4AA"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             }
                             Button {
-                                text: "Config"; font.pixelSize: 10
+                                text: "Config"; font.pixelSize: 12
                                 onClicked: configController.configureAlgorithm(modelData.algoId, { "action": "getConfig" })
                                 background: Rectangle { color: "#252830"; radius: 4; width: 44; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                             }
                         }
                     }
@@ -376,13 +376,13 @@ Item {
                         anchors.fill: parent; anchors.margins: 12; spacing: 4
                         Text { text: "TPU Utilization"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Row { spacing: 20
-                            Text { text: "Active models: " + (configController.algorithms || []).filter(function(e){ return e.status === "active" }).length; font.pixelSize: 11; color: "#00D4AA" }
-                            Text { text: "Total FPS: " + (configController.algorithms || []).reduce(function(a, e){ return a + (e.fps || 0) }, 0); font.pixelSize: 11; color: "#3B82F6" }
-                            Text { text: "Avg latency: " + ((configController.algorithms || []).length > 0 ? ((configController.algorithms || []).reduce(function(a, e){ return a + (e.inferenceMs || 0) }, 0) / (configController.algorithms || []).filter(function(e){ return e.status === "active" }).length).toFixed(1) : 0) + "ms"; font.pixelSize: 11; color: "#FFB800" }
+                            Text { text: "Active models: " + (configController.algorithms || []).filter(function(e){ return e.status === "active" }).length; font.pixelSize: 12; color: "#00D4AA" }
+                            Text { text: "Total FPS: " + (configController.algorithms || []).reduce(function(a, e){ return a + (e.fps || 0) }, 0); font.pixelSize: 12; color: "#3B82F6" }
+                            Text { text: "Avg latency: " + ((configController.algorithms || []).length > 0 ? ((configController.algorithms || []).reduce(function(a, e){ return a + (e.inferenceMs || 0) }, 0) / (configController.algorithms || []).filter(function(e){ return e.status === "active" }).length).toFixed(1) : 0) + "ms"; font.pixelSize: 12; color: "#FFB800" }
                         }
                         Row { spacing: 20
-                            Text { text: "Storage used: " + (configController.algorithms || []).reduce(function(a, e){ return a + (e.size || 0) }, 0).toFixed(1) + " MB"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: "TPU slots: " + (configController.algorithms || []).filter(function(e){ return e.slot > 0 }).length + "/8"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "Storage used: " + (configController.algorithms || []).reduce(function(a, e){ return a + (e.size || 0) }, 0).toFixed(1) + " MB"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: "TPU slots: " + (configController.algorithms || []).filter(function(e){ return e.slot > 0 }).length + "/8"; font.pixelSize: 12; color: "#8B8FA3" }
                         }
                     }
                 }

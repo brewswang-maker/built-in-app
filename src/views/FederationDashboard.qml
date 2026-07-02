@@ -215,19 +215,19 @@ Item {
                     columnSpacing: 16
 
                     Column { spacing: 2
-                        Text { text: "当前轮次"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "当前轮次"; font.pixelSize: 12; color: "#8B8FA3" }
                         Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "- / -"; font.pixelSize: 16; font.bold: true; color: "#3B82F6" }
                     }
                     Column { spacing: 2
-                        Text { text: "全局精度"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "全局精度"; font.pixelSize: 12; color: "#8B8FA3" }
                         Text { text: fedCurrentRound && fedCurrentRound.accuracy !== undefined ? fedCurrentRound.accuracy.toFixed(1) + "%" : "-"; font.pixelSize: 16; font.bold: true; color: "#00D4AA" }
                     }
                     Column { spacing: 2
-                        Text { text: "联邦节点"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "联邦节点"; font.pixelSize: 12; color: "#8B8FA3" }
                         Text { text: fedNodes.length + ""; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
                     }
                     Column { spacing: 2
-                        Text { text: "损失值"; font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "损失值"; font.pixelSize: 12; color: "#8B8FA3" }
                         Text { text: fedCurrentRound && fedCurrentRound.loss !== undefined ? fedCurrentRound.loss.toFixed(4) : "-"; font.pixelSize: 16; font.bold: true; color: "#EF4444" }
                     }
                 }
@@ -237,9 +237,9 @@ Item {
                 // 联邦策略
                 Text { text: "聚合策略"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                 Column { spacing: 4; width: parent.width - 24
-                    Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.algorithm || "FedAvg") : "FedAvg"; font.pixelSize: 11; color: "#E8E8E8"; font.bold: true } }
-                    Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.minNodes || "3") : "3"; font.pixelSize: 11; color: "#E8E8E8" } }
-                    Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
+                    Row { spacing: 8; Text { text: "算法:"; font.pixelSize: 12; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.algorithm || "FedAvg") : "FedAvg"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true } }
+                    Row { spacing: 8; Text { text: "最小节点:"; font.pixelSize: 12; color: "#8B8FA3" } Text { text: fedCurrentRound ? (fedCurrentRound.minNodes || "3") : "3"; font.pixelSize: 12; color: "#E8E8E8" } }
+                    Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 12; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 12; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
                 }
             }
         }
@@ -309,8 +309,8 @@ Item {
 
                 // 图例
                 Row { spacing: 16
-                    Text { text: "● 全局精度 (Global Accuracy)"; font.pixelSize: 10; color: "#00D4AA" }
-                    Text { text: "● 全局损失 (Global Loss)"; font.pixelSize: 10; color: "#EF4444" }
+                    Text { text: "● 全局精度 (Global Accuracy)"; font.pixelSize: 12; color: "#00D4AA" }
+                    Text { text: "● 全局损失 (Global Loss)"; font.pixelSize: 12; color: "#EF4444" }
                 }
 
                 // 梯度分布热力图
@@ -377,12 +377,12 @@ Item {
                         color: index % 2 ? "#0D1015" : "transparent"
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 8; spacing: 12
-                            Text { text: modelData.name || "-"; font.pixelSize: 10; color: "#E8E8E8"; font.bold: true; width: 50 }
-                            Text { text: (modelData.sampleCount || 0) + "样本"; font.pixelSize: 10; color: "#8B8FA3"; width: 60 }
-                            Text { text: "Acc:" + (modelData.accuracy !== undefined ? modelData.accuracy : "-"); font.pixelSize: 10; color: "#00D4AA"; width: 60 }
-                            Text { text: "Loss:" + (modelData.loss !== undefined ? modelData.loss : "-"); font.pixelSize: 10; color: "#EF4444"; width: 70 }
-                            Text { text: modelData.status || "-"; font.pixelSize: 10; color: modelData.status === "active" ? "#00D4AA" : modelData.status === "syncing" ? "#FFB800" : "#4A4D58"; width: 50 }
-                            Text { text: modelData.duration || "-"; font.pixelSize: 10; color: "#8B8FA3" }
+                            Text { text: modelData.name || "-"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true; width: 50 }
+                            Text { text: (modelData.sampleCount || 0) + "样本"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 }
+                            Text { text: "Acc:" + (modelData.accuracy !== undefined ? modelData.accuracy : "-"); font.pixelSize: 12; color: "#00D4AA"; width: 60 }
+                            Text { text: "Loss:" + (modelData.loss !== undefined ? modelData.loss : "-"); font.pixelSize: 12; color: "#EF4444"; width: 70 }
+                            Text { text: modelData.status || "-"; font.pixelSize: 12; color: modelData.status === "active" ? "#00D4AA" : modelData.status === "syncing" ? "#FFB800" : "#4A4D58"; width: 50 }
+                            Text { text: modelData.duration || "-"; font.pixelSize: 12; color: "#8B8FA3" }
                         }
                     }
                 }
@@ -403,9 +403,9 @@ Item {
                     Text { text: "全局模型"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
 
                     Column { spacing: 4
-                        Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 11; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
-                        Row { spacing: 8; Text { text: "当前轮:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "-"; font.pixelSize: 11; color: "#E8E8E8" } }
-                        Row { spacing: 8; Text { text: "活跃节点:"; font.pixelSize: 11; color: "#8B8FA3" } Text { text: fedNodes.filter(function(n){ return n.status === "active" }).length + " / " + fedNodes.length; font.pixelSize: 11; color: "#E8E8E8" } }
+                        Row { spacing: 8; Text { text: "状态:"; font.pixelSize: 12; color: "#8B8FA3" } Text { text: federationController.federating ? "训练中" : "空闲"; font.pixelSize: 12; color: federationController.federating ? "#00D4AA" : "#8B8FA3" } }
+                        Row { spacing: 8; Text { text: "当前轮:"; font.pixelSize: 12; color: "#8B8FA3" } Text { text: fedCurrentRound ? fedCurrentRound.current + " / " + fedCurrentRound.total : "-"; font.pixelSize: 12; color: "#E8E8E8" } }
+                        Row { spacing: 8; Text { text: "活跃节点:"; font.pixelSize: 12; color: "#8B8FA3" } Text { text: fedNodes.filter(function(n){ return n.status === "active" }).length + " / " + fedNodes.length; font.pixelSize: 12; color: "#E8E8E8" } }
                     }
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
@@ -421,11 +421,11 @@ Item {
                             color: index === 0 ? "#1A3A2A" : "transparent"
                             Row {
                                 anchors.fill: parent; anchors.leftMargin: 4; spacing: 8
-                                Text { text: index === 0 ? "*" : " "; font.pixelSize: 10; color: "#FFB800" }
-                                Text { text: "R" + (modelData.round || index); font.pixelSize: 10; color: index === 0 ? "#00D4AA" : "#E8E8E8"; font.bold: index === 0 }
-                                Text { text: modelData.accuracy !== undefined ? "Acc:" + modelData.accuracy.toFixed(1) + "%" : "-"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: modelData.loss !== undefined ? "L:" + modelData.loss.toFixed(4) : "-"; font.pixelSize: 10; color: "#4A4D58" }
-                                Text { text: modelData.time || "-"; font.pixelSize: 10; color: "#4A4D58" }
+                                Text { text: index === 0 ? "*" : " "; font.pixelSize: 12; color: "#FFB800" }
+                                Text { text: "R" + (modelData.round || index); font.pixelSize: 12; color: index === 0 ? "#00D4AA" : "#E8E8E8"; font.bold: index === 0 }
+                                Text { text: modelData.accuracy !== undefined ? "Acc:" + modelData.accuracy.toFixed(1) + "%" : "-"; font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: modelData.loss !== undefined ? "L:" + modelData.loss.toFixed(4) : "-"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: modelData.time || "-"; font.pixelSize: 12; color: "#4A4D58" }
                             }
                         }
                     }
@@ -443,8 +443,8 @@ Item {
                             Row {
                                 anchors.fill: parent; anchors.margins: 4; spacing: 6
                                 Rectangle { width: 6; height: 6; radius: 3; color: modelData.status === "active" ? "#00D4AA" : modelData.status === "syncing" ? "#FFB800" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: modelData.name || "-"; font.pixelSize: 10; color: "#E8E8E8"; width: 50 }
-                                Text { text: modelData.status || "-"; font.pixelSize: 9; color: "#8B8FA3"; width: 40 }
+                                Text { text: modelData.name || "-"; font.pixelSize: 12; color: "#E8E8E8"; width: 50 }
+                                Text { text: modelData.status || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 40 }
 
                                 Button {
                                     text: "通过"; font.pixelSize: 8; visible: modelData.status === "pending"

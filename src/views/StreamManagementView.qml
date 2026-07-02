@@ -90,9 +90,9 @@ Item {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
             Text { text: "Stream Mgmt"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
             Text { text: "Active: " + mediaController.channels.length; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
-            Text { text: "BW: " + totalBitrate.toFixed(1) + "/" + maxBandwidth + " Mbps"; font.pixelSize: 11; color: "#8B8FA3" }
+            Text { text: "BW: " + totalBitrate.toFixed(1) + "/" + maxBandwidth + " Mbps"; font.pixelSize: 12; color: "#8B8FA3" }
             Item { Layout.fillWidth: true }
-            Text { text: statusMsg; font.pixelSize: 11; color: "#FFB800"; visible: statusMsg !== "" }
+            Text { text: statusMsg; font.pixelSize: 12; color: "#FFB800"; visible: statusMsg !== "" }
 
             Button {
                 text: "Batch Stop (" + selectedStreams.length + ")"; font.pixelSize: 12
@@ -139,7 +139,7 @@ Item {
         Row {
             anchors.fill: parent; anchors.margins: 6; spacing: 8
 
-            Text { text: "BW:"; font.pixelSize: 10; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: "BW:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
             Rectangle {
                 width: parent.width - 120; height: 14; radius: 3; color: "#0D0F12"
                 anchors.verticalCenter: parent.verticalCenter
@@ -150,7 +150,7 @@ Item {
                     Behavior on width { NumberAnimation { duration: 500 } }
                 }
             }
-            Text { text: (totalBitrate / maxBandwidth * 100).toFixed(1) + "%"; font.pixelSize: 10; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: (totalBitrate / maxBandwidth * 100).toFixed(1) + "%"; font.pixelSize: 12; color: "#E8E8E8"; anchors.verticalCenter: parent.verticalCenter }
         }
     }
 
@@ -207,17 +207,17 @@ Item {
                     Column { anchors.fill: parent; anchors.margins: 10; spacing: 4
                         Text { text: "Server Stats"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
                         Row { spacing: 8
-                            Text { text: "Active streams:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: mediaController.channels.length; font.pixelSize: 11; color: "#00D4AA"; font.bold: true } }
+                            Text { text: "Active streams:"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: mediaController.channels.length; font.pixelSize: 12; color: "#00D4AA"; font.bold: true } }
                         Row { spacing: 8
-                            Text { text: "Total bandwidth:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: totalBitrate.toFixed(1) + " Mbps"; font.pixelSize: 11; color: "#E8E8E8" } }
+                            Text { text: "Total bandwidth:"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: totalBitrate.toFixed(1) + " Mbps"; font.pixelSize: 12; color: "#E8E8E8" } }
                         Row { spacing: 8
-                            Text { text: "Avg bitrate:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: (mediaController.channels.length > 0 ? (totalBitrate / mediaController.channels.length).toFixed(1) : "0") + " Mbps"; font.pixelSize: 11; color: "#E8E8E8" } }
+                            Text { text: "Avg bitrate:"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: (mediaController.channels.length > 0 ? (totalBitrate / mediaController.channels.length).toFixed(1) : "0") + " Mbps"; font.pixelSize: 12; color: "#E8E8E8" } }
                         Row { spacing: 8
-                            Text { text: "BW utilization:"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: (totalBitrate / maxBandwidth * 100).toFixed(1) + "%"; font.pixelSize: 11; color: totalBitrate / maxBandwidth > 0.8 ? "#FF3D71" : "#00D4AA" } }
+                            Text { text: "BW utilization:"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: (totalBitrate / maxBandwidth * 100).toFixed(1) + "%"; font.pixelSize: 12; color: totalBitrate / maxBandwidth > 0.8 ? "#FF3D71" : "#00D4AA" } }
                     }
                 }
             }
@@ -262,27 +262,27 @@ Item {
                                 Rectangle { width: 32; height: 14; radius: 3; color: "#1A3A2A"
                                     Text { text: streamData.codec || "-"; font.pixelSize: 8; color: "#00D4AA"; anchors.centerIn: parent } }
 
-                                Text { text: streamData.resolution || "-"; font.pixelSize: 10; color: "#8B8FA3" }
-                                Text { text: (streamData.bitrate || 0) + " Kbps"; font.pixelSize: 10; color: bitrateColor(streamData.bitrate || 0) }
-                                Text { text: formatDuration(streamData.duration); font.pixelSize: 10; color: "#8B8FA3" }
+                                Text { text: streamData.resolution || "-"; font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { text: (streamData.bitrate || 0) + " Kbps"; font.pixelSize: 12; color: bitrateColor(streamData.bitrate || 0) }
+                                Text { text: formatDuration(streamData.duration); font.pixelSize: 12; color: "#8B8FA3" }
 
                                 Item { width: 10 }
 
-                                Button { text: "Copy RTSP"; font.pixelSize: 9
+                                Button { text: "Copy RTSP"; font.pixelSize: 12
                                     onClicked: copyToClipboard(streamData.rtspUrl || streamData.url || "")
                                     background: Rectangle { color: "#252830"; radius: 3; width: 56; height: 18 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Copy HLS"; font.pixelSize: 9
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Copy HLS"; font.pixelSize: 12
                                     onClicked: copyToClipboard(streamData.hlsUrl || "")
                                     background: Rectangle { color: "#252830"; radius: 3; width: 48; height: 18 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Stop"; font.pixelSize: 9
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                Button { text: "Stop"; font.pixelSize: 12
                                     onClicked: mediaController.stopStream(streamData.channelId || "")
                                     background: Rectangle { color: "#FF3D71"; radius: 3; width: 36; height: 18 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                             }
 
-                            Text { text: streamData.url || streamData.rtspUrl || ""; font.pixelSize: 9; color: "#4A4D58"; elide: Text.ElideMiddle; width: parent.width }
+                            Text { text: streamData.url || streamData.rtspUrl || ""; font.pixelSize: 12; color: "#4A4D58"; elide: Text.ElideMiddle; width: parent.width }
 
                             // Bitrate bar per stream
                             Row { spacing: 4; width: parent.width
@@ -343,27 +343,27 @@ Item {
                     Text { text: "Viewers:"; font.pixelSize: 12; color: "#8B8FA3" }
                     Text { text: detailStream ? (detailStream.viewers || 0) : "0"; font.pixelSize: 12; color: "#E8E8E8" }
                     Text { text: "RTSP URL:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: detailStream ? (detailStream.rtspUrl || detailStream.url || "-") : "-"; font.pixelSize: 11; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
+                    Text { text: detailStream ? (detailStream.rtspUrl || detailStream.url || "-") : "-"; font.pixelSize: 12; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
                     Text { text: "HLS URL:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: detailStream ? (detailStream.hlsUrl || "-") : "-"; font.pixelSize: 11; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
+                    Text { text: detailStream ? (detailStream.hlsUrl || "-") : "-"; font.pixelSize: 12; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
                     Text { text: "FLV URL:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: detailStream ? (detailStream.flvUrl || "-") : "-"; font.pixelSize: 11; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
+                    Text { text: detailStream ? (detailStream.flvUrl || "-") : "-"; font.pixelSize: 12; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
                     Text { text: "WebRTC:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: detailStream ? (detailStream.webrtcUrl || "-") : "-"; font.pixelSize: 11; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
+                    Text { text: detailStream ? (detailStream.webrtcUrl || "-") : "-"; font.pixelSize: 12; color: "#3B82F6"; elide: Text.ElideMiddle; width: 280 }
                 }
 
                 Rectangle { height: 1; width: parent.width; color: "#252830" }
 
                 Row { spacing: 8
-                    Button { text: "Snapshot"; font.pixelSize: 11; onClicked: { if (detailStream) mediaController.snapshot(detailStream.channelId) }
+                    Button { text: "Snapshot"; font.pixelSize: 12; onClicked: { if (detailStream) mediaController.snapshot(detailStream.channelId) }
                         background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "Start Rec"; font.pixelSize: 11; onClicked: { if (detailStream) mediaController.startRecording(detailStream.channelId) }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Start Rec"; font.pixelSize: 12; onClicked: { if (detailStream) mediaController.startRecording(detailStream.channelId) }
                         background: Rectangle { color: "#FF3D71"; radius: 6; width: 80; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "Stop Stream"; font.pixelSize: 11; onClicked: { if (detailStream) mediaController.stopStream(detailStream.channelId); showStreamDetail = false }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                    Button { text: "Stop Stream"; font.pixelSize: 12; onClicked: { if (detailStream) mediaController.stopStream(detailStream.channelId); showStreamDetail = false }
                         background: Rectangle { color: "#FF3D71"; radius: 6; width: 90; height: 28 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                 }
             }
         }

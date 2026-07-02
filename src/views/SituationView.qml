@@ -169,9 +169,9 @@ Item {
 
                         Row {
                             spacing: 16; anchors.horizontalCenter: parent.horizontalCenter
-                            Text { text: "入侵:" + Math.round(securityScore * 0.9 + 10); font.pixelSize: 11; color: "#00D4AA" }
-                            Text { text: "消防:" + Math.round(securityScore * 0.8 + 5); font.pixelSize: 11; color: "#FFB800" }
-                            Text { text: "PPE:" + Math.round(securityScore * 0.95 + 3); font.pixelSize: 11; color: "#00D4AA" }
+                            Text { text: "入侵:" + Math.round(securityScore * 0.9 + 10); font.pixelSize: 12; color: "#00D4AA" }
+                            Text { text: "消防:" + Math.round(securityScore * 0.8 + 5); font.pixelSize: 12; color: "#FFB800" }
+                            Text { text: "PPE:" + Math.round(securityScore * 0.95 + 3); font.pixelSize: 12; color: "#00D4AA" }
                         }
                     }
                 }
@@ -399,13 +399,13 @@ Item {
                         Column {
                             anchors.fill: parent; anchors.margins: 10; spacing: 4
                             Text { text: camPopup.camName; font.pixelSize: 13; font.bold: true; color: "#3B82F6" }
-                            Text { text: "状态: 在线"; font.pixelSize: 11; color: "#00D4AA" }
-                            Text { text: "分辨率: 1080p"; font.pixelSize: 11; color: "#8B8FA3" }
-                            Text { text: "码率: 4Mbps"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "状态: 在线"; font.pixelSize: 12; color: "#00D4AA" }
+                            Text { text: "分辨率: 1080p"; font.pixelSize: 12; color: "#8B8FA3" }
+                            Text { text: "码率: 4Mbps"; font.pixelSize: 12; color: "#8B8FA3" }
                             Button {
-                                text: "查看预览"; font.pixelSize: 10
+                                text: "查看预览"; font.pixelSize: 12
                                 background: Rectangle { color: "#3B82F6"; radius: 4; width: 70; height: 22 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: camPopup.close()
                             }
                         }
@@ -458,17 +458,17 @@ Item {
                                         anchors.verticalCenter: parent.verticalCenter
                                         Text {
                                             text: alarmData.status || "未处置"
-                                            font.pixelSize: 11
+                                            font.pixelSize: 12
                                             color: alarmData.status === "已处置" ? "#00D4AA" :
                                                    alarmData.status === "处置中" ? "#FFB800" : "#FF3D71"
                                             anchors.centerIn: parent
                                         }
                                     }
                                     Button {
-                                        text: "处置"; font.pixelSize: 11
+                                        text: "处置"; font.pixelSize: 12
                                         visible: alarmData.status !== "已处置"
                                         background: Rectangle { color: "#3B82F6"; radius: 3; width: 40; height: 22 }
-                                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                         onClicked: alarmController.handleAlarm(alarmData.id, "confirm")
                                     }
                                 }
@@ -497,19 +497,19 @@ Item {
 
                         Text { text: "AI推理性能"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
                         Row { spacing: 12
-                            Text { text: "TPU:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "TPU:"; font.pixelSize: 12; color: "#8B8FA3" }
                             Text { id: tpuValueText; text: "0%"; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
                         }
                         Row { spacing: 12
-                            Text { text: "吞吐:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "吞吐:"; font.pixelSize: 12; color: "#8B8FA3" }
                             Text { text: statusController.activeModels + "模型"; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
                         }
                         Row { spacing: 12
-                            Text { text: "温度:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "温度:"; font.pixelSize: 12; color: "#8B8FA3" }
                             Text { id: tempValueText; text: "0°C"; font.pixelSize: 12; color: "#00D4AA"; font.bold: true }
                         }
                         Row { spacing: 12
-                            Text { text: "模型数:"; font.pixelSize: 11; color: "#8B8FA3" }
+                            Text { text: "模型数:"; font.pixelSize: 12; color: "#8B8FA3" }
                             Text { id: fpsValueText; text: "0 / 8槽位"; font.pixelSize: 12; color: "#E8E8E8" }
                         }
 
@@ -545,9 +545,9 @@ Item {
                                 Row {
                                     anchors.fill: parent; spacing: 6
                                     Rectangle { width: 6; height: 6; radius: 3; color: algoData.enabled ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: algoData.name || ""; font.pixelSize: 11; color: "#E8E8E8"; width: 70; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: (algoData.fps || "-") + " FPS"; font.pixelSize: 11; color: "#8B8FA3"; width: 50; anchors.verticalCenter: parent.verticalCenter }
-                                    Text { text: "TPU " + (algoData.tpu || "0%"); font.pixelSize: 11; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: algoData.name || ""; font.pixelSize: 12; color: "#E8E8E8"; width: 70; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: (algoData.fps || "-") + " FPS"; font.pixelSize: 12; color: "#8B8FA3"; width: 50; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: "TPU " + (algoData.tpu || "0%"); font.pixelSize: 12; color: "#FFB800"; anchors.verticalCenter: parent.verticalCenter }
                                 }
                             }
                         }
@@ -571,8 +571,8 @@ Item {
                             Column {
                                 width: parent.width; spacing: 2
                                 Row {
-                                    Text { text: "BM1684X TPU"; font.pixelSize: 11; color: "#8B8FA3"; width: 100 }
-                                    Text { id: tpuTempText; text: statusController.temperature.toFixed(0) + "°C"; font.pixelSize: 11; color: "#E8E8E8" }
+                                    Text { text: "BM1684X TPU"; font.pixelSize: 12; color: "#8B8FA3"; width: 100 }
+                                    Text { id: tpuTempText; text: statusController.temperature.toFixed(0) + "°C"; font.pixelSize: 12; color: "#E8E8E8" }
                                 }
                                 ProgressBar { id: tempBar; width: parent.width; value: 0; height: 4
                                     background: Rectangle { color: "#252830"; radius: 2; height: 4 }
@@ -584,8 +584,8 @@ Item {
                             Column {
                                 width: parent.width; spacing: 2
                                 Row {
-                                    Text { text: "DDR4 内存"; font.pixelSize: 11; color: "#8B8FA3"; width: 100 }
-                                    Text { id: memValueText; text: "0%"; font.pixelSize: 11; color: "#E8E8E8" }
+                                    Text { text: "DDR4 内存"; font.pixelSize: 12; color: "#8B8FA3"; width: 100 }
+                                    Text { id: memValueText; text: "0%"; font.pixelSize: 12; color: "#E8E8E8" }
                                 }
                                 ProgressBar { id: memBar; width: parent.width; value: 0; height: 4
                                     background: Rectangle { color: "#252830"; radius: 2; height: 4 }
@@ -596,8 +596,8 @@ Item {
                             // 运行时间
                             Row {
                                 spacing: 12
-                                Text { text: "运行时间:"; font.pixelSize: 11; color: "#8B8FA3" }
-                                Text { id: uptimeValueText; text: statusController.uptime; font.pixelSize: 11; color: "#00D4AA" }
+                                Text { text: "运行时间:"; font.pixelSize: 12; color: "#8B8FA3" }
+                                Text { id: uptimeValueText; text: statusController.uptime; font.pixelSize: 12; color: "#00D4AA" }
                             }
                         }
                     }

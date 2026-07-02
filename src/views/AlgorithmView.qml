@@ -43,7 +43,7 @@ Item {
                         text: Math.round(tpuRing.tpuUsage * 100) + "%"
                         font.pixelSize: 12; font.bold: true; color: tpuRing.tpuUsage > 0.9 ? "#FF3D71" : tpuRing.tpuUsage > 0.7 ? "#FFB800" : "#00D4AA"
                     }
-                    Text { text: "TPU"; font.pixelSize: 9; color: "#8B8FA3"; anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter }
+                    Text { text: "TPU"; font.pixelSize: 12; color: "#8B8FA3"; anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter }
                 }
 
                 Column {
@@ -54,7 +54,7 @@ Item {
                     }
                     Text {
                         text: "TPU内存: " + algorithmController.tpuMemoryUsed + " MB"
-                        font.pixelSize: 11; color: "#8B8FA3"
+                        font.pixelSize: 12; color: "#8B8FA3"
                     }
                 }
 
@@ -62,19 +62,19 @@ Item {
 
                 Column {
                     spacing: 2; Layout.alignment: Qt.AlignVCenter
-                    Text { text: "算法总数"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "算法总数"; font.pixelSize: 12; color: "#8B8FA3" }
                     Text { text: (algorithmController.algorithms || []).length + ""; font.pixelSize: 16; font.bold: true; color: "#00D4AA" }
                 }
 
                 Column {
                     spacing: 2; Layout.alignment: Qt.AlignVCenter
-                    Text { text: "模型总数"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "模型总数"; font.pixelSize: 12; color: "#8B8FA3" }
                     Text { text: (algorithmController.models || []).length + ""; font.pixelSize: 16; font.bold: true; color: "#3B82F6" }
                 }
 
                 Column {
                     spacing: 2; Layout.alignment: Qt.AlignVCenter
-                    Text { text: "加载状态"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "加载状态"; font.pixelSize: 12; color: "#8B8FA3" }
                     Text { text: algorithmController.loading ? "加载中..." : "就绪"; font.pixelSize: 16; font.bold: true; color: algorithmController.loading ? "#FFB800" : "#00D4AA" }
                 }
 
@@ -123,7 +123,7 @@ Item {
                         Row {
                             spacing: 4; anchors.horizontalCenter: parent.horizontalCenter
                             AppIcon { name: modelData.icon; size: 14; iconColor: activePreset === index ? "#00D4AA" : "#8B8FA3" }
-                            Text { text: modelData.name; font.pixelSize: 11; color: activePreset === index ? "#00D4AA" : "#E8E8E8"; font.bold: activePreset === index }
+                            Text { text: modelData.name; font.pixelSize: 12; color: activePreset === index ? "#00D4AA" : "#E8E8E8"; font.bold: activePreset === index }
                         }
                         Text { text: modelData.desc; font.pixelSize: 8; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight; width: 110 }
                     }
@@ -131,7 +131,7 @@ Item {
             }
 
             Item { Layout.fillWidth: true }
-            Text { text: "选择场景自动配置算法参数"; font.pixelSize: 10; color: "#4A4D58" }
+            Text { text: "选择场景自动配置算法参数"; font.pixelSize: 12; color: "#4A4D58" }
         }
     }
 
@@ -214,7 +214,7 @@ Item {
                                 color: algoCategory === modelData.id ? modelData.color : "#252830"
                                 border.width: 1
                                 border.color: algoCategory === modelData.id ? modelData.color : "transparent"
-                                Text { id: catText; text: modelData.name; font.pixelSize: 11; color: algoCategory === modelData.id ? "#FFF" : "#8B8FA3"; font.bold: algoCategory === modelData.id; anchors.centerIn: parent }
+                                Text { id: catText; text: modelData.name; font.pixelSize: 12; color: algoCategory === modelData.id ? "#FFF" : "#8B8FA3"; font.bold: algoCategory === modelData.id; anchors.centerIn: parent }
                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: algoCategory = modelData.id }
                             }
                         }
@@ -257,20 +257,20 @@ Item {
                                         }
                                     }
                                     Item { width: 10 }
-                                    Text { text: algoData.inference_latency_ms ? (1000 / algoData.inference_latency_ms).toFixed(1) + " FPS" : ""; font.pixelSize: 10; color: "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
+                                    Text { text: algoData.inference_latency_ms ? (1000 / algoData.inference_latency_ms).toFixed(1) + " FPS" : ""; font.pixelSize: 12; color: "#00D4AA"; anchors.verticalCenter: parent.verticalCenter }
                                 }
 
                                 Row {
                                     spacing: 8
-                                    Text { text: algoData.model_id || algoData.id || ""; font.pixelSize: 9; color: "#4A4D58"; elide: Text.ElideRight; width: 150 }
-                                    Text { text: "TPU: " + (algoData.tpu_usage || 0) + "%"; font.pixelSize: 9; color: "#FFB800" }
+                                    Text { text: algoData.model_id || algoData.id || ""; font.pixelSize: 12; color: "#4A4D58"; elide: Text.ElideRight; width: 150 }
+                                    Text { text: "TPU: " + (algoData.tpu_usage || 0) + "%"; font.pixelSize: 12; color: "#FFB800" }
                                 }
 
                                 Row {
                                     spacing: 4
                                     Button {
                                         text: (algoData.status === "active" || algoData.status === "loaded") ? "停止" : "启动"
-                                        font.pixelSize: 9
+                                        font.pixelSize: 12
                                         onClicked: {
                                             if (algoData.status === "active" || algoData.status === "loaded")
                                                 algorithmController.deactivateModel(algoData.model_id || algoData.id)
@@ -280,17 +280,17 @@ Item {
                                         background: Rectangle {
                                             color: (algoData.status === "active" || algoData.status === "loaded") ? "#FF3D71" : "#00D4AA"; radius: 4; width: 52; height: 18
                                         }
-                                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: (algoData.status === "active" || algoData.status === "loaded") ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: (algoData.status === "active" || algoData.status === "loaded") ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     }
                                     Button {
-                                        text: "配置"; font.pixelSize: 9
+                                        text: "配置"; font.pixelSize: 12
                                         onClicked: {
                                             currentAlgoId = algoData.model_id || algoData.id || ""
                                             currentAlgo = algoData
                                             algorithmController.getAlgorithmConfig(currentAlgoId)
                                         }
                                         background: Rectangle { color: "#252830"; radius: 4; width: 44; height: 18 }
-                                        contentItem: Text { text: parent.text; font.pixelSize: 9; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     }
                                 }
                             }
@@ -325,14 +325,14 @@ Item {
                                             Text { text: algoData.category || ""; font.pixelSize: 8; color: "#3B82F6"; anchors.centerIn: parent }
                                         }
                                     }
-                                    Text { text: algoData.algo_id || algoData.id || ""; font.pixelSize: 9; color: "#8B8FA3"; elide: Text.ElideRight; width: 150 }
+                                    Text { text: algoData.algo_id || algoData.id || ""; font.pixelSize: 12; color: "#8B8FA3"; elide: Text.ElideRight; width: 150 }
                                 }
 
                                 Item { width: 10 }
 
                                 Button {
                                     text: algoData.enabled ? "已启用" : "启用"
-                                    font.pixelSize: 10
+                                    font.pixelSize: 12
                                     anchors.verticalCenter: parent.verticalCenter
                                     onClicked: {
                                         currentAlgoId = algoData.algo_id || algoData.id || ""
@@ -340,7 +340,7 @@ Item {
                                         algorithmController.getAlgorithmConfig(currentAlgoId)
                                     }
                                     background: Rectangle { color: algoData.enabled ? "#1A3A2A" : "#3B82F6"; radius: 4; width: 48; height: 22 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 10; color: algoData.enabled ? "#00D4AA" : "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: algoData.enabled ? "#00D4AA" : "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 }
                             }
                         }
@@ -450,7 +450,7 @@ Item {
                                 return chs
                             }
                             background: Rectangle { color: "transparent" }
-                            contentItem: Text { text: parent.displayText; font.pixelSize: 11; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
                         }
                     }
                 }
@@ -466,7 +466,7 @@ Item {
                         Row {
                             spacing: 12
                             Text { text: "实时推理性能"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
-                            Text { text: "TPU(%)"; font.pixelSize: 10; color: "#00D4AA" }
+                            Text { text: "TPU(%)"; font.pixelSize: 12; color: "#00D4AA" }
                         }
 
                         Canvas {
@@ -549,7 +549,7 @@ Item {
                     }
 
                     // 置信度阈值
-                    Text { text: "置信度阈值"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "置信度阈值"; font.pixelSize: 12; color: "#8B8FA3" }
                     Row {
                         spacing: 8; width: parent.width
                         Slider {
@@ -560,7 +560,7 @@ Item {
                     }
 
                     // NMS阈值
-                    Text { text: "NMS 阈值"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "NMS 阈值"; font.pixelSize: 12; color: "#8B8FA3" }
                     Row {
                         spacing: 8; width: parent.width
                         Slider {
@@ -571,11 +571,11 @@ Item {
                     }
 
                     // 确认帧数
-                    Text { text: "确认帧数"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "确认帧数"; font.pixelSize: 12; color: "#8B8FA3" }
                     SpinBox { id: confirmSpin; from: 1; to: 30; value: 3; width: parent.width }
 
                     // 最大目标数
-                    Text { text: "最大检测目标数"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "最大检测目标数"; font.pixelSize: 12; color: "#8B8FA3" }
                     SpinBox { id: maxTargetsSpin; from: 1; to: 100; value: 20; width: parent.width }
 
                     // TPU加速
@@ -587,7 +587,7 @@ Item {
                     }
 
                     // 生效时段
-                    Text { text: "生效时段"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "生效时段"; font.pixelSize: 12; color: "#8B8FA3" }
                     Row {
                         spacing: 4
                         TextField { id: timeFrom; text: "00:00"; width: 60; font.pixelSize: 12; color: "#E8E8E8"; background: Rectangle { color: "#252830"; radius: 4 } }
@@ -596,7 +596,7 @@ Item {
                     }
 
                     // ROI设置
-                    Text { text: "ROI 区域设置"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "ROI 区域设置"; font.pixelSize: 12; color: "#8B8FA3" }
                     Button {
                         text: "绘制ROI区域"
                         width: parent.width
@@ -608,10 +608,10 @@ Item {
                     Rectangle { height: 1; color: "#252830"; width: parent.width }
                     Text { text: "告警配置"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
 
-                    Text { text: "告警级别"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "告警级别"; font.pixelSize: 12; color: "#8B8FA3" }
                     ComboBox { id: alarmLevelCombo; width: parent.width; model: ["低", "中", "高", "紧急"]; currentIndex: 2; background: Rectangle { color: "#252830"; radius: 4 } }
 
-                    Text { text: "冷却时间(秒)"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: "冷却时间(秒)"; font.pixelSize: 12; color: "#8B8FA3" }
                     SpinBox { id: cooldownSpin; from: 5; to: 300; value: 30; width: parent.width }
 
                     CheckBox { id: snapshotCheck; text: "截图"; checked: true; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8" } }

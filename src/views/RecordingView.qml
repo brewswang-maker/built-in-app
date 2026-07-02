@@ -241,14 +241,14 @@ Item {
                     Rectangle {
                         anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8
                         width: 160; height: 24; color: "#99000000"; radius: 4
-                        Text { text: (selectedChannel || "全部通道"); font.pixelSize: 11; color: "#E8E8E8"; anchors.centerIn: parent }
+                        Text { text: (selectedChannel || "全部通道"); font.pixelSize: 12; color: "#E8E8E8"; anchors.centerIn: parent }
                     }
 
                     // 时间戳叠加
                     Rectangle {
                         anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8
                         width: 140; height: 24; color: "#99000000"; radius: 4
-                        Text { text: selectedDate + " " + playbackTimeText.text; font.pixelSize: 11; color: "#FFB800"; anchors.centerIn: parent }
+                        Text { text: selectedDate + " " + playbackTimeText.text; font.pixelSize: 12; color: "#FFB800"; anchors.centerIn: parent }
                     }
 
                     // 多路同步缩略图
@@ -266,7 +266,7 @@ Item {
                                         var streamList = mediaController.channels
                                         return streamList[index] ? (streamList[index].name || ("CH" + (index+1))) : ("CH" + (index+1))
                                     }
-                                    font.pixelSize: 10; color: "#8B8FA3"; anchors.centerIn: parent
+                                    font.pixelSize: 12; color: "#8B8FA3"; anchors.centerIn: parent
                                 }
                                 MouseArea {
                                     anchors.fill: parent
@@ -340,7 +340,7 @@ Item {
 
                             Text { text: "|"; font.pixelSize: 14; color: "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
 
-                            Text { text: "速度:"; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "速度:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
                             ComboBox {
                                 id: speedCombo; width: 60
                                 model: ["0.5x","1x","2x","4x","8x","16x"]; currentIndex: 1
@@ -350,13 +350,13 @@ Item {
                             Text { text: "|"; font.pixelSize: 14; color: "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
 
                             Text { id: playbackTimeText; text: "00:00:00"; font.pixelSize: 12; color: "#FFB800"; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: "/ 23:59:59"; font.pixelSize: 11; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
+                            Text { text: "/ 23:59:59"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
 
                             Item { width: 20 }
                             Button {
-                                text: "截图"; font.pixelSize: 10
+                                text: "截图"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 48; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
                                     if (selectedChannel) {
                                         var streamList = mediaController.channels
@@ -370,9 +370,9 @@ Item {
                                 }
                             }
                             Button {
-                                text: "下载"; font.pixelSize: 10
+                                text: "下载"; font.pixelSize: 12
                                 background: Rectangle { color: "#252830"; radius: 4; width: 48; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
                                     // 下载当前选中的录像段
                                     if (recordingSegments.length > 0) {
@@ -381,9 +381,9 @@ Item {
                                 }
                             }
                             Button {
-                                text: lockedRecordings[selectedChannel] ? "解锁" : "锁定"; font.pixelSize: 10
+                                text: lockedRecordings[selectedChannel] ? "解锁" : "锁定"; font.pixelSize: 12
                                 background: Rectangle { color: lockedRecordings[selectedChannel] ? "#FFB800" : "#252830"; radius: 4; width: 52; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 10; color: lockedRecordings[selectedChannel] ? "#0D0F12" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: lockedRecordings[selectedChannel] ? "#0D0F12" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
                                     if (selectedChannel) {
                                         lockedRecordings[selectedChannel] = !lockedRecordings[selectedChannel]
@@ -471,9 +471,9 @@ Item {
                         // 图例
                         Row {
                             spacing: 12
-                            Text { text: "连续录像"; font.pixelSize: 9; color: "#00D4AA" }
-                            Text { text: "移动侦测"; font.pixelSize: 9; color: "#FFB800" }
-                            Text { text: "告警录像"; font.pixelSize: 9; color: "#FF3D71" }
+                            Text { text: "连续录像"; font.pixelSize: 12; color: "#00D4AA" }
+                            Text { text: "移动侦测"; font.pixelSize: 12; color: "#FFB800" }
+                            Text { text: "告警录像"; font.pixelSize: 12; color: "#FF3D71" }
                         }
                     }
                 }
@@ -523,7 +523,7 @@ Item {
                             Text {
                                 text: (modelData.startTime !== undefined ? modelData.startTime : "—") + " - " +
                                       (modelData.endTime !== undefined ? modelData.endTime : "—")
-                                font.pixelSize: 11; color: "#8B8FA3"
+                                font.pixelSize: 12; color: "#8B8FA3"
                                 width: 160
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -532,7 +532,7 @@ Item {
                             Text {
                                 text: modelData.type === "alarm" ? "告警录像" :
                                       modelData.type === "motion" ? "移动侦测" : "连续录像"
-                                font.pixelSize: 11; color: "#FFB800"
+                                font.pixelSize: 12; color: "#FFB800"
                                 width: 80
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -540,7 +540,7 @@ Item {
                             // 大小
                             Text {
                                 text: modelData.size ? modelData.size : "—"
-                                font.pixelSize: 11; color: "#8B8FA3"
+                                font.pixelSize: 12; color: "#8B8FA3"
                                 width: 80
                                 anchors.verticalCenter: parent.verticalCenter
                             }

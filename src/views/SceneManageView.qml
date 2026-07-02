@@ -165,19 +165,19 @@ Item {
                     AppIcon { name: modelData.icon || "folder"; size: 22; iconColor: modelData.active ? "#00D4AA" : "#8B8FA3" }
                     Column { spacing: 1
                         Text { text: modelData.name || "场景"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                        Text { text: "预设: " + (modelData.preset || "自定义"); font.pixelSize: 10; color: "#8B8FA3" }
+                        Text { text: "预设: " + (modelData.preset || "自定义"); font.pixelSize: 12; color: "#8B8FA3" }
                     }
                     Item { width: 10 }
                     Rectangle {
                         width: 50; height: 18; radius: 4
                         color: modelData.active ? "#0A2A1A" : "#2A2A2A"
-                        Text { text: modelData.active ? "激活" : "停用"; font.pixelSize: 9; color: modelData.active ? "#00D4AA" : "#8B8FA3"; anchors.centerIn: parent }
+                        Text { text: modelData.active ? "激活" : "停用"; font.pixelSize: 12; color: modelData.active ? "#00D4AA" : "#8B8FA3"; anchors.centerIn: parent }
                     }
                 }
 
                 Row { spacing: 12
-                    Text { text: (modelData.devices || 0) + " 设备"; font.pixelSize: 11; color: "#8B8FA3" }
-                    Text { text: (modelData.algorithms ? modelData.algorithms.length : 0) + " 算法"; font.pixelSize: 11; color: "#8B8FA3" }
+                    Text { text: (modelData.devices || 0) + " 设备"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: (modelData.algorithms ? modelData.algorithms.length : 0) + " 算法"; font.pixelSize: 12; color: "#8B8FA3" }
                 }
 
                 // 算法标签
@@ -195,20 +195,20 @@ Item {
                 Row {
                     spacing: 8
                     Button {
-                        text: modelData.active ? "停用" : "激活"; font.pixelSize: 11
+                        text: modelData.active ? "停用" : "激活"; font.pixelSize: 12
                         background: Rectangle { color: modelData.active ? "#FF3D71" : "#00D4AA"; radius: 4; width: 60; height: 24 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: configController.saveConfig("scene_" + modelData.id + "_active", !modelData.active)
                     }
                     Button {
-                        text: "配置"; font.pixelSize: 11
+                        text: "配置"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 4; width: 60; height: 24 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                     Button {
-                        text: "删除"; font.pixelSize: 11
+                        text: "删除"; font.pixelSize: 12
                         background: Rectangle { color: "#252830"; radius: 4; width: 30; height: 24 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                 }
             }
@@ -261,15 +261,15 @@ Item {
                                     anchors.verticalCenter: parent.verticalCenter }
                             }
 
-                            Text { text: "算法: " + modelData.algorithms.join(", "); font.pixelSize: 9; color: "#3B82F6"; wrapMode: Text.WordWrap; width: parent.width }
-                            Text { text: "告警: " + modelData.alarmRules.length + " 条规则"; font.pixelSize: 9; color: "#FFB800" }
-                            Text { text: "联动: " + modelData.linkageActions.join(", "); font.pixelSize: 9; color: "#00D4AA"; wrapMode: Text.WordWrap; width: parent.width }
-                            Text { text: "ROI: " + modelData.roiConfig; font.pixelSize: 9; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
+                            Text { text: "算法: " + modelData.algorithms.join(", "); font.pixelSize: 12; color: "#3B82F6"; wrapMode: Text.WordWrap; width: parent.width }
+                            Text { text: "告警: " + modelData.alarmRules.length + " 条规则"; font.pixelSize: 12; color: "#FFB800" }
+                            Text { text: "联动: " + modelData.linkageActions.join(", "); font.pixelSize: 12; color: "#00D4AA"; wrapMode: Text.WordWrap; width: parent.width }
+                            Text { text: "ROI: " + modelData.roiConfig; font.pixelSize: 12; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
 
                             Button {
-                                text: "应用此模板"; font.pixelSize: 11
+                                text: "应用此模板"; font.pixelSize: 12
                                 background: Rectangle { color: modelData.color; radius: 4; width: 80; height: 22 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 11; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
                                     configController.saveConfig("scene_template_" + modelData.id, {
                                         name: modelData.name, icon: modelData.icon,
@@ -331,7 +331,7 @@ Item {
                     text: exportJsonText
                     color: "#00D4AA"
                     font.family: "monospace"
-                    font.pixelSize: 10
+                    font.pixelSize: 12
                     background: Rectangle { color: "#0D0F12"; radius: 6; border.color: "#252830" }
                     wrapMode: TextArea.Wrap
                 }

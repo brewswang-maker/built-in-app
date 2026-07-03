@@ -232,7 +232,7 @@ Item {
                         HourlyTrendChart {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            data: statisticsController.hourlyTrend
+                            chartData: statisticsController.hourlyTrend
                         }
                     }
                 }
@@ -372,7 +372,7 @@ Item {
                         }
                         TpsLineChart {
                             Layout.fillWidth: true; Layout.fillHeight: true
-                            data: statisticsController.aiTpsHistory
+                            chartData: statisticsController.aiTpsHistory
                         }
                     }
                 }
@@ -695,22 +695,22 @@ Item {
 
     // ── 24h 趋势图 ──
     component HourlyTrendChart : Canvas {
-        property var data: []
-        onDataChanged: requestPaint()
+        property var chartData: []
+        onChartDataChanged: requestPaint()
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
             ctx.fillStyle = "#0D0F12"; ctx.fillRect(0, 0, width, height)
-            if (!data || data.length === 0) {
+            if (!chartData || chartData.length === 0) {
                 ctx.fillStyle = "#4A4D58"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"
                 ctx.fillText("暂无数据", width / 2, height / 2)
                 return
             }
-            var counts = data.map(function(d) { return d.count || 0 })
+            var counts = chartData.map(function(d) { return d.count || 0 })
             var maxV = Math.max.apply(null, counts)
             if (maxV <= 0) maxV = 1
-            var barW = width / data.length - 2
-            for (var i = 0; i < data.length; i++) {
+            var barW = width / chartData.length - 2
+            for (var i = 0; i < chartData.length; i++) {
                 var h = (counts[i] / maxV) * (height - 24)
                 var x = i * (barW + 2) + 1
                 var y = height - 20 - h
@@ -719,26 +719,27 @@ Item {
                 ctx.fillStyle = grad
                 ctx.fillRect(x, y, barW, h)
                 ctx.fillStyle = "#8B8FA3"; ctx.font = "9px sans-serif"; ctx.textAlign = "center"
-                if (data[i].hour !== undefined)
-                    ctx.fillText(data[i].hour, x + barW / 2, height - 6)
+                if (chartData[i].hour !== undefined)
+                    ctx.fillText(chartData[i].hour, x + barW / 2, height - 6)
             }
         }
     }
 
     // ── v7.0 P1 #10: 实时 TPS 折线图 ──
     component TpsLineChart : Canvas {
-        property var data: []   // [{t, v}, ...]
-        onDataChanged: requestPaint()
+        property var chartData: []   // [{t, v}, ...]
+        onChartDataChanged: requestPaint()
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
             ctx.fillStyle = "#0D0F12"; ctx.fillRect(0, 0, width, height)
-            if (!data || data.length === 0) {
+            if (!chartData || chartData.length === 0) {
                 ctx.fillStyle = "#4A4D58"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"
                 ctx.fillText("等待 WS 推理数据 (ai_inference)...", width / 2, height / 2)
                 return
             }
             // 提取 v
+            var data = chartData
             var vals = data.map(function(d) { return d.v || 0 })
             var maxV = Math.max.apply(null, vals)
             if (maxV <= 0) maxV = 1

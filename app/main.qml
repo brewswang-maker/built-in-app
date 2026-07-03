@@ -529,15 +529,13 @@ ApplicationWindow {
 
     // ── 告警音效播放器 ──
     // [FIX 2026-06-28] 对标 Web 端 useGlobalAlarm.ts playAlarmSound()
-    MediaPlayer {
+    // [FIX 2026-07-01] Qt 6.11.1 兼容性: QQuickMediaPlayer QML 只暴露 source/autoPlay
+    // (无 volume/loops/audioOutput), 改用 QQuickSoundEffect (有 volume/loops/muted/playing/status)
+    SoundEffect {
         id: alarmSound
         source: "qrc:/audio/alarm.wav"
         volume: 0.6
         loops: 1
-        audioOutput: AudioOutput {
-            id: alarmAudioOutput
-            volume: 0.6
-        }
     }
 
     // ── Connections ──

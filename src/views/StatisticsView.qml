@@ -434,14 +434,15 @@ Item {
                     Canvas {
                         id: pieCanvas
                         width: parent.width - 24; height: parent.height - 50
-                        property var data: alarmTypeData
+                        property var chartData: alarmTypeData
+                        onChartDataChanged: requestPaint()
                         property var labels: alarmTypeLabels
                         property var colors: ["#FF3D71", "#FF6B35", "#FFB800", "#3B82F6", "#6C5CE7", "#00D4AA", "#8B5CF6", "#10B981"]
 
                         onPaint: {
                             var ctx = getContext("2d")
                             ctx.clearRect(0, 0, width, height)
-                            var d = data
+                            var d = chartData
                             if (d.length === 0) return
                             var cx = 70, cy = height / 2, r = Math.min(cx, cy) - 10
                             var total = 0

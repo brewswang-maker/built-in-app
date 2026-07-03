@@ -256,7 +256,8 @@ Item {
 
                 Canvas {
                     width: parent.width; height: 120
-                    property var data: [alarmStats.critical, alarmStats.warning, alarmStats.info]
+                    property var chartData: [alarmStats.critical, alarmStats.warning, alarmStats.info]
+                    onChartDataChanged: requestPaint()
                     property var colors: ["#FF3D71", "#FF6B35", "#00D4AA"]
                     property var labels: ["严重", "警告", "信息"]
 
@@ -264,6 +265,7 @@ Item {
                         var ctx = getContext("2d")
                         var cx = 70, cy = 60, r = 45
                         ctx.clearRect(0, 0, width, height)
+                        var data = chartData
                         var total = data[0] + data[1] + data[2]
                         if (total === 0) { total = 1 }
                         var start = -Math.PI / 2
@@ -341,7 +343,7 @@ Item {
     }
 
     // ── 统计（从实际告警数据动态计算, 响应式更新）──
-    QtObject {
+    Item {
         id: alarmStats
         property int critical: 0
         property int warning: 0

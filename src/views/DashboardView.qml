@@ -136,7 +136,7 @@ Item {
                         id: trendChart
                         width: 268; height: 120
 
-                        property var data: [23, 18, 31, 15, 22, 12, 19]
+                        property var chartData: [23, 18, 31, 15, 22, 12, 19]
                         property var labels: ["一", "二", "三", "四", "五", "六", "日"]
 
                         onPaint: {
@@ -144,6 +144,7 @@ Item {
                             ctx.clearRect(0, 0, width, height)
                             ctx.fillStyle = "#0D0F12"; ctx.fillRect(0, 0, width, height)
 
+                            var data = chartData
                             var maxVal = Math.max.apply(null, data)
                             var barW = width / data.length - 8
 

@@ -181,17 +181,17 @@ Item {
                                 font.pixelSize: 12; color: modelData.status === "unhandled" ? "#FFB800" : "#8B8FA3"; anchors.centerIn: parent }
                         }
                         Row { spacing: 2
-                            Button { width: 32; height: 26; text: "ç¡®è®¤"; font.pixelSize: 12
+                            Button { width: 32; height: 26; text: "确认"; font.pixelSize: 12
                                 background: Rectangle { color: "#1A2A1A"; radius: 3 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: alarmController.confirmAlarm(modelData.alarm_id)
                             }
-                            Button { width: 32; height: 26; text: "è¯¯æ\u008a¥"; font.pixelSize: 12
+                            Button { width: 32; height: 26; text: "误报"; font.pixelSize: 12
                                 background: Rectangle { color: "#2A1A1A"; radius: 3 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: alarmController.markFalseAlarm(modelData.alarm_id)
                             }
-                            Button { width: 32; height: 26; text: "è¯¦æ\u0083\u0085"; font.pixelSize: 12
+                            Button { width: 32; height: 26; text: "详情"; font.pixelSize: 12
                                 background: Rectangle { color: "#1A1D23"; radius: 3 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: { detailPanel.alarm = modelData; detailPanel.visible = true }
@@ -340,13 +340,14 @@ Item {
         }
     }
 
-    // ── 统计（从实际告警数据动态计算）──
+    // ── 统计（从实际告警数据动态计算, 响应式更新）──
     QtObject {
         id: alarmStats
         property int critical: 0
         property int warning: 0
         property int info: 0
-        Component.onCompleted: {
+
+        function recompute() {
             var c = 0, w = 0, n = 0
             for (var i = 0; i < alarmController.alarms.length; i++) {
                 var lvl = alarmController.alarms[i].level
@@ -355,6 +356,14 @@ Item {
                 else n++
             }
             critical = c; warning = w; info = n
+        }
+
+        Component.onCompleted: recompute()
+
+        // [FIX 2026-06-28] 响应式更新: 告警列表变化时重新计算统计
+        Connections {
+            target: alarmController
+            function onAlarmsUpdated() { alarmStats.recompute() }
         }
     }
 

@@ -87,7 +87,7 @@ AlarmController::AlarmController(ApiClient* api, QObject* parent)
     }
     QString wsUrl = m_api->property("baseUrl").toString();
     wsUrl.replace("http://", "ws://").replace("https://", "wss://");
-    wsUrl += "/api/v1/alarms/stream";
+    wsUrl += "/ws";  // [FIX] DrogonWsAdapter route is /ws
     auto* ws = new QWebSocket();
     m_ws = ws;
     connect(ws, &QWebSocket::textMessageReceived,
@@ -170,6 +170,11 @@ void AlarmController::handleAlarm(const QString& alarmId, const QString& action)
 }
 
 void AlarmController::connectWebSocket() {
+    // [FIX 2026-06-28] 统一WS通道启用时跳过独立连接, 避免双通道重复收告警
+    if (m_useUnifiedWs && m_router) {
+        qInfo() << "[AlarmController] unified WS active, connectWebSocket() skipped";
+        return;
+    }
 #ifdef HAS_QT_WEBSOCKETS
     if (m_ws) {
         static_cast<QWebSocket*>(m_ws)->close();
@@ -178,7 +183,7 @@ void AlarmController::connectWebSocket() {
     }
     QString wsUrl = m_api->property("baseUrl").toString();
     wsUrl.replace("http://", "ws://").replace("https://", "wss://");
-    wsUrl += "/api/v1/alarms/stream";
+    wsUrl += "/ws";  // [FIX] DrogonWsAdapter route is /ws
     auto* ws = new QWebSocket();
     m_ws = ws;
     connect(ws, &QWebSocket::textMessageReceived,

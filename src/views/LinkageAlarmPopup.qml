@@ -111,7 +111,12 @@ Window {
             alarmVideo.source = currentAlarm.stream_url
             alarmVideo.play()
         } else if (currentAlarm && currentAlarm.channel_id) {
-            alarmVideo.source = "rtsp://127.0.0.1:554/gb_" + currentAlarm.channel_id
+            var chId = currentAlarm.channel_id_str || ("" + currentAlarm.channel_id)
+            if (chId.length >= 20 && chId.indexOf("gb_") !== 0) {
+                alarmVideo.source = "rtsp://127.0.0.1:554/rtp/gb_" + chId
+            } else {
+                alarmVideo.source = "rtsp://127.0.0.1:554/rtp/" + chId
+            }
             alarmVideo.play()
         } else {
             alarmVideo.stop()
@@ -310,13 +315,29 @@ Window {
                         Column {
                             width: 264; spacing: 6; padding: 8
 
-                            // 联动抓图区域 (占位)
+                            // 联动抓图区域
                             Text { text: "联动抓图"; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
-                            Rectangle { width: 260; height: 146; color: "#0A0C10"; radius: 6
+                            Rectangle {
+                                width: 260; height: 146; color: "#0A0C10"; radius: 6; clip: true
+                                // [FIX 2026-06-28] 加载实际快照图片
+                                Image {
+                                    anchors.fill: parent
+                                    source: currentAlarm ? (currentAlarm.snapshot_url || currentAlarm.snapshotUrl || "") : ""
+                                    fillMode: Image.PreserveAspectCrop
+                                    visible: currentAlarm && currentAlarm.snapshot_url && status === Image.Ready
+                                    cache: false
+                                    asynchronous: true
+                                }
+                                BusyIndicator {
+                                    anchors.centerIn: parent
+                                    running: currentAlarm && currentAlarm.snapshot_url && parent.children[0].status === Image.Loading
+                                    visible: running
+                                }
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "等待抓图..."
+                                    text: currentAlarm && currentAlarm.snapshot_url ? "加载中..." : "等待抓图..."
                                     font.pixelSize: 14; color: "#4A4D58"
+                                    visible: !currentAlarm || !currentAlarm.snapshot_url || parent.children[0].status !== Image.Ready
                                 }
                             }
 

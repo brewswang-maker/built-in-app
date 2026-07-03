@@ -207,7 +207,8 @@ void WsMessageRouter::buildAndOpenSocket() {
     wsBase.replace(QStringLiteral("https://"), QStringLiteral("wss://"));
 
     // 规范 700c35a7: 携带 Last-Event-ID 续传
-    QUrl url(wsBase + QStringLiteral("/api/v1/ws"));
+    // [FIX 2026-06-28] WS 路径修正: DrogonWsAdapter 注册在 /ws, 不是 /api/v1/ws
+    QUrl url(wsBase + QStringLiteral("/ws"));
     if (!m_lastEventId.isEmpty()) {
         QUrlQuery q;
         q.addQueryItem("last_event_id", m_lastEventId);
@@ -297,10 +298,16 @@ void WsMessageRouter::onWsTextMessage(const QString& message) {
 
     QString typeStr = env.value("type").toString();
     QString messageId = env.value("messageId").toString();
-    // [Audit-Fix] 兼容后端 pushSystemEvent 的 "data" 字段和 pushAlarm 的 "alarm" 字段
+    // [FIX 2026-06-28] 兼容后端三种 payload 格式:
+    //   1. 规范信封: {type, payload: {...}}
+    //   2. pushSystemEvent: {type, data: {...}}
+    //   3. pushAlarm flat JSON: {type: "alarm.new", alarm_id: "...", alarm_type: "...", ...}
+    //      (后端 pushAlarm 将 alarm 字段展开到顶层, 无 payload/data/alarm 嵌套)
     QJsonObject payload = env.value("payload").toObject();
     if (payload.isEmpty()) payload = env.value("data").toObject();
     if (payload.isEmpty()) payload = env.value("alarm").toObject();
+    // [FIX] 当三种嵌套格式都为空时, 使用整个 env 作为 payload (flat JSON 兼容)
+    if (payload.isEmpty()) payload = env;
 
     // 持久化 lastEventId, 用于断线重连时续传
     if (!messageId.isEmpty()) {

@@ -70,7 +70,16 @@ inline const char* wsMessageTypeToString(WsMessageType t) {
 
 inline WsMessageType wsMessageTypeFromString(const QString& s) {
     if (s == "heartbeat")       return WsMessageType::Heartbeat;
-    if (s == "alarm")           return WsMessageType::Alarm;
+    // [FIX 2026-06-28] 兼容后端 pushAlarm 多种 type 命名:
+    //   "alarm"         — 规范 b4ced019
+    //   "alarm.new"     — DrogonWsAdapter::pushAlarm 默认 type
+    //   "linkage_alarm" — BoxService WEB_POPUP executor
+    if (s == "alarm" || s == "alarm.new" || s == "linkage_alarm" ||
+        s == "dashboard_alert" || s == "system.dashboard_alert" || s == "system.alarm")
+        return WsMessageType::Alarm;
+    // [FIX] system.linkage_action → AgentMessage 通道 (联动日志实时更新)
+    if (s == "system.linkage_action" || s == "linkage_action")
+        return WsMessageType::AgentMessage;
     if (s == "device_status")   return WsMessageType::DeviceStatus;
     if (s == "system_metrics")  return WsMessageType::SystemMetrics;
     if (s == "ai_inference")    return WsMessageType::AiInference;

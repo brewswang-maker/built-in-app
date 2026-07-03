@@ -80,24 +80,11 @@ Popup {
         }
     }
 
-    Component.onCompleted: {
-        alarmController.refreshAlarms(1)
-    }
-
-    Connections {
-        target: alarmController
-        function onAlarmsUpdated() {
-            if (alarmController.alarms.length > 0) {
-                currentAlarm = alarmController.alarms[0]
-                autoCloseTimer.start()
-            }
-        }
-        function onNewAlarm(alarm) {
-            currentAlarm = alarm
-            alarmPopup.open()
-            autoCloseTimer.restart()
-        }
-    }
+    // [FIX 2026-06-28] 移除了 Component.onCompleted { refreshAlarms(1) } 和
+    //   Connections { onAlarmsUpdated / onNewAlarm } — 这些会导致:
+    //   1. 应用启动时自动弹出第一条告警 (refreshAlarms → onAlarmsUpdated → open)
+    //   2. 每条新告警弹窗两次 (main.qml onNewAlarm 调 showAlarm, 这里又 open)
+    //   正确路径: main.qml Connections → alarmPopup.showAlarm(alarm)
 
     // ── 自动关闭倒计时 + 进度条 ═══
     Timer {

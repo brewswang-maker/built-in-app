@@ -36,5 +36,6 @@
         <file alias="ReActTraceView.qml">../src/views/components/ReActTraceView.qml</file>
         <file alias="HeatmapOverlay.qml">../src/views/components/HeatmapOverlay.qml</file>
         <file alias="CardPanel.qml">../src/views/components/CardPanel.qml</file>
+        <file>audio/alarm.wav</file>
     </qresource>
 </RCC>

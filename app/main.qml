@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import Qt.labs.settings 1.0
+import QtMultimedia  // [FIX 2026-06-28] 告警音效
 
 ApplicationWindow {
     id: root
@@ -526,16 +527,37 @@ ApplicationWindow {
         unreadCount: notificationController.unreadCount
     }
 
+    // ── 告警音效播放器 ──
+    // [FIX 2026-06-28] 对标 Web 端 useGlobalAlarm.ts playAlarmSound()
+    MediaPlayer {
+        id: alarmSound
+        source: "qrc:/audio/alarm.wav"
+        volume: 0.6
+        loops: 1
+        audioOutput: AudioOutput {
+            id: alarmAudioOutput
+            volume: 0.6
+        }
+    }
+
     // ── Connections ──
     Connections {
         target: alarmController
         function onNewAlarm(alarm) {
+            // 播放告警音效
+            alarmSound.stop()
+            alarmSound.play()
+
             var level = alarm.severity || alarm.level || 0
             if (level >= 3 || alarm.has_linkage) {
                 linkageAlarmPopup.showAlarm(alarm, alarm.linkage_actions || [])
             } else {
                 alarmPopup.showAlarm(alarm)
             }
+        }
+        // [FIX] 被防抖抑制的告警不弹窗, 但记录日志
+        function onSuppressedAlarm(alarm) {
+            console.log("[Main] Alarm suppressed (debounce):", alarm.alarm_type, alarm.channel_id)
         }
     }
 }

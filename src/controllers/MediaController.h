@@ -108,6 +108,11 @@ public:
     /// P1-1: Receive detection results from WebSocket and update QML tiles
     Q_INVOKABLE void updateDetections(const QString& deviceId, const QVariantList& boxes);
 
+    /// [RC10] QML 同步设备在线状态到 MediaController（由 DeviceController.onDevicesUpdated 驱动）
+    Q_INVOKABLE void setDeviceOnlineStatus(const QString& deviceId, bool online);
+    /// [RC10] 查询设备是否在线（triggerStreamStart 防御性前置检查）
+    Q_INVOKABLE bool isDeviceOnline(const QString& deviceId) const;
+
 signals:
     void layoutChanged();
     void channelsUpdated();
@@ -155,4 +160,5 @@ private:
     float m_pipOpacity = 0.85f;
     float m_playbackRate = 1.0f;
     QVariantMap m_detections; // deviceId -> [{x,y,width,height,label,confidence,color}, ...]
+    QHash<QString, bool> m_deviceOnline; // [RC10] deviceId -> online cache (synced from QML DeviceController)
 };

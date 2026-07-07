@@ -182,6 +182,13 @@ void MediaController::triggerStreamStart(const QString& deviceId,
                                          const QString& channelId) {
     const QString streamId = channelId.isEmpty() ? deviceId : channelId;
 
+    // [RC10] 防御性前置检查：设备离线时跳过拉流，避免向后端发送无意义的 SIP INVITE
+    if (!isDeviceOnline(deviceId)) {
+        qWarning() << "[MediaController] [RC10] Device offline, skipping triggerStreamStart:"
+                   << deviceId;
+        return;
+    }
+
     qDebug() << "[MediaController] triggerStreamStart: deviceId=" << deviceId
              << "streamId=" << streamId;
 
@@ -582,4 +589,22 @@ QVariantList MediaController::supportedPlaybackRates() const {
 void MediaController::updateDetections(const QString& deviceId, const QVariantList& boxes) {
     m_detections[deviceId] = boxes;
     emit detectionsUpdated();
+}
+
+// [RC10] 设备在线状态缓存管理
+void MediaController::setDeviceOnlineStatus(const QString& deviceId, bool online) {
+    if (deviceId.isEmpty()) return;
+    auto it = m_deviceOnline.find(deviceId);
+    if (it == m_deviceOnline.end() || it.value() != online) {
+        m_deviceOnline[deviceId] = online;
+        qDebug() << "[MediaController] [RC10] Device online status updated:"
+                 << deviceId << "->" << (online ? "online" : "offline");
+    }
+}
+
+bool MediaController::isDeviceOnline(const QString& deviceId) const {
+    auto it = m_deviceOnline.constFind(deviceId);
+    // 未知设备（未同步过状态）默认允许拉流，避免误阻断
+    if (it == m_deviceOnline.constEnd()) return true;
+    return it.value();
 }

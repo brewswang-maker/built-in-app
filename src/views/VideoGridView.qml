@@ -36,6 +36,16 @@ Item {
     // 当前选中的播放倍速(同步到 mediaController)
     property real playbackRate: mediaController.playbackRate
 
+    // [RC10] 计算是否有在线设备 — 用于禁用"开始预览"按钮
+    readonly property bool hasOnlineDevice: {
+        for (var i = 0; i < deviceController.devices.length; i++) {
+            var dev = deviceController.devices[i]
+            if ((dev.status || "offline") === "online")
+                return true
+        }
+        return false
+    }
+
     // Helper: get device ID for a slot index
     function slotDeviceId(slot) {
         if (slot >= 0 && slot < deviceController.devices.length)
@@ -49,25 +59,62 @@ Item {
     }
 
     // Request stream for a slot (with the current degradation chain)
+    // [RC10] 增加设备在线状态预检查
     function requestStream(slot) {
         var devId = slotDeviceId(slot)
         if (devId.length > 0) {
+            // 检查设备在线状态
+            if (slot < deviceController.devices.length) {
+                var devStatus = deviceController.devices[slot].status || "offline"
+                if (devStatus !== "online") {
+                    videoGridPage.showToast("设备离线，无法预览", "warn")
+                    return
+                }
+            }
             mediaController.startStreamWithProtocols(
                 devId, slotChannelId(slot), protocolChain)
         }
     }
 
+    // [RC10] 同步设备在线状态到 MediaController（在拉流前调用）
+    function syncDeviceOnlineStatus() {
+        for (var i = 0; i < deviceController.devices.length; i++) {
+            var dev = deviceController.devices[i]
+            var devId = dev.id || dev.device_id || ""
+            if (devId.length > 0) {
+                var isOnline = (dev.status || "offline") === "online"
+                mediaController.setDeviceOnlineStatus(devId, isOnline)
+            }
+        }
+    }
+
     // Request streams for all visible slots via single batch API call.
-    // Uses refreshAllStreamUrls which maps streams to devices by index
-    // position, bypassing the GB28181 device_id/channel_id mismatch.
+    // [RC10] 增加设备在线状态过滤：离线设备跳过，并弹出 Toast 提示
     function requestAllStreams() {
+        // 先同步设备在线状态到 MediaController（防御性后端检查）
+        syncDeviceOnlineStatus()
+
         var devIds = []
+        var offlineSkipped = 0
         var count = Math.min(mediaController.currentLayout, deviceController.devices.length)
         for (var i = 0; i < count; i++) {
-            var id = deviceController.devices[i].id || deviceController.devices[i].device_id || ""
+            var dev = deviceController.devices[i]
+            var devStatus = dev.status || "offline"
+            if (devStatus !== "online") {
+                offlineSkipped++
+                continue  // 跳过离线设备
+            }
+            var id = dev.id || dev.device_id || ""
             if (id.length > 0)
                 devIds.push(id)
         }
+
+        // 有离线设备时弹出提示
+        if (offlineSkipped > 0) {
+            videoGridPage.showToast(
+                offlineSkipped + " 台设备离线，已跳过拉流", "warn")
+        }
+
         if (devIds.length > 0)
             mediaController.refreshAllStreamUrls(devIds)
     }
@@ -108,6 +155,9 @@ Item {
                 text: videoGridPage.isPreviewActive ? "停止预览" : "开始预览"
                 // [P2-B3] "开始/停止预览" Button 文字: 12 → 13 (合规)
                                 font.pixelSize: 13
+                // [RC10] 全部设备离线时禁用"开始预览"（但允许"停止预览"）
+                enabled: videoGridPage.isPreviewActive || videoGridPage.hasOnlineDevice
+                opacity: enabled ? 1.0 : 0.4
                 highlighted: videoGridPage.isPreviewActive
                 onClicked: {
                     videoGridPage.isPreviewActive = !videoGridPage.isPreviewActive

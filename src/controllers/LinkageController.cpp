@@ -74,6 +74,30 @@ QStringList LinkageController::knownActionTypes() const {
     return out;
 }
 
+// [P1-#1 v3.0 R1] inline in header
+
+void LinkageController::refreshActionTypes() {
+    if (!m_api) return;
+    m_api->get("/api/v1/linkage/action-types",
+        [this](QJsonObject obj) {
+            QJsonArray arr = ApiClient::extractArray(obj, {"data", "items"});
+            m_actionTypes.clear();
+            m_actionSchemas.clear();
+            for (const auto& v : arr) {
+                QJsonObject t = v.toObject();
+                QString typeName = t.value("type_name").toString();
+                m_actionTypes.append(t.toVariantMap());
+                if (t.contains("param_schema") && t["param_schema"].isObject() && !typeName.isEmpty()) {
+                    m_actionSchemas[typeName] = t["param_schema"].toObject().toVariantMap();
+                }
+            }
+            emit actionTypesUpdated();
+        },
+        [this](int code, QString msg) {
+            emit errorOccurred(code, QStringLiteral("refreshActionTypes failed: ") + msg);
+        });
+}
+
 QVariantMap LinkageController::actionTypesByPrefix() const {
     QVariantMap out;
     for (auto it = m_actionByPrefix.constBegin(); it != m_actionByPrefix.constEnd(); ++it) {

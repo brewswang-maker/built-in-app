@@ -29,6 +29,9 @@
         <file alias="LinkageRuleView.qml">../src/views/LinkageRuleView.qml</file>
         <file alias="LinkageConditionNode.qml">../src/views/LinkageConditionNode.qml</file>
         <file alias="LinkageAlarmPopup.qml">../src/views/LinkageAlarmPopup.qml</file>
+        <!-- [P1-#1 v3.0 R1-2] 人脸库管理视图 -->
+        <file alias="FaceDatabaseView.qml">../src/views/FaceDatabaseView.qml</file>
+        <file alias="FaceRealtimeView.qml">../src/views/FaceRealtimeView.qml</file>
         <file alias="NotificationPopup.qml">../src/views/NotificationPopup.qml</file>
         <file alias="NotificationBell.qml">../src/views/components/NotificationBell.qml</file>
         <file alias="AppIcon.qml">../src/views/components/AppIcon.qml</file>
@@ -36,6 +39,13 @@
         <file alias="ReActTraceView.qml">../src/views/components/ReActTraceView.qml</file>
         <file alias="HeatmapOverlay.qml">../src/views/components/HeatmapOverlay.qml</file>
         <file alias="CardPanel.qml">../src/views/components/CardPanel.qml</file>
+        <!-- [P1-#1 v3.0 R1-2] 人脸库管理组件 -->
+        <file alias="FaceRecordDialog.qml">../src/views/components/FaceRecordDialog.qml</file>
+        <file alias="BatchImportDialog.qml">../src/views/components/BatchImportDialog.qml</file>
+        <file alias="ClearGroupDialog.qml">../src/views/components/ClearGroupDialog.qml</file>
+        <file alias="DeleteConfirmDialog.qml">../src/views/components/DeleteConfirmDialog.qml</file>
+        <!-- [P1-#1 v3.0 R1] 动作参数配置弹窗 -->
+        <file alias="ActionParamDialog.qml">../src/views/components/ActionParamDialog.qml</file>
         <file>audio/alarm.wav</file>
     </qresource>
 </RCC>

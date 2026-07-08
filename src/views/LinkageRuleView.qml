@@ -17,6 +17,11 @@ Item {
     // ── 校验错误状态 (规范 82ec775a: 显示给用户的可读错误) ──
     property string validationError: ""
     property string validationField: ""
+    // [P1-#1 v3.0 R1] 动作参数 (key=actionType, value=params object)
+    property var actionParams: ({})
+    // 当前要编辑参数的动作类型 (空=无)
+    property string editingActionType: ""
+    property var editingSchema: ({"fields": []})
     property int    validationCode: -1
 
     // ── 条件树状态 (P1 #5) ──
@@ -59,7 +64,12 @@ Item {
             for (var i = 0; i < col.children.length; i++) {
                 var child = col.children[i]
                 if (child.actionType && child.checked) {
-                    actions.push({ type: child.actionType })
+                    var actObj = { type: child.actionType }
+                    // [P1-#1 v3.0 R1] 附加参数 (从 actionParams map 读取)
+                    if (actionParams[child.actionType] !== undefined) {
+                        actObj.params = actionParams[child.actionType]
+                    }
+                    actions.push(actObj)
                 }
             }
         }
@@ -321,6 +331,7 @@ Item {
 
     Component.onCompleted: {
         linkageController.refreshRules()
+        linkageController.refreshActionTypes()  // [P1-#1 v3.0 R1] 拉取 param_schema
     }
 
     Connections {
@@ -1087,5 +1098,27 @@ Item {
                 }
             }
         }
+    // ═══ 动作参数配置弹窗 (P1-#1 v3.0 R1 补齐) ═══
+    ActionParamDialog {
+        id: actionParamDialog
+        actionType: linkagePage.editingActionType
+        schema: linkagePage.editingSchema
+        initialParams: linkagePage.actionParams[linkagePage.editingActionType] || ({})
+        onAcceptedParams: (params) => {
+            var m = JSON.parse(JSON.stringify(linkagePage.actionParams))
+            m[linkagePage.editingActionType] = params
+            linkagePage.actionParams = m
+        }
     }
+
+    // [P1-#1] 调起参数配置: 弹 dialog
+    function openActionParamDialog(actionType, schema) {
+        if (!schema || !schema.fields || schema.fields.length === 0) {
+            return  // 无参数动作
+        }
+        editingActionType = actionType
+        editingSchema = schema
+        actionParamDialog.open()
+    }
+}
 }

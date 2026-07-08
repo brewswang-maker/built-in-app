@@ -56,9 +56,9 @@ Window {
         }
     }
 
+    // [FIX 2026-07-09] 移除启动时多余请求: alarmController.refreshAlarms(10) 已在 main.qml:100 调用
     Component.onCompleted: {
         if (alarmId) {
-            alarmController.refreshAlarms(10)
             linkageController.refreshLogs(alarmId)
             linkageController.getRuleStats()
         }

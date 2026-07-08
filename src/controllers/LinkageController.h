@@ -67,6 +67,13 @@ public:
     Q_INVOKABLE QStringList knownActionTypes() const;
     Q_INVOKABLE QVariantMap actionTypesByPrefix() const;
 
+    // [P1-#1 v3.0 R1] 动作类型元数据 (含 param_schema)
+    Q_PROPERTY(QVariantList actionTypesMeta READ actionTypesMeta CONSTANT)
+    Q_PROPERTY(QVariantMap actionParamSchemas READ actionParamSchemas CONSTANT)
+    QVariantList actionTypesMeta() const { return m_actionTypes; }
+    QVariantMap actionParamSchemas() const { return m_actionSchemas; }
+    Q_INVOKABLE void refreshActionTypes();  // GET /api/v1/linkage/action-types
+
     // P1 #5 条件树相关
     Q_INVOKABLE QStringList allRuleIds(const QString& excludeId = QString()) const;
     Q_INVOKABLE QVariantMap validateConditionTree(const QVariantMap& tree) const;
@@ -82,6 +89,7 @@ public:
 
 signals:
     void rulesUpdated();
+    void actionTypesUpdated();
     void logsUpdated();
     void ruleCreated(const QVariantMap& rule);
     void ruleDeleted(const QString& ruleId);
@@ -98,4 +106,6 @@ private:
     QVariantList m_logs;
     QSet<QString> m_knownActionTypes;
     QHash<QString, QStringList> m_actionByPrefix;
+    QVariantList m_actionTypes;
+    QVariantMap m_actionSchemas;
 };

@@ -13,6 +13,9 @@ Item {
     property string selectedDate: Qt.formatDate(new Date(), "yyyy-MM-dd")
     property string selectedChannel: ""
     property string selectedEventType: ""
+    // [FIX 2026-07-01] AI标签筛选透传到 RecordingController.query()
+    property string selectedAiTag: ""
+    property int selectedMinConfidence: 0
     property var recordingSegments: []
     property real playbackPosition: 0
     property string playbackUrl: ""
@@ -21,6 +24,7 @@ Item {
 
     Component.onCompleted: {
         mediaController.refreshStreams()
+        recordingController.refreshRecordings()  // [FIX 2026-07-01] 初始化加载录像记录
     }
 
     Connections {
@@ -112,6 +116,20 @@ Item {
                     color: "#E8E8E8"; font.pixelSize: 13
                     verticalAlignment: Text.AlignVCenter; leftPadding: 10
                 }
+                // [FIX 2026-07-01] AI标签透传到 selectedAiTag
+                onCurrentTextChanged: {
+                    var tagMap = {
+                        "全部AI标签": "",
+                        "人员检测": "person",
+                        "车辆检测": "vehicle",
+                        "安全帽": "helmet",
+                        "火焰/烟雾": "fire_smoke",
+                        "人脸识别": "face",
+                        "人群密度": "crowd",
+                        "摔倒检测": "fall"
+                    }
+                    selectedAiTag = tagMap[currentText] || ""
+                }
             }
 
             // P3.5: 最低置信度
@@ -132,6 +150,24 @@ Item {
             }
 
             Item { Layout.fillWidth: true }
+
+            // [FIX 2026-07-01] 搜索按钮 — 将所有筛选条件透传到 RecordingController
+            Button {
+                text: "搜索"
+                font.pixelSize: 13; font.bold: true
+                background: Rectangle { color: "#00D4AA"; radius: 6; width: 72; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: {
+                    var filter = {
+                        "channel": selectedChannel,
+                        "event_type": selectedEventType,
+                        "ai_tag": selectedAiTag,
+                        "min_confidence": selectedMinConfidence / 100.0,
+                        "date": selectedDate
+                    }
+                    recordingController.query(filter)
+                }
+            }
 
             Button {
                 text: selectedDate

@@ -196,23 +196,14 @@ void AlarmController::onWsTextMessage(const QString& message) {
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
     QVariantMap alarm = doc.object().toVariantMap();
 
-    // 同通道同类型去重: 仅保留最新一条
+    // 提取通道标识用于防抖
     QString chId = alarm["channel_id_str"].toString();
     if (chId.isEmpty()) chId = alarm["channel_id"].toString();
     QString alarmType = alarm["alarm_type"].toString();
 
-    for (int i = 0; i < m_alarms.size(); ++i) {
-        QVariantMap existing = m_alarms[i].toMap();
-        QString exCh = existing["channel_id_str"].toString();
-        if (exCh.isEmpty()) exCh = existing["channel_id"].toString();
-        if (exCh == chId && existing["alarm_type"].toString() == alarmType) {
-            m_alarms.removeAt(i);
-            break;
-        }
-    }
-
-    m_hasUnread = true;
-    m_alarms.prepend(alarm);
+    // [FIX 2026-07-09] 收到消息入 pending 队列，500ms 后批量合并，避免每次都触发 alarmsUpdated
+    m_pendingAlarms.append(alarm);
+    m_hasPendingAlarms = true;
 
     // 防抖: 500ms 合并窗口，批量刷新 UI
     if (!m_flushTimer) {
@@ -222,23 +213,46 @@ void AlarmController::onWsTextMessage(const QString& message) {
     }
     m_flushTimer->start(500);
 
-    // 弹窗防抖: 同设备同类型在 N 秒内不重复弹窗 (记录但抑制弹窗)
+    // 弹窗防抖: 同设备同类型在 N 秒内不重复弹窗
     qint64 now = QDateTime::currentDateTime().toMSecsSinceEpoch();
     QString popupKey = chId + ":" + alarmType;
     int debounceMs = popupDebounceMs();
     qint64 lastPopup = m_lastPopupMs.value(popupKey, 0);
 
     if (debounceMs > 0 && (now - lastPopup) < debounceMs) {
-        // 被抑制: 记录到列表但不弹窗
         emit suppressedAlarm(alarm);
     } else {
-        // 弹窗
         m_lastPopupMs[popupKey] = now;
         emit newAlarm(alarm);
     }
 }
 
 void AlarmController::flushPendingUI() {
+    // [FIX 2026-07-09] 只在有新消息时触发 alarmsUpdated
+    if (!m_hasPendingAlarms) return;
+    m_hasPendingAlarms = false;
+
+    // 合并 pending 队列到 m_alarms，同通道同类型去重只保留最新
+    for (const QVariant& item : std::as_const(m_pendingAlarms)) {
+        QVariantMap a = item.toMap();
+        QString aChId = a["channel_id_str"].toString();
+        if (aChId.isEmpty()) aChId = a["channel_id"].toString();
+        QString aType = a["alarm_type"].toString();
+
+        // 从 m_alarms 移除同通道同类型的旧条目
+        for (int i = 0; i < m_alarms.size(); ++i) {
+            QVariantMap ex = m_alarms[i].toMap();
+            QString exChId = ex["channel_id_str"].toString();
+            if (exChId.isEmpty()) exChId = ex["channel_id"].toString();
+            if (exChId == aChId && ex["alarm_type"].toString() == aType) {
+                m_alarms.removeAt(i);
+                break;
+            }
+        }
+        m_alarms.prepend(a);
+    }
+    m_pendingAlarms.clear();
+
     emit alarmsUpdated();
     if (m_alarmModel)
         m_alarmModel->setAlarms(m_alarms);

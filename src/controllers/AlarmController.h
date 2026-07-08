@@ -146,6 +146,8 @@ private:
     void* m_ws = nullptr;  // QWebSocket* when HAS_QT_WEBSOCKETS (旧路径)
     WsMessageRouter* m_router = nullptr;  // 新路径
     QTimer* m_flushTimer = nullptr;
+    bool m_hasPendingAlarms = false;  // [FIX 2026-07-09] flushPendingUI 只在新消息到达时才触发
+    QVariantList m_pendingAlarms;     // [FIX 2026-07-09] 500ms 批量合并的 pending 队列
     QSettings m_settings;
 
     // 弹窗防抖: key = "channelId:alarmType" → last popup timestamp

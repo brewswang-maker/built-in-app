@@ -82,6 +82,8 @@ ApplicationWindow {
                 { idx: 11, icon: "device", label: "设备", tip: "Devices" },
                 { idx: 12, icon: "channel", label: "通道", tip: "Channels" },
                 { idx: 13, icon: "stream", label: "流管理", tip: "Streams" },
+                { idx: 21, icon: "face", label: "人脸库", tip: "Face Database" },
+                { idx: 22, icon: "face", label: "实时识别", tip: "Face Realtime" },
                 { idx: 15, icon: "federation", label: "联邦", tip: "Federation" },
                 { idx: 17, icon: "folder", label: "场景", tip: "Scene Manage" },
                 { idx: 19, icon: "refresh", label: "OTA", tip: "OTA Upgrade" },
@@ -505,6 +507,8 @@ ApplicationWindow {
         SceneManageView {}
         LinkageRuleView {}
         OTAUpgradeView {}
+        FaceDatabaseView {}
+        FaceRealtimeView {}
         SettingsView {}
     }
 
@@ -546,8 +550,17 @@ ApplicationWindow {
             alarmSound.stop()
             alarmSound.play()
 
-            var level = alarm.severity || alarm.level || 0
-            if (level >= 3 || alarm.has_linkage) {
+            // [FIX 2026-07-09] severity 可能是数字(后端推送) 或 字符串(历史兼容)
+            //   确保数值化比较, 避免 "critical" >= 3 被解析为 NaN >= 3 = false
+            var severity = parseInt(alarm.severity) || 0
+            // level 字符串 → 数字映射 (与后端 SSOT severity 1-5 对齐)
+            if (severity === 0 && alarm.level) {
+                var levelMap = {"critical": 5, "high": 4, "warning": 3, "medium": 2, "low": 1, "info": 1}
+                severity = levelMap[alarm.level] || 0
+            }
+            // 高严重度(>=3) 或联动触发(has_linkage) → 海康级联动弹窗
+            // 其他 → 简易告警弹窗
+            if (severity >= 3 || alarm.has_linkage === true) {
                 linkageAlarmPopup.showAlarm(alarm, alarm.linkage_actions || [])
             } else {
                 alarmPopup.showAlarm(alarm)

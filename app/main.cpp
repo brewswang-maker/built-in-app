@@ -29,6 +29,7 @@
 #include "controllers/RbacController.h"
 #include "controllers/StreamingController.h"
 #include "controllers/RecordingController.h"
+#include "controllers/FaceController.h"
 #include "streaming/StreamingDegradationChain.h"
 #include "models/DeviceListModel.h"
 #include "models/AlarmListModel.h"
@@ -104,6 +105,9 @@ int main(int argc, char *argv[]) {
     StreamingController streamingController(&apiClient);
     RecordingController recordingController(&apiClient);
 
+    // [P1-#1 v3.0 R1-2] 人脸库管理 Controller
+    FaceController faceController(&apiClient);
+
     // ── QML Engine ──
     QQmlApplicationEngine engine;
 
@@ -130,6 +134,7 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("rbacController", &rbacController);
     engine.rootContext()->setContextProperty("streamingController", &streamingController);
     engine.rootContext()->setContextProperty("recordingController", &recordingController);
+    engine.rootContext()->setContextProperty("faceController", &faceController);
     engine.rootContext()->setContextProperty("channelModel", &channelModel);
     engine.rootContext()->setContextProperty("streamModel", &streamModel);
     // 统一 WS 路由器 (规范 b4ced019): QML 可订阅 stateString / reconnectAttempts

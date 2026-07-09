@@ -15,9 +15,9 @@ void RecordingController::query(const QVariantMap& filter) {
     m_api->post("/api/v1/recordings/query",
                 QJsonObject::fromVariantMap(filter),
         [this](QJsonObject obj) {
-            // 后端响应: {code,message,data:{items:[...]/recordings:[...],total:N}}
+            // 后端响应: {code,message,data:{items:[...]/recordings:[...],total: N}}
             QJsonObject data = ApiClient::unwrapData(obj);
-            QJsonArray arr = ApiClient::extractArray(obj, {"items", "recordings"});
+            QJsonArray arr = ApiClient::extractArray(obj, {"items", "recordings" });
             m_recordings.clear();
             for (const auto& v : arr) m_recordings.append(v.toVariant().toMap());
             m_total = data.value("total").toInt(m_recordings.size());
@@ -27,6 +27,64 @@ void RecordingController::query(const QVariantMap& filter) {
         [this](int code, QString msg) {
             emit errorOccurred(code, msg);
             setLoading(false);
+        });
+}
+
+// [V4-X2 2026-07-08] AI 标签智能检索 — POST /api/v1/recordings/smart-search
+//  filter.ai_tag  → 转 target_type (后端从 metadata.class_name 提取)
+//  filter.min_confidence / date / channel 透传
+void RecordingController::querySmart(const QVariantMap& filter) {
+    setLoading(true);
+    QJsonObject body = QJsonObject::fromVariantMap(filter);
+    // 客户端字段名 ai_tag → 后端字段名 target_type (语义对齐 web-admin)
+    if (body.contains("ai_tag") && !body.value("ai_tag").toString().isEmpty()) {
+        body["target_type"] = body.value("ai_tag");
+    }
+    // channel 字段 → channel_id
+    if (body.contains("channel") && !body.value("channel").toString().isEmpty()) {
+        body["channel_id"] = body.value("channel");
+    }
+    // date (YYYY-MM-DD) → start_time / end_time (YYYY-MM-DDT00:00:00 / T23:59:59)
+    if (body.contains("date") && body.value("date").isString()) {
+        QString d = body.value("date").toString();
+        if (d.length() == 10 && d[4] == '-' && d[7] == '-') {
+            body["start_time"] = d + QStringLiteral("T00:00:00");
+            body["end_time"]   = d + QStringLiteral("T23:59:59");
+        }
+    }
+    m_api->post("/api/v1/recordings/smart-search", body,
+        [this](QJsonObject obj) {
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QJsonArray arr = data.value("results").toArray();
+            m_recordings.clear();
+            for (const auto& v : arr) m_recordings.append(v.toVariant().toMap());
+            m_total = data.value("total").toInt(m_recordings.size());
+            emit recordingsUpdated();
+            setLoading(false);
+        },
+        [this](int code, QString msg) {
+            emit errorOccurred(code, msg);
+            setLoading(false);
+        });
+}
+
+// [V4-X2 2026-07-08] 获取 AI 标签可选值 — GET /api/v1/recordings/smart-search/target-types
+//  用于 UI 下拉框初始化
+void RecordingController::refreshTargetTypes() {
+    m_api->get("/api/v1/recordings/smart-search/target-types",
+        [this](QJsonObject obj) {
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QJsonArray arr = data.value("target_types").toArray();
+            m_targetTypes.clear();
+            for (const auto& v : arr) m_targetTypes.append(v.toString());
+            // 即使空也更新, 清空下拉框
+            if (m_targetTypes.isEmpty()) m_targetTypes.append(QStringLiteral("person"));
+            emit targetTypesUpdated();
+        },
+        [this](int /*code*/, QString /*msg*/) {
+            // 失败时使用默认值, 不阻塞 UI
+            if (m_targetTypes.isEmpty()) m_targetTypes.append(QStringLiteral("person"));
+            emit targetTypesUpdated();
         });
 }
 

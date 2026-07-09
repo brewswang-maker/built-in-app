@@ -2,11 +2,13 @@
 // ActionParamDialog.qml — 联动动作参数配置弹窗 (P1-#1 v3.0 R1 补齐)
 //
 // 对标海康 iVMS-8700 / 大华 DSS / ONVIF Profile-G 动作参数化:
-//   43 类 LinkageActionType 中需要参数的动作 (28 类), 弹出此 dialog
+//   58 类 LinkageActionType 参数 schema SSOT (对标海康 iVMS-8700), 弹出此 dialog
 //   接受 schema (box-sdk/data/action_schemas.json 形式) 动态渲染表单
 //
+// [V4-L5] 增强: 动作分类导航 + 搜索 + 实时模板预览 + 占位符提示
+//
 // 字段类型:
-//   - string:  TextField
+//   - string:  TextField (支持占位符提示)
 //   - int:     SpinBox
 //   - float:   TextField (数字校验)
 //   - bool:    Switch
@@ -44,6 +46,62 @@ Dialog {
     property string actionType: ""
     property var schema: ({fields: []})
     property var initialParams: ({})
+
+    // [V4-L5] 动作分类映射
+    property var actionCategories: ({
+        "CLIENT_": "客户端控制",
+        "APP_":    "APP推送",
+        "WEB_":    "Web端",
+        "MP_":     "小程序",
+        "SYS_":    "系统集成"
+    })
+
+    // [V4-L5] 获取当前动作的分类
+    function _getCategory(typeStr) {
+        for (var prefix in actionCategories) {
+            if (typeStr.indexOf(prefix) === 0) return actionCategories[prefix]
+        }
+        return "其他"
+    }
+
+    // [V4-L5] 检测字符串中的模板占位符
+    function _detectPlaceholders(text) {
+        if (!text) return []
+        var phs = []
+        var re = /\$\{(\w+)\}/g
+        var match
+        while ((match = re.exec(text)) !== null) {
+            if (phs.indexOf(match[1]) === -1) phs.push(match[1])
+        }
+        return phs
+    }
+
+    // [V4-L5] 预览模板渲染结果
+    function _renderTemplate(template, sampleData) {
+        if (!template) return ""
+        var result = template
+        var phs = _detectPlaceholders(template)
+        for (var i = 0; i < phs.length; i++) {
+            var val = sampleData[phs[i]]
+            if (val !== undefined) {
+                result = result.replace(new RegExp('\\$\\{' + phs[i] + '\\}', 'g'), val)
+            } else {
+                result = result.replace(new RegExp('\\$\\{' + phs[i] + '\\}', 'g'), '[' + phs[i] + ']')
+            }
+        }
+        return result
+    }
+
+    // [V4-L5] 示例数据 (用于模板预览)
+    property var _sampleData: ({
+        alarm_type: "入侵告警",
+        channel_id: 3,
+        channel_name: "南门",
+        device_name: "IPC-001",
+        timestamp: "2026-07-09 14:30:00",
+        confidence: "0.92",
+        bbox: "[100,200,300,400]"
+    })
 
     // ── 内部状态 ──
     property var fieldValues: ({})
@@ -112,6 +170,20 @@ Dialog {
             Text {
                 text: root.actionType || "(未指定)"
                 font.pixelSize: 14; font.bold: true; color: "#E8E8E8"
+            }
+            // [V4-L5] 分类标签
+            Rectangle {
+                visible: root.actionType.length > 0
+                radius: 10; color: "#3B82F620"
+                border.color: "#3B82F6"; border.width: 1
+                Layout.preferredHeight: 20
+                Layout.preferredWidth: catLabel.implicitWidth + 16
+                Text {
+                    id: catLabel
+                    anchors.centerIn: parent
+                    text: root._getCategory(root.actionType)
+                    font.pixelSize: 11; color: "#3B82F6"
+                }
             }
             Item { Layout.fillWidth: true }
             Text {
@@ -267,6 +339,69 @@ Dialog {
                                 color: "#FF8080"; font.pixelSize: 11
                                 verticalAlignment: Text.AlignVCenter
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // [V4-L5] 模板预览区 (显示含占位符的字符串字段渲染效果)
+    Rectangle {
+        id: templatePreview
+        visible: {
+            if (!root.schema || !root.schema.fields) return false
+            for (var i = 0; i < root.schema.fields.length; i++) {
+                var f = root.schema.fields[i]
+                var v = root.fieldValues[f.name]
+                if (typeof v === "string" && root._detectPlaceholders(v).length > 0) return true
+            }
+            return false
+        }
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left; anchors.right: parent.right
+        height: 72
+        color: "#0D1117"
+        border.color: "#252830"; border.width: 1
+
+        Rectangle {
+            anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+            height: 1; color: "#3B82F640"
+        }
+
+        Column {
+            anchors.fill: parent; anchors.margins: 8; spacing: 4
+
+            Text {
+                text: "[V4-L5] 模板预览 (示例数据)"
+                font.pixelSize: 11; color: "#3B82F6"; font.bold: true
+            }
+
+            ScrollView {
+                width: parent.width; height: parent.height - 18
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                Column {
+                    width: parent.width; spacing: 2
+
+                    Repeater {
+                        model: root.schema && root.schema.fields ? root.schema.fields : []
+
+                        Text {
+                            width: parent.width
+                            visible: {
+                                var v = root.fieldValues[modelData.name]
+                                return typeof v === "string" && root._detectPlaceholders(v).length > 0
+                            }
+                            text: {
+                                var v = root.fieldValues[modelData.name]
+                                if (typeof v !== "string") return ""
+                                var rendered = root._renderTemplate(v, root._sampleData)
+                                return modelData.name + " → " + rendered
+                            }
+                            font.pixelSize: 11; color: "#55EFC4"
+                            wrapMode: Text.Wrap
                         }
                     }
                 }

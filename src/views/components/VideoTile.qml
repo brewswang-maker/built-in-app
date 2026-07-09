@@ -14,6 +14,18 @@ Item {
     property var detectionBoxes: []
     property bool active: false
 
+    // [V4-V3] 画面调节属性
+    property real imgBrightness: 0.0   // -0.5 ~ 0.5
+    property real imgContrast: 1.0     // 0.0 ~ 2.0
+    property real imgSaturation: 1.0   // 0.0 ~ 2.0
+    property bool mirrorH: false
+    property bool mirrorV: false
+
+    // [V4-V4] 电子放大 eZoom
+    property real eZoomLevel: 1.0    // 1.0=正常 ~ 4.0=4倍放大
+    property real eZoomOffsetX: 0.5  // 缩放中心 X (0.0~1.0)
+    property real eZoomOffsetY: 0.5  // 缩放中心 Y (0.0~1.0)
+
     signal doubleClicked()
 
     // Video playback
@@ -40,6 +52,45 @@ Item {
             id: videoOutput
             anchors.fill: parent
             visible: root.streamUrl.length > 0
+            // [V4-V3] 镜像翻转 + [V4-V4] 电子放大
+            transform: [
+                Scale {
+                    xScale: root.mirrorH ? -1 : 1
+                    yScale: root.mirrorV ? -1 : 1
+                    origin.x: videoOutput.width / 2
+                    origin.y: videoOutput.height / 2
+                },
+                Scale {
+                    xScale: root.eZoomLevel
+                    yScale: root.eZoomLevel
+                    origin.x: videoOutput.width * root.eZoomOffsetX
+                    origin.y: videoOutput.height * root.eZoomOffsetY
+                }
+            ]
+            // [V4-V3] 色彩调节 (layer + ShaderEffect)
+            layer.enabled: root.imgBrightness !== 0.0 || root.imgContrast !== 1.0 || root.imgSaturation !== 1.0
+            layer.effect: ShaderEffect {
+                property real brightness: root.imgBrightness
+                property real contrast: root.imgContrast
+                property real saturation: root.imgSaturation
+                fragmentShader: [
+                    "uniform sampler2D source;",
+                    "uniform lowp float qt_Opacity;",
+                    "uniform highp float brightness;",
+                    "uniform highp float contrast;",
+                    "uniform highp float saturation;",
+                    "varying highp vec2 qt_TexCoord0;",
+                    "void main() {",
+                    "    lowp vec4 src = texture2D(source, qt_TexCoord0);",
+                    "    lowp vec3 color = src.rgb + vec3(brightness);",
+                    "    color = (color - 0.5) * contrast + 0.5;",
+                    "    lowp float gray = dot(color, vec3(0.299, 0.587, 0.114));",
+                    "    color = mix(vec3(gray), color, saturation);",
+                    "    color = clamp(color, 0.0, 1.0);",
+                    "    gl_FragColor = vec4(color, src.a) * qt_Opacity;",
+                    "}"
+                ].join("\n")
+            }
             // Connection established via MediaPlayer.videoOutput above
         }
 
@@ -178,6 +229,25 @@ Item {
             styleColor: "#000000"
         }
 
+        // [V4-V4] eZoom 缩放指示器
+        Rectangle {
+            visible: root.eZoomLevel > 1.0
+            height: 20; radius: 4
+            color: "#FFB800"; opacity: 0.9
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin: 6
+            width: zoomLabel.implicitWidth + 20
+
+            Text {
+                id: zoomLabel
+                text: "\uD83D\uDD0D " + root.eZoomLevel.toFixed(1) + "x  (\u6ED1\u8F6E\u7F29\u653E \u00B7 \u62D6\u62FD\u5E73\u79FB \u00B7 \u53CC\u51FB\u590D\u4F4D)"
+                color: "#0D0F12"
+                font.pixelSize: 11; font.bold: true
+                anchors.centerIn: parent
+            }
+        }
+
         // Active slot highlight border
         Rectangle {
             anchors.fill: parent
@@ -200,6 +270,80 @@ Item {
     // Double click -> fullscreen
     MouseArea {
         anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         onDoubleClicked: root.doubleClicked()
+        onClicked: function(mouse) {
+            if (mouse.button === Qt.RightButton) {
+                tileContextMenu.popup()
+            }
+        }
+    }
+
+    // [V4-V3] 右键上下文菜单
+    Menu {
+        id: tileContextMenu
+
+        MenuItem {
+            text: "画面调节..."
+            onTriggered: imageControlPanel.open()
+        }
+        MenuItem {
+            text: root.mirrorH ? "取消水平镜像" : "水平镜像"
+            onTriggered: root.mirrorH = !root.mirrorH
+        }
+        MenuItem {
+            text: root.mirrorV ? "取消垂直翻转" : "垂直翻转"
+            onTriggered: root.mirrorV = !root.mirrorV
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: root.eZoomLevel > 1.0 ? ("重置电子放大 (" + root.eZoomLevel.toFixed(1) + "x)") : "电子放大"
+            enabled: root.eZoomLevel > 1.0
+            onTriggered: {
+                root.eZoomLevel = 1.0
+                root.eZoomOffsetX = 0.5
+                root.eZoomOffsetY = 0.5
+            }
+        }
+        MenuSeparator {}
+        MenuItem {
+            text: "重置画面"
+            onTriggered: {
+                root.imgBrightness = 0.0
+                root.imgContrast = 1.0
+                root.imgSaturation = 1.0
+                root.mirrorH = false
+                root.mirrorV = false
+                root.eZoomLevel = 1.0
+                root.eZoomOffsetX = 0.5
+                root.eZoomOffsetY = 0.5
+            }
+        }
+    }
+
+    // [V4-V3] 画面调节面板
+    ImageControlPanel {
+        id: imageControlPanel
+        x: parent.width - width - 10
+        y: 10
+        brightness: root.imgBrightness
+        contrast: root.imgContrast
+        saturation: root.imgSaturation
+        mirrorH: root.mirrorH
+        mirrorV: root.mirrorV
+        onAdjusted: {
+            root.imgBrightness = brightness
+            root.imgContrast = contrast
+            root.imgSaturation = saturation
+            root.mirrorH = mirrorH
+            root.mirrorV = mirrorV
+        }
+        onResetRequested: {
+            root.imgBrightness = 0.0
+            root.imgContrast = 1.0
+            root.imgSaturation = 1.0
+            root.mirrorH = false
+            root.mirrorV = false
+        }
     }
 }

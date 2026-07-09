@@ -22,6 +22,8 @@ Item {
     // 当前要编辑参数的动作类型 (空=无)
     property string editingActionType: ""
     property var editingSchema: ({"fields": []})
+    // [V4-L5] 43类动作 Schema 映射表 (从后端 /api/v1/linkage/action-schemas 加载)
+    property var allSchemas: ({})
     property int    validationCode: -1
 
     // ── 条件树状态 (P1 #5) ──
@@ -371,24 +373,35 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Button { text: "新建规则"; font.pixelSize: 12
-                background: Rectangle { color: "#00D4AA"; radius: 8; width: 100; height: 34 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: {
-                    editingRule = null
-                    resetForm()
-                    ruleEditor.visible = true
+            // [V4-X1 2026-07-08] RBAC: linkage.create 权限检查 - 新建规则
+            PermissionCheck {
+                perm: "linkage.create"; mode: "disable"
+                Button { text: "新建规则"; font.pixelSize: 12
+                    background: Rectangle { color: "#00D4AA"; radius: 8; width: 100; height: 34 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: {
+                        // [V4-L2] 先弹出模板选择器
+                        templateDialog.open()
+                    }
                 }
             }
-            Button { text: "导出"; font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 8; width: 60; height: 34 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: exportDialog.open()
+            // [V4-X1 2026-07-08] RBAC: linkage.export 权限检查 - 导出
+            PermissionCheck {
+                perm: "linkage.export"; mode: "disable"
+                Button { text: "导出"; font.pixelSize: 12
+                    background: Rectangle { color: "#252830"; radius: 8; width: 60; height: 34 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: exportDialog.open()
+                }
             }
-            Button { text: "导入"; font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 8; width: 60; height: 34 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: importDialog.open()
+            // [V4-X1 2026-07-08] RBAC: linkage.import 权限检查 - 导入
+            PermissionCheck {
+                perm: "linkage.import"; mode: "disable"
+                Button { text: "导入"; font.pixelSize: 12
+                    background: Rectangle { color: "#252830"; radius: 8; width: 60; height: 34 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: importDialog.open()
+                }
             }
         }
     }
@@ -451,10 +464,14 @@ Item {
                                 ruleEditor.visible = true
                             }
                         }
-                        Button { text: "删除"; font.pixelSize: 12
-                            background: Rectangle { color: "transparent" }
-                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71" }
-                            onClicked: linkageController.deleteRule(modelData.id)
+                        // [V4-X1 2026-07-08] RBAC: linkage.delete 权限检查 - 删除按钮
+                        PermissionCheck {
+                            perm: "linkage.delete"; mode: "disable"
+                            Button { text: "删除"; font.pixelSize: 12
+                                background: Rectangle { color: "transparent" }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71" }
+                                onClicked: linkageController.deleteRule(modelData.id)
+                            }
                         }
                     }
                 }
@@ -975,9 +992,22 @@ Item {
         CheckBox { id: cb; anchors.verticalCenter: parent.verticalCenter }
         AppIcon { name: actionRow.icon; size: 14; iconColor: cb.checked ? "#00D4AA" : "#4A4D58"; visible: actionRow.icon !== ""; anchors.verticalCenter: parent.verticalCenter }
         Text { text: actionRow.text; font.pixelSize: 12; color: cb.checked ? "#E8E8E8" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter; width: 300; elide: Text.ElideRight }
-        Button { text: "配置"; font.pixelSize: 12; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
+        Button {
+            text: "配置"; font.pixelSize: 12; visible: cb.checked; anchors.verticalCenter: parent.verticalCenter
             background: Rectangle { color: "transparent" }
             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#3B82F6" }
+            // [V4-L5] 点击配置 → 弹出 Schema 驱动参数弹窗
+            onClicked: {
+                var schema = linkagePage.allSchemas[actionRow.actionType]
+                if (schema && schema.fields && schema.fields.length > 0) {
+                    linkagePage.openActionParamDialog(actionRow.actionType, schema)
+                } else {
+                    // 无 schema → 无参数动作, 提示
+                    configHint.text = actionRow.text + " 无可配置参数"
+                    configHint.visible = true
+                    configHintTimer.restart()
+                }
+            }
         }
     }
 
@@ -1098,6 +1128,8 @@ Item {
                 }
             }
         }
+    }
+
     // ═══ 动作参数配置弹窗 (P1-#1 v3.0 R1 补齐) ═══
     ActionParamDialog {
         id: actionParamDialog
@@ -1120,5 +1152,172 @@ Item {
         editingSchema = schema
         actionParamDialog.open()
     }
-}
+
+    // [V4-L5] 加载43类动作 Schema (从后端 REST API)
+    function loadActionSchemas() {
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", "/api/v1/linkage/action-schemas", true)
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        var resp = JSON.parse(xhr.responseText)
+                        var schemas = resp.data || resp
+                        // 移除 _meta 键
+                        var clean = {}
+                        var keys = Object.keys(schemas)
+                        for (var i = 0; i < keys.length; i++) {
+                            if (keys[i] !== "_meta") {
+                                clean[keys[i]] = schemas[keys[i]]
+                            }
+                        }
+                        linkagePage.allSchemas = clean
+                        console.log("[V4-L5] Loaded", Object.keys(clean).length, "action schemas")
+                    } catch(e) {
+                        console.warn("[V4-L5] Failed to parse action schemas:", e)
+                    }
+                } else {
+                    console.warn("[V4-L5] Action schemas endpoint unavailable, status:", xhr.status)
+                }
+            }
+        }
+        xhr.send()
+    }
+
+    // [V4-L5] 无参数动作提示 (2秒后自动隐藏)
+    Text {
+        id: configHint
+        visible: false
+        text: ""
+        color: "#8B8FA3"; font.pixelSize: 11
+        anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 20
+        background: Rectangle { color: "#252830"; radius: 6; width: configHint.implicitWidth + 24; height: configHint.implicitHeight + 12; z: -1 }
+        padding: 6
+    }
+    Timer {
+        id: configHintTimer
+        interval: 2000
+        repeat: false
+        onTriggered: configHint.visible = false
+    }
+
+    // [V4-L5] 页面加载时拉取动作 Schema
+    Component.onCompleted: {
+        loadActionSchemas()
+    }
+
+    // ═══ [V4-L2] 模板选择器对话框 ═══
+    Dialog {
+        id: templateDialog
+        title: "选择规则模板"
+        modal: true
+        anchors.centerIn: parent
+        width: 480; height: 520
+        background: Rectangle { color: "#1A1D23"; radius: 12; border.color: "#3B82F6"; border.width: 1 }
+
+        header: Rectangle {
+            height: 44; color: "transparent"
+            Text { text: "选择规则模板"; font.pixelSize: 15; font.bold: true; color: "#E8E8E8"; anchors.centerIn: parent }
+        }
+
+        contentItem: ScrollView {
+            clip: true
+            Column {
+                width: 440; spacing: 8
+
+                // ── 从空白创建 ──
+                Rectangle {
+                    width: parent.width; height: 56; radius: 8; color: "#0D0F12"; border.color: "#3B82F6"; border.width: 1
+                    MouseArea {
+                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            templateDialog.close()
+                            editingRule = null
+                            resetForm()
+                            ruleEditor.visible = true
+                        }
+                    }
+                    Column {
+                        anchors.centerIn: parent; spacing: 2
+                        Text { text: "＋ 从空白创建"; font.pixelSize: 13; font.bold: true; color: "#3B82F6"; horizontalAlignment: Text.AlignHCenter }
+                        Text { text: "完全自定义条件和动作"; font.pixelSize: 12; color: "#8B8FA3" }
+                    }
+                }
+
+                // ── 预置模板列表 ──
+                Repeater {
+                    model: [
+                        { name: "周界入侵报警", icon: "🚨", desc: "区域入侵 → 声光+抓拍+录像", events: ["intrusion"], actions: ["client_alarm", "client_snapshot", "client_record"] },
+                        { name: "人员终留报警", icon: "⏱", desc: "终留>30s → 弹窗+抓拍", events: ["loitering"], actions: ["client_popup", "client_snapshot"] },
+                        { name: "越线检测", icon: "📏", desc: "人员越线 → 录像+报警", events: ["tripwire"], actions: ["client_record", "client_alarm"] },
+                        { name: "火焰检测", icon: "🔥", desc: "火焰识别 → 声光+电话", events: ["fire"], actions: ["client_alarm", "client_phone_call"] },
+                        { name: "人员聚集报警", icon: "👥", desc: "人数>阈值 → 弹窗+录像", events: ["crowd"], actions: ["client_popup", "client_record"] },
+                        { name: "物品遗留", icon: "📦", desc: "物品遗留>60s → 抓拍+通知", events: ["left_luggage"], actions: ["client_snapshot", "client_push"] },
+                        { name: "夜间巡航", icon: "🌙", desc: "22:00-06:00 全事件抓拍+录像", events: ["*"], actions: ["client_snapshot", "client_record"], timeCond: { start: "22:00", end: "06:00" } },
+                        { name: "安全帽检测", icon: "⛑", desc: "未戴安全帽 → 弹窗+抓拍", events: ["no_helmet"], actions: ["client_popup", "client_snapshot"] }
+                    ]
+                    delegate: Rectangle {
+                        width: 440; height: 64; radius: 8; color: "#0D0F12"; border.color: "#252830"; border.width: 1
+
+                        MouseArea {
+                            anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            onEntered: parent.border.color = "#3B82F6"
+                            onExited: parent.border.color = "#252830"
+                            onClicked: {
+                                templateDialog.close()
+                                applyTemplate(modelData)
+                            }
+                        }
+
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 10; spacing: 10
+
+                            Text { text: modelData.icon; font.pixelSize: 24; Layout.preferredWidth: 32 }
+
+                            ColumnLayout { Layout.fillWidth: true; spacing: 2
+                                Text { text: modelData.name; font.pixelSize: 13; font.bold: true; color: "#E8E8E8" }
+                                Text { text: modelData.desc; font.pixelSize: 12; color: "#8B8FA3"; elide: Text.ElideRight; Layout.fillWidth: true }
+                            }
+
+                            Text { text: "→"; font.pixelSize: 16; color: "#4A4D58" }
+                        }
+                    }
+                }
+            }
+        }
+
+        footer: Rectangle {
+            height: 40; color: "transparent"
+            Button {
+                text: "取消"; anchors.centerIn: parent
+                background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 28 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                onClicked: templateDialog.close()
+            }
+        }
+    }
+
+    // [V4-L2] 应用模板到表单
+    function applyTemplate(tpl) {
+        editingRule = null
+        resetForm()
+        ruleNameField.text = tpl.name
+        // 预填事件类型
+        if (tpl.events && tpl.events.length > 0) {
+            for (var e = 0; e < eventTypeRepeater.count; e++) {
+                var evtItem = eventTypeRepeater.itemAt(e)
+                if (evtItem) {
+                    var evtName = eventTypeRepeater.model[e]
+                    evtItem.checked = tpl.events.indexOf(evtName) >= 0 || tpl.events.indexOf("*") >= 0
+                }
+            }
+        }
+        // 预填时间条件
+        if (tpl.timeCond) {
+            // 时间段会在 collectRuleData 中自动应用
+        }
+        ruleEditor.visible = true
+    }
 }

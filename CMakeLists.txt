@@ -42,6 +42,9 @@ file(GLOB_RECURSE CONTROLLER_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers
 file(GLOB_RECURSE MODEL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/models/*.cpp)
 file(GLOB_RECURSE UTIL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.cpp)
 file(GLOB_RECURSE BRIDGE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/bridge/*.cpp)
+# V4-V1 S1T6 子任务 2 — WebRtcFrameSink(SPSC lock-free 双缓冲)
+# V4-V1 S1T6 子任务 3 — libdatachannel + H264 解码[占位,子任务 3 启用]
+# V4-V1 S1T6 子任务 1 — WebRTCStreamProvider(URL 探测/降级/缓存)
 file(GLOB_RECURSE STREAMING_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/streaming/*.cpp)
 
 qt_add_executable(${PROJECT_NAME}
@@ -101,12 +104,19 @@ if(Qt6Test_FOUND)
         get_filename_component(test_name ${test_src} NAME_WE)
         add_executable(${test_name} ${test_src} ${TEST_MOCS}
             src/streaming/WebRTCStreamProvider.cpp
-            src/streaming/StreamingDegradationChain.cpp)
+            src/streaming/StreamingDegradationChain.cpp
+            src/streaming/WebRtcFrameSink.cpp
+            src/streaming/WebRtcRenderer.cpp)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests
+            ${Qt6Gui_PRIVATE_INCLUDE_DIRS}
+            ${Qt6Quick_PRIVATE_INCLUDE_DIRS})
         target_link_libraries(${test_name} PRIVATE
-            Qt6::Core Qt6::Network Qt6::Test
+            Qt6::Core Qt6::Network Qt6::Gui Qt6::Quick Qt6::Test
+            ${Qt6OpenGL_LIBRARIES}
+            ${QT_LIBRARIES}
+            ${OPENGL_LIBRARIES}
             ${CMAKE_THREAD_LIBS_INIT})
         add_test(NAME ${test_name} COMMAND ${test_name})
     endforeach()

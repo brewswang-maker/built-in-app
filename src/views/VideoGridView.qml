@@ -36,6 +36,13 @@ Item {
     // 当前选中的播放倍速(同步到 mediaController)
     property real playbackRate: mediaController.playbackRate
 
+    // [V4-V4] 自动轮巡
+    property bool autoPatrol: false
+    property int autoPatrolInterval: 10  // 秒, 对标海康 iVMS-8700 默认值
+
+    // [V4-V5] 3D PTZ 点击定位模式
+    property bool ptz3DMode: false
+
     // [RC10] 计算是否有在线设备 — 用于禁用"开始预览"按钮
     readonly property bool hasOnlineDevice: {
         for (var i = 0; i < deviceController.devices.length; i++) {
@@ -340,6 +347,37 @@ Item {
                     else mediaController.currentLayout = 4
                 }
             }
+
+            // [V4-V4] 自动轮巡
+            Button {
+                id: patrolBtn
+                width: 84; height: 32
+                text: videoGridPage.autoPatrol ? "停止轮巡" : "自动轮巡"
+                font.pixelSize: 12
+                enabled: videoGridPage.isPreviewActive && videoGridPage.hasOnlineDevice
+                opacity: enabled ? 1.0 : 0.4
+                highlighted: videoGridPage.autoPatrol
+                onClicked: {
+                    videoGridPage.autoPatrol = !videoGridPage.autoPatrol
+                    if (videoGridPage.autoPatrol) {
+                        videoGridPage.activeSlot = 0
+                        mediaController.currentLayout = 1
+                        videoGridPage.showToast("自动轮巡已开启 · 间隔 " + videoGridPage.autoPatrolInterval + "s", "ok")
+                    } else {
+                        videoGridPage.showToast("自动轮巡已停止", "info")
+                    }
+                }
+                background: Rectangle {
+                    color: patrolBtn.highlighted ? "#FFB800" : "#252830"
+                    radius: 6
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                }
+                contentItem: Text {
+                    text: patrolBtn.text; font.pixelSize: 12; font.bold: true
+                    color: patrolBtn.highlighted ? "#0D0F12" : "#E8E8E8"
+                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                }
+            }
         }
     }
 
@@ -416,11 +454,82 @@ Item {
                         return mediaController.detections[devId] || []
                     }
 
-                    // 双击全屏
+                    // 双击全屏 + [V4-V4] eZoom 控制
                     MouseArea {
                         anchors.fill: parent; z: 10; propagateComposedEvents: true
-                        onDoubleClicked: { videoGridPage.activeSlot = index; mediaController.currentLayout = 1; videoGridPage.isFullscreen = true }
-                        onClicked: { videoGridPage.activeSlot = index; mouse.accepted = false }
+                        property real _panStartX: 0
+                        property real _panStartY: 0
+                        property real _panStartOffX: 0.5
+                        property real _panStartOffY: 0.5
+
+                        onDoubleClicked: {
+                            if (parent.eZoomLevel > 1.0) {
+                                parent.eZoomLevel = 1.0
+                                parent.eZoomOffsetX = 0.5
+                                parent.eZoomOffsetY = 0.5
+                            } else {
+                                videoGridPage.activeSlot = index
+                                mediaController.currentLayout = 1
+                                videoGridPage.isFullscreen = true
+                            }
+                        }
+                        onClicked: {
+                            videoGridPage.activeSlot = index
+                            // [V4-V5] 3D 定位模式: 点击画面 → PTZ 移动到该点
+                            if (videoGridPage.ptz3DMode && parent.active) {
+                                var xPct = mouseX / parent.width
+                                var yPct = mouseY / parent.height
+                                // 归一化坐标 → PTZ 方向 (中心0.5,0.5)
+                                var dx = (xPct - 0.5) * 2.0  // -1.0~1.0
+                                var dy = (yPct - 0.5) * 2.0
+                                var dir = ""
+                                if (Math.abs(dx) < 0.15 && Math.abs(dy) < 0.15) {
+                                    // 中心区域 → 无需移动
+                                    videoGridPage.showToast("3D定位: 目标已在中心", "info")
+                                } else {
+                                    // 发送 PTZ 方向+速度 (速度与距离成正比)
+                                    var speed = Math.min(Math.sqrt(dx*dx + dy*dy), 1.0)
+                                    if (Math.abs(dx) > Math.abs(dy)) {
+                                        dir = dx > 0 ? "right" : "left"
+                                    } else {
+                                        dir = dy > 0 ? "down" : "up"
+                                    }
+                                    mediaController.ptzControl(index, dir, speed)
+                                    videoGridPage.showToast("3D定位: " + dir + " (速度 " + speed.toFixed(2) + ")", "ok")
+                                }
+                                mouse.accepted = true
+                            } else {
+                                mouse.accepted = false
+                            }
+                        }
+                        // [V4-V4] 滚轮缩放
+                        onWheel: function(wheel) {
+                            if (wheel.angleDelta.y > 0)
+                                parent.eZoomLevel = Math.min(parent.eZoomLevel + 0.25, 4.0)
+                            else {
+                                parent.eZoomLevel = Math.max(parent.eZoomLevel - 0.25, 1.0)
+                                if (parent.eZoomLevel <= 1.0) {
+                                    parent.eZoomOffsetX = 0.5
+                                    parent.eZoomOffsetY = 0.5
+                                }
+                            }
+                        }
+                        // [V4-V4] 拖拽平移 (放大时拦截, 正常时穿透)
+                        onPressed: {
+                            _panStartX = mouseX
+                            _panStartY = mouseY
+                            _panStartOffX = parent.eZoomOffsetX
+                            _panStartOffY = parent.eZoomOffsetY
+                            mouse.accepted = parent.eZoomLevel > 1.0
+                        }
+                        onPositionChanged: {
+                            if (parent.eZoomLevel > 1.0 && pressed) {
+                                var dx = (mouseX - _panStartX) / parent.width / parent.eZoomLevel
+                                var dy = (mouseY - _panStartY) / parent.height / parent.eZoomLevel
+                                parent.eZoomOffsetX = Math.max(0, Math.min(1, _panStartOffX - dx))
+                                parent.eZoomOffsetY = Math.max(0, Math.min(1, _panStartOffY - dy))
+                            }
+                        }
                     }
                 }
             }
@@ -504,6 +613,35 @@ Item {
 
                     Text { text: "速度: " + ptzSpeed.value.toFixed(1); font.pixelSize: 12; color: "#8B8FA3" }
                     Slider { id: ptzSpeed; width: 140; from: 0.1; to: 1.0; value: 0.5; stepSize: 0.1 }
+
+                    // [V4-V5] 3D 点击定位
+                    Rectangle { height: 1; color: "#252830"; width: parent.width - 16 }
+                    Text { text: "3D定位"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                    Button {
+                        width: parent.width - 16; height: 28
+                        text: videoGridPage.ptz3DMode ? "● 3D定位已开启" : "开启3D定位"
+                        font.pixelSize: 12
+                        highlighted: videoGridPage.ptz3DMode
+                        onClicked: {
+                            videoGridPage.ptz3DMode = !videoGridPage.ptz3DMode
+                            if (videoGridPage.ptz3DMode) {
+                                videoGridPage.showToast("3D定位已开启\n点击画面任意位置控制云台", "ok")
+                            } else {
+                                videoGridPage.showToast("3D定位已关闭", "info")
+                            }
+                        }
+                        background: Rectangle {
+                            color: videoGridPage.ptz3DMode ? "#3B82F6" : "#252830"
+                            radius: 4
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+                        contentItem: Text {
+                            text: parent.text; font.pixelSize: 12
+                            color: videoGridPage.ptz3DMode ? "#FFF" : "#E8E8E8"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
 
                     Text { text: "变倍 Zoom"; font.pixelSize: 12; color: "#8B8FA3" }
                     Row { spacing: 4
@@ -824,6 +962,28 @@ Item {
             id: toastTimer
             interval: 3500
             onTriggered: videoGridPage.toastText = ""
+        }
+    }
+
+    // [V4-V4] 自动轮巡 Timer — 每 autoPatrolInterval 秒切换到下一个在线通道
+    Timer {
+        id: autoPatrolTimer
+        interval: videoGridPage.autoPatrolInterval * 1000
+        repeat: true
+        running: videoGridPage.autoPatrol && videoGridPage.isPreviewActive
+        onTriggered: {
+            var devCount = deviceController.devices.length
+            if (devCount <= 1) return
+            // 找到下一个在线通道
+            var nextSlot = videoGridPage.activeSlot
+            for (var i = 0; i < devCount; i++) {
+                nextSlot = (nextSlot + 1) % devCount
+                var dev = deviceController.devices[nextSlot]
+                if ((dev.status || "offline") === "online") {
+                    videoGridPage.activeSlot = nextSlot
+                    return
+                }
+            }
         }
     }
 

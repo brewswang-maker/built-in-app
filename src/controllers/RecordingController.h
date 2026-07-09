@@ -39,6 +39,15 @@ public:
     bool loading() const { return m_loading; }
 
     Q_INVOKABLE void query(const QVariantMap& filter);
+    /// [V4-X2 2026-07-08] AI 标签智能检索 (透传到后端 smart-search 端点)
+    ///  filter.ai_tag  → 转为 target_type (class_name 匹配)
+    ///  filter.min_confidence → 透传
+    ///  filter.date/start_time/end_time → 透传
+    Q_INVOKABLE void querySmart(const QVariantMap& filter);
+    /// [V4-X2 2026-07-08] 获取 AI 标签可选值 (人/车/狗/...) 供 UI 下拉
+    Q_INVOKABLE void refreshTargetTypes();
+    Q_PROPERTY(QVariantList targetTypes READ targetTypes NOTIFY targetTypesUpdated)
+    QVariantList targetTypes() const { return m_targetTypes; }
     Q_INVOKABLE void refreshRecordings(int page = 1, int pageSize = 50);
     Q_INVOKABLE void refreshStorage();
     Q_INVOKABLE void play(const QString& recordingId, double startTs);
@@ -59,6 +68,7 @@ signals:
     void playStarted(const QString& callId, const QVariantMap& urls);
     void playStopped(const QString& recordingId);
     void downloadReady(const QString& url);
+    void targetTypesUpdated();
     void errorOccurred(int code, const QString& message);
 
 private:
@@ -67,6 +77,7 @@ private:
     ApiClient* m_api;
     QVariantList m_recordings;
     QVariantMap m_storageInfo;
+    QVariantList m_targetTypes;  ///< [V4-X2 2026-07-08] AI 标签可选值
     int m_total = 0;
     bool m_loading = false;
 };

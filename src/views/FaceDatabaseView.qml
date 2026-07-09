@@ -196,37 +196,46 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
-                // 添加人员
-                Button {
-                    height: 36; implicitWidth: 100
-                    background: Rectangle { color: c_accent; radius: 6 }
-                    contentItem: Text {
-                        text: "+ 添加人员"; font.pixelSize: 13; color: c_bg_base
-                        font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                // [V4-X1 2026-07-08] RBAC: face.create 权限检查 - 添加人员
+                PermissionCheck {
+                    perm: "face.create"; mode: "disable"
+                    Button {
+                        height: 36; implicitWidth: 100
+                        background: Rectangle { color: c_accent; radius: 6 }
+                        contentItem: Text {
+                            text: "+ 添加人员"; font.pixelSize: 13; color: c_bg_base
+                            font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: addDialog.open()
                     }
-                    onClicked: addDialog.open()
                 }
 
-                // 批量导入
-                Button {
-                    height: 36; implicitWidth: 90
-                    background: Rectangle { color: c_bg_elevated; radius: 6; border.color: c_border; border.width: 1 }
-                    contentItem: Text {
-                        text: "批量导入"; font.pixelSize: 13; color: c_text_primary
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                // [V4-X1 2026-07-08] RBAC: face.import 权限检查 - 批量导入
+                PermissionCheck {
+                    perm: "face.import"; mode: "disable"
+                    Button {
+                        height: 36; implicitWidth: 90
+                        background: Rectangle { color: c_bg_elevated; radius: 6; border.color: c_border; border.width: 1 }
+                        contentItem: Text {
+                            text: "批量导入"; font.pixelSize: 13; color: c_text_primary
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: batchDialog.open()
                     }
-                    onClicked: batchDialog.open()
                 }
 
-                // 导出
-                Button {
-                    height: 36; implicitWidth: 80
-                    background: Rectangle { color: c_bg_elevated; radius: 6; border.color: c_border; border.width: 1 }
-                    contentItem: Text {
-                        text: "导出"; font.pixelSize: 13; color: c_text_primary
-                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                // [V4-X1 2026-07-08] RBAC: face.export 权限检查 - 导出
+                PermissionCheck {
+                    perm: "face.export"; mode: "disable"
+                    Button {
+                        height: 36; implicitWidth: 80
+                        background: Rectangle { color: c_bg_elevated; radius: 6; border.color: c_border; border.width: 1 }
+                        contentItem: Text {
+                            text: "导出"; font.pixelSize: 13; color: c_text_primary
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                        }
+                        onClicked: faceController.exportDatabase()
                     }
-                    onClicked: faceController.exportDatabase()
                 }
 
                 // 清空分组
@@ -338,11 +347,15 @@ Item {
                                     contentItem: Text { text: "编辑"; font.pixelSize: 12; color: c_text_primary; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                     onClicked: openEditDialog(modelData)
                                 }
-                                Button {
-                                    width: 56; height: 28
-                                    background: Rectangle { color: c_bg_elevated; radius: 4; border.color: c_danger; border.width: 1 }
-                                    contentItem: Text { text: "删除"; font.pixelSize: 12; color: c_danger; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                    onClicked: confirmDelete(modelData.person_id, modelData.name)
+                                // [V4-X1 2026-07-08] RBAC: face.delete 权限检查 - 删除按钮
+                                PermissionCheck {
+                                    perm: "face.delete"; mode: "disable"
+                                    Button {
+                                        width: 56; height: 28
+                                        background: Rectangle { color: c_bg_elevated; radius: 4; border.color: c_danger; border.width: 1 }
+                                        contentItem: Text { text: "删除"; font.pixelSize: 12; color: c_danger; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        onClicked: confirmDelete(modelData.person_id, modelData.name)
+                                    }
                                 }
                             }
                         }

@@ -17,6 +17,62 @@ Rectangle {
     property bool showRawJson: false
     property int currentStep: -1
 
+    // [V4-A6] 回放控制状态
+    property bool autoFollow: true          // 自动跟随最新步骤
+    property bool isPlaying: false           // 回放播放中
+    property int playbackSpeed: 1            // 播放速度 (1x/2x/4x)
+    property int totalTokens: 0              // 总 Token 消耗
+    property int totalLatencyMs: 0           // 总延迟
+
+    // [V4-A6] 回放定时器
+    Timer {
+        id: playbackTimer
+        interval: 1000 / playbackSpeed
+        repeat: true
+        running: isPlaying
+        onTriggered: {
+            if (currentStep < aiController.thoughtSteps.length - 1) {
+                currentStep++
+            } else {
+                isPlaying = false
+            }
+        }
+    }
+
+    // [V4-A6] 自动跟随最新步骤
+    Connections {
+        target: aiController
+        function onThoughtStepsChanged() {
+            if (autoFollow && !isPlaying) {
+                currentStep = aiController.thoughtSteps.length - 1
+            }
+            // 统计 Token 和延迟
+            totalTokens = 0
+            totalLatencyMs = 0
+            for (var i = 0; i < aiController.thoughtSteps.length; i++) {
+                var s = aiController.thoughtSteps[i]
+                totalTokens += (s.tokens || 0)
+                totalLatencyMs += (s.duration_ms || 0)
+            }
+        }
+    }
+
+    // [V4-A6] 导出推理链到剪贴板
+    function exportTrace() {
+        var trace = {
+            export_time: new Date().toISOString(),
+            total_steps: aiController.thoughtSteps.length,
+            total_tokens: totalTokens,
+            total_latency_ms: totalLatencyMs,
+            steps: aiController.thoughtSteps,
+            tool_calls: aiController.toolCalls
+        }
+        var jsonStr = JSON.stringify(trace, null, 2)
+        aiChatPage.copyToClipboard(jsonStr)
+        exportToast.visible = true
+        exportToastTimer.restart()
+    }
+
     // ═══ 标题栏 ═══
     Rectangle {
         id: panelHeader
@@ -103,6 +159,22 @@ Rectangle {
                 onClicked: showRawJson = !showRawJson
             }
 
+            // [V4-A6] 导出按钮
+            Button {
+                Layout.preferredWidth: 28
+                Layout.preferredHeight: 24
+                flat: true
+                background: Rectangle { color: "transparent"; radius: 4 }
+                contentItem: AppIcon {
+                    name: "download"
+                    size: 16
+                    iconColor: "#8B8FA3"
+                }
+                ToolTip.text: "导出推理链 (JSON)"
+                ToolTip.visible: hovered
+                onClicked: exportTrace()
+            }
+
             // 清空
             Button {
                 Layout.preferredWidth: 28
@@ -121,10 +193,158 @@ Rectangle {
         }
     }
 
+    // [V4-A6] 回放控制条
+    Rectangle {
+        id: playbackBar
+        anchors.top: panelHeader.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 36
+        color: "#101218"
+        visible: aiController.thoughtSteps.length > 0
+
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left; anchors.right: parent.right
+            height: 1; color: "#252830"
+        }
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 8; anchors.rightMargin: 8
+            spacing: 6
+
+            // 播放/暂停
+            Button {
+                Layout.preferredWidth: 28; Layout.preferredHeight: 24
+                flat: true
+                background: Rectangle { color: isPlaying ? "#6C5CE7" : "#252830"; radius: 4 }
+                contentItem: Text {
+                    text: isPlaying ? "⏸" : "▶"
+                    font.pixelSize: 12
+                    color: "#FFF"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: {
+                    if (currentStep >= aiController.thoughtSteps.length - 1) {
+                        currentStep = -1
+                    }
+                    isPlaying = !isPlaying
+                }
+            }
+
+            // 上一步
+            Button {
+                Layout.preferredWidth: 24; Layout.preferredHeight: 24
+                flat: true
+                background: Rectangle { color: "transparent"; radius: 4 }
+                contentItem: Text { text: "⏮"; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter }
+                onClicked: { isPlaying = false; currentStep = Math.max(-1, currentStep - 1) }
+            }
+
+            // 进度滑块
+            Slider {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 24
+                from: 0
+                to: Math.max(1, aiController.thoughtSteps.length - 1)
+                value: Math.max(0, currentStep)
+                onMoved: { isPlaying = false; currentStep = Math.round(value) }
+            }
+
+            // 下一步
+            Button {
+                Layout.preferredWidth: 24; Layout.preferredHeight: 24
+                flat: true
+                background: Rectangle { color: "transparent"; radius: 4 }
+                contentItem: Text { text: "⏭"; font.pixelSize: 11; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter }
+                onClicked: { isPlaying = false; currentStep = Math.min(aiController.thoughtSteps.length - 1, currentStep + 1) }
+            }
+
+            // 速度选择
+            ComboBox {
+                Layout.preferredWidth: 50; Layout.preferredHeight: 24
+                font.pixelSize: 11
+                model: ["1x", "2x", "4x"]
+                currentIndex: 0
+                onActivated: playbackSpeed = parseInt(currentText)
+                background: Rectangle { color: "#252830"; radius: 4 }
+            }
+
+            // 自动跟随开关
+            Button {
+                Layout.preferredWidth: 28; Layout.preferredHeight: 24
+                flat: true
+                background: Rectangle { color: autoFollow ? "#00D4AA20" : "transparent"; radius: 4; border.color: autoFollow ? "#00D4AA" : "transparent"; border.width: 1 }
+                contentItem: AppIcon { name: "arrow-down"; size: 14; iconColor: autoFollow ? "#00D4AA" : "#4A4D58" }
+                ToolTip.text: autoFollow ? "自动跟随: 开" : "自动跟随: 关"
+                ToolTip.visible: hovered
+                onClicked: autoFollow = !autoFollow
+            }
+        }
+    }
+
+    // [V4-A6] 统计栏
+    Rectangle {
+        id: statsBar
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left; anchors.right: parent.right
+        height: 28
+        color: "#101218"
+        visible: aiController.thoughtSteps.length > 0
+
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left; anchors.right: parent.right
+            height: 1; color: "#252830"
+        }
+
+        Row {
+            anchors.centerIn: parent
+            spacing: 16
+
+            Text {
+                text: "\u26A1 " + totalLatencyMs + "ms"
+                font.pixelSize: 11; color: "#FFB800"
+            }
+            Text {
+                text: "\u2726 " + totalTokens + " tokens"
+                font.pixelSize: 11; color: "#6C5CE7"
+                visible: totalTokens > 0
+            }
+            Text {
+                text: "\u25B6 " + aiController.thoughtSteps.length + " steps"
+                font.pixelSize: 11; color: "#00D4AA"
+            }
+        }
+    }
+
+    // [V4-A6] 导出提示 Toast
+    Rectangle {
+        id: exportToast
+        anchors.bottom: statsBar.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 8
+        width: exportToastText.implicitWidth + 24; height: 28
+        radius: 14; color: "#00D4AA"
+        visible: false
+        opacity: 0.95
+
+        Text {
+            id: exportToastText
+            anchors.centerIn: parent
+            text: "✓ 推理链已复制到剪贴板"
+            font.pixelSize: 12; color: "#0D0F12"; font.bold: true
+        }
+
+        Timer { id: exportToastTimer; interval: 2000; onTriggered: exportToast.visible = false }
+    }
+
     // ═══ 步骤列表 ═══
     ScrollView {
-        anchors.top: panelHeader.bottom
-        anchors.bottom: parent.bottom
+        anchors.top: playbackBar.bottom
+        anchors.bottom: statsBar.top
         anchors.left: parent.left
         anchors.right: parent.right
         clip: true
@@ -155,8 +375,8 @@ Rectangle {
             visible: !showRawJson
             width: parent.width
             spacing: 0
-            topPadding: 8
-            bottomPadding: 8
+            topPadding: 4
+            bottomPadding: 4
             leftPadding: 8
             rightPadding: 8
 

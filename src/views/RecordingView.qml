@@ -151,7 +151,9 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            // [FIX 2026-07-01] 搜索按钮 — 将所有筛选条件透传到 RecordingController
+            // [V4-X2 2026-07-08] 搜索按钮 — 有 AI 标签 / 置信度 走 smart-search 智能检索
+            //   ai_tag / min_confidence 组合 → POST /api/v1/recordings/smart-search
+            //   其他筛选 → POST /api/v1/recordings/query (传统录像查询)
             Button {
                 text: "搜索"
                 font.pixelSize: 13; font.bold: true
@@ -165,7 +167,13 @@ Item {
                         "min_confidence": selectedMinConfidence / 100.0,
                         "date": selectedDate
                     }
-                    recordingController.query(filter)
+                    // 智能检索分支: 只要指定了 AI 标签或设置了最低置信度,
+                    //   调 smart-search 端点查 alarm_events 表 (含 AI 标签)
+                    if (selectedAiTag || selectedMinConfidence > 0) {
+                        recordingController.querySmart(filter)
+                    } else {
+                        recordingController.query(filter)
+                    }
                 }
             }
 

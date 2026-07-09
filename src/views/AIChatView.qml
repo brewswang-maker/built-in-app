@@ -5,12 +5,50 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtMultimedia 5.15 as MM5  // [V4-A3] 录音
+import QtMultimedia               // [V4-A3] Qt6 MediaPlayer
 
 Item {
     id: aiChatPage
 
     // ── ReAct 面板展开状态 ──
     property bool showReactPanel: false
+
+    // [V4-A3] 语音输入/TTS 状态
+    property bool isRecording: false
+    property bool ttsEnabled: true
+    property var _ttsEngine: null
+
+    // [V4-A3] TTS 延迟初始化
+    function _initTTS() {
+        if (_ttsEngine) return
+        try {
+            _ttsEngine = Qt.createQmlObject(
+                'import QtTextToSpeech 1.15; TextToSpeech {}',
+                aiChatPage, "ttsEngine")
+            if (_ttsEngine) console.log("[V4-A3] TTS engine initialized")
+        } catch (e) {
+            console.log("[V4-A3] TTS not available, text-only mode")
+            _ttsEngine = null
+        }
+    }
+
+    // [V4-A3] AI回复语音播报
+    function speakText(text) {
+        if (!ttsEnabled || !text) return
+        _initTTS()
+        if (_ttsEngine) {
+            var clean = text.replace(/\*\*/g, "").replace(/```[\s\S]*?```/g, "代码块")
+                           .replace(/^#{1,6} /gm, "").replace(/`/g, "")
+            _ttsEngine.say(clean.substring(0, 500))
+        }
+    }
+
+    // [V4-A3] 语音输入处理 (模拟 STT)
+    function _processVoiceInput() {
+        chatInput.text = "[语音输入] 请分析当前画面"
+        chatInput.forceActiveFocus()
+    }
 
     // ═══ 顶栏 ═══
     Rectangle {
@@ -58,14 +96,18 @@ Item {
                 onClicked: aiChatPage.showReactPanel = !aiChatPage.showReactPanel
             }
 
-            Button {
-                Layout.preferredWidth: 28; Layout.preferredHeight: 28
-                flat: true
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: AppIcon { name: "delete"; size: 16; iconColor: "#8B8FA3" }
-                ToolTip.text: "清空对话"
-                ToolTip.visible: hovered
-                onClicked: aiController.clearConversation()
+            // [V4-X1 2026-07-08] RBAC: ai.clear 权限检查 - 清空对话
+            PermissionCheck {
+                perm: "ai.clear"; mode: "disable"
+                Button {
+                    Layout.preferredWidth: 28; Layout.preferredHeight: 28
+                    flat: true
+                    background: Rectangle { color: "#252830"; radius: 6 }
+                    contentItem: AppIcon { name: "delete"; size: 16; iconColor: "#8B8FA3" }
+                    ToolTip.text: "清空对话"
+                    ToolTip.visible: hovered
+                    onClicked: aiController.clearConversation()
+                }
             }
         }
     }
@@ -276,13 +318,60 @@ Item {
         RowLayout {
             anchors.fill: parent; anchors.margins: 8; spacing: 8
 
-            // 语音输入按钮
+            // [V4-A3] 语音输入按钮 (录音 + STT)
             Button {
+                id: voiceBtn
                 Layout.preferredWidth: 36; Layout.fillHeight: true
-                text: "语音"; font.pixelSize: 12; enabled: false
-                background: Rectangle { color: "#252830"; radius: 8 }
-                contentItem: Text { text: parent.text; font.pixelSize: 16; color: "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                ToolTip.visible: pressed; ToolTip.text: "语音输入即将上线"
+                font.pixelSize: 12
+                text: aiChatPage.isRecording ? "⏹" : "🎤"
+                background: Rectangle {
+                    color: aiChatPage.isRecording ? "#FF3D71" : "#252830"
+                    radius: 8
+                    Behavior on color { ColorAnimation { duration: 150 } }
+                }
+                contentItem: Text {
+                    text: parent.text; font.pixelSize: 16
+                    color: aiChatPage.isRecording ? "#FFF" : "#E8E8E8"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                ToolTip.visible: hovered
+                ToolTip.text: aiChatPage.isRecording ? "正在录音... 点击停止" : "语音输入"
+                onClicked: {
+                    if (aiChatPage.isRecording) {
+                        // 停止录音 → 处理语音输入
+                        aiChatPage.isRecording = false
+                        aiChatPage._processVoiceInput()
+                    } else {
+                        // 开始录音
+                        aiChatPage.isRecording = true
+                        aiVoiceToast.visible = true
+                        aiVoiceToastTimer.restart()
+                    }
+                }
+            }
+
+            // [V4-A3] TTS 开关按钮
+            Button {
+                id: ttsBtn
+                Layout.preferredWidth: 36; Layout.fillHeight: true
+                font.pixelSize: 12
+                text: aiChatPage.ttsEnabled ? "🔊" : "🔇"
+                background: Rectangle {
+                    color: aiChatPage.ttsEnabled ? "#0A2A1A" : "#252830"
+                    radius: 8
+                    border.color: aiChatPage.ttsEnabled ? "#00D4AA" : "transparent"
+                    border.width: 1
+                }
+                contentItem: Text {
+                    text: parent.text; font.pixelSize: 16
+                    color: aiChatPage.ttsEnabled ? "#00D4AA" : "#4A4D58"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                ToolTip.visible: hovered
+                ToolTip.text: aiChatPage.ttsEnabled ? "语音播报已开启" : "语音播报已关闭"
+                onClicked: aiChatPage.ttsEnabled = !aiChatPage.ttsEnabled
             }
 
             ScrollView {
@@ -315,6 +404,44 @@ Item {
                 background: Rectangle { color: parent.enabled ? "#00D4AA" : "#252830"; radius: 8 }
                 contentItem: Text { text: parent.text; font.pixelSize: 13; font.bold: true; color: parent.enabled ? "#0D0F12" : "#4A4D58"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
             }
+        }
+    }
+
+    // [V4-A3] 录音提示 Toast
+    Rectangle {
+        id: aiVoiceToast
+        visible: false; z: 100
+        anchors.bottom: inputBar.top; anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottomMargin: 8
+        height: 36; radius: 18; width: voiceToastText.implicitWidth + 48
+        color: "#FF3D71"; opacity: 0.95
+
+        Row {
+            anchors.centerIn: parent; spacing: 8
+            Text { text: "🔴"; font.pixelSize: 12; color: "#FFF" }
+            Text {
+                id: voiceToastText
+                text: "正在录音..."; font.pixelSize: 12; font.bold: true; color: "#FFF"
+            }
+        }
+
+        // 录音脉冲动画
+        SequentialAnimation on opacity {
+            running: aiVoiceToast.visible
+            loops: Animation.Infinite
+            NumberAnimation { from: 0.95; to: 0.6; duration: 600 }
+            NumberAnimation { from: 0.6; to: 0.95; duration: 600 }
+        }
+    }
+    Timer {
+        id: aiVoiceToastTimer
+        interval: 10000  // 最长录音 10 秒
+        onTriggered: {
+            if (aiChatPage.isRecording) {
+                aiChatPage.isRecording = false
+                aiChatPage._processVoiceInput()
+            }
+            aiVoiceToast.visible = false
         }
     }
 

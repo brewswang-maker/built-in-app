@@ -420,7 +420,11 @@ Item {
                                 onClicked: {
                                     // 下载当前选中的录像段
                                     if (recordingSegments.length > 0) {
-                                        // TODO: 调用录像下载API
+                                        var seg = recordingSegments[0]
+                                        var recId = seg.id || seg.recording_id || seg.recordingId || ""
+                                        if (recId) {
+                                            recordingController.download(recId)
+                                        }
                                     }
                                 }
                             }
@@ -622,7 +626,11 @@ Item {
                                 background: Rectangle { color: "#252830"; radius: 4; width: 28; height: 24 }
                                 contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: {
-                                    // TODO: 调用录像下载API
+                                    // 调用录像下载API
+                                    var recId = modelData.id || modelData.recording_id || modelData.recordingId || ""
+                                    if (recId) {
+                                        recordingController.download(recId)
+                                    }
                                 }
                             }
                         }

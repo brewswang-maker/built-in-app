@@ -43,6 +43,13 @@ Item {
     // [V4-V5] 3D PTZ 点击定位模式
     property bool ptz3DMode: false
 
+    // [P1-3] 画面调节属性 (对标 Web 端 LiveView.vue imageAdjust)
+    property real imgBrightness: 0.0   // -0.5 ~ 0.5
+    property real imgContrast: 1.0     // 0.0 ~ 2.0
+    property real imgSaturation: 1.0   // 0.0 ~ 2.0
+    property bool mirrorH: false
+    property bool mirrorV: false
+
     // [RC10] 计算是否有在线设备 — 用于禁用"开始预览"按钮
     readonly property bool hasOnlineDevice: {
         for (var i = 0; i < deviceController.devices.length; i++) {
@@ -448,6 +455,12 @@ Item {
                         index < deviceController.devices.length ? (deviceController.devices[index].id || deviceController.devices[index].device_id || "") : ""
                     ] || "") : ""
                     active: videoGridPage.activeSlot === index
+                    // [P1-3] 画面调节绑定
+                    imgBrightness: videoGridPage.imgBrightness
+                    imgContrast: videoGridPage.imgContrast
+                    imgSaturation: videoGridPage.imgSaturation
+                    mirrorH: videoGridPage.mirrorH
+                    mirrorV: videoGridPage.mirrorV
                     // P1-1: AI detection overlay binding
                     detectionBoxes: {
                         var devId = index < deviceController.devices.length ? (deviceController.devices[index].id || deviceController.devices[index].device_id || "") : ""
@@ -668,6 +681,62 @@ Item {
                             background: Rectangle { color: "#252830"; radius: 4 }
                             contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         }
+                    }
+
+                    Rectangle { height: 1; color: "#252830"; width: parent.width - 16 }
+
+                    // [P1-3] 画面调节
+                    Text { text: "画面调节"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
+                    Row {
+                        spacing: 4
+                        Button {
+                            width: 64; height: 26; text: videoGridPage.mirrorH ? "● 水平镜像" : "水平镜像"; font.pixelSize: 12
+                            highlighted: videoGridPage.mirrorH
+                            onClicked: videoGridPage.mirrorH = !videoGridPage.mirrorH
+                            background: Rectangle { color: videoGridPage.mirrorH ? "#3B82F6" : "#252830"; radius: 4 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: videoGridPage.mirrorH ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        }
+                        Button {
+                            width: 64; height: 26; text: videoGridPage.mirrorV ? "● 垂直翻转" : "垂直翻转"; font.pixelSize: 12
+                            highlighted: videoGridPage.mirrorV
+                            onClicked: videoGridPage.mirrorV = !videoGridPage.mirrorV
+                            background: Rectangle { color: videoGridPage.mirrorV ? "#3B82F6" : "#252830"; radius: 4 }
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: videoGridPage.mirrorV ? "#FFF" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        }
+                    }
+                    // 亮度
+                    Text { text: "亮度: " + (videoGridPage.imgBrightness * 100).toFixed(0) + "%"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Slider {
+                        width: 140; from: -0.5; to: 0.5; value: 0.0; stepSize: 0.05
+                        onValueChanged: videoGridPage.imgBrightness = value
+                        Component.onCompleted: value = videoGridPage.imgBrightness
+                    }
+                    // 对比度
+                    Text { text: "对比度: " + (videoGridPage.imgContrast * 100).toFixed(0) + "%"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Slider {
+                        width: 140; from: 0.0; to: 2.0; value: 1.0; stepSize: 0.05
+                        onValueChanged: videoGridPage.imgContrast = value
+                        Component.onCompleted: value = videoGridPage.imgContrast
+                    }
+                    // 饱和度
+                    Text { text: "饱和度: " + (videoGridPage.imgSaturation * 100).toFixed(0) + "%"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Slider {
+                        width: 140; from: 0.0; to: 2.0; value: 1.0; stepSize: 0.05
+                        onValueChanged: videoGridPage.imgSaturation = value
+                        Component.onCompleted: value = videoGridPage.imgSaturation
+                    }
+                    // 重置按钮
+                    Button {
+                        width: parent.width - 16; height: 26; text: "重置画面"; font.pixelSize: 12
+                        onClicked: {
+                            videoGridPage.imgBrightness = 0.0
+                            videoGridPage.imgContrast = 1.0
+                            videoGridPage.imgSaturation = 1.0
+                            videoGridPage.mirrorH = false
+                            videoGridPage.mirrorV = false
+                        }
+                        background: Rectangle { color: "#252830"; radius: 4 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
 
                     Rectangle { height: 1; color: "#252830"; width: parent.width - 16 }

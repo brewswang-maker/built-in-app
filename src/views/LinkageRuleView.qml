@@ -331,9 +331,11 @@ Item {
         }
     }
 
+    // [V4-L5] 页面初始化 - 合并后的统一入口 (避免两个顶层 Component.onCompleted 冲突)
     Component.onCompleted: {
         linkageController.refreshRules()
         linkageController.refreshActionTypes()  // [P1-#1 v3.0 R1] 拉取 param_schema
+        loadActionSchemas()                      // [V4-L5] 拉取 43 类动作 Schema
     }
 
     Connections {
@@ -1184,16 +1186,22 @@ Item {
         xhr.send()
     }
 
-    // [V4-L5] 无参数动作提示 (2秒后自动隐藏)
-    Text {
+    // [V4-L5] 无参数动作提示 (2秒后自动隐藏) - 修复: Text 没有 background/padding, 用 Rectangle 包裹
+    Rectangle {
         id: configHint
         visible: false
-        text: ""
-        color: "#8B8FA3"; font.pixelSize: 11
+        color: "#252830"; radius: 6
         anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottomMargin: 20
-        background: Rectangle { color: "#252830"; radius: 6; width: configHint.implicitWidth + 24; height: configHint.implicitHeight + 12; z: -1 }
-        padding: 6
+        width: configHintText.implicitWidth + 24
+        height: configHintText.implicitHeight + 12
+        z: -1
+        Text {
+            id: configHintText
+            anchors.centerIn: parent
+            text: ""
+            color: "#8B8FA3"; font.pixelSize: 11
+        }
     }
     Timer {
         id: configHintTimer
@@ -1202,10 +1210,7 @@ Item {
         onTriggered: configHint.visible = false
     }
 
-    // [V4-L5] 页面加载时拉取动作 Schema
-    Component.onCompleted: {
-        loadActionSchemas()
-    }
+    // [V4-L5] 页面加载时拉取动作 Schema - 已合并到上面的统一 Component.onCompleted 中
 
     // ═══ [V4-L2] 模板选择器对话框 ═══
     Dialog {

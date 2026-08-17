@@ -46,6 +46,8 @@
         <file alias="DeleteConfirmDialog.qml">../src/views/components/DeleteConfirmDialog.qml</file>
         <!-- [P1-#1 v3.0 R1] 动作参数配置弹窗 -->
         <file alias="ActionParamDialog.qml">../src/views/components/ActionParamDialog.qml</file>
+        <!-- [V4-V3] 画面调节面板 -->
+        <file alias="ImageControlPanel.qml">../src/views/components/ImageControlPanel.qml</file>
         <file>audio/alarm.wav</file>
     </qresource>
 </RCC>

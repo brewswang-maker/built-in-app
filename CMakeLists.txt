@@ -20,6 +20,9 @@ find_package(Qt6 REQUIRED COMPONENTS
     Network
 )
 
+# [P1-4 2026-08-14] 交叉编译后修补: 把 Qt6::qmlimportscanner 等 build tools 重定向到主机版
+include(${CMAKE_SOURCE_DIR}/cmake/qt_redirect_tools.cmake)
+
 # Optional Qt6 modules
 find_package(Qt6 COMPONENTS WebSockets)
 if(Qt6WebSockets_FOUND)
@@ -86,6 +89,14 @@ if(Qt6Svg_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Svg)
 endif()
 
+# [FIX 2026-08-17] CV186AH sysroot (glibc 2.31) 缺 __libc_single_threaded (glibc 2.32+),
+#   用静态 stub 库提供此符号. 必须放在 link 命令最后 (Qt6 库之后), 才能被 .o 文件中
+#   libstdc++ 共享指针代码引用. stub 定义 __libc_single_threaded = 0 (多线程模式).
+if(CMAKE_CROSSCOMPILING AND EXISTS "${CMAKE_CURRENT_LIST_DIR}/cmake/stub_libc/libglibc_compat_stub.a")
+    target_link_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}/cmake/stub_libc")
+    target_link_libraries(${PROJECT_NAME} PRIVATE "libglibc_compat_stub.a")
+endif()
+
 # Install
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION /opt/shieldbox/bin
@@ -96,7 +107,7 @@ install(TARGETS ${PROJECT_NAME}
 # 验收: ctest -V 或直接运行 ./tests/test_xxx
 # ---------------------------------------------------------------------------
 find_package(Qt6 COMPONENTS Test)
-if(Qt6Test_FOUND)
+if(Qt6Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
     enable_testing()
     file(GLOB TEST_SOURCES tests/test_*.cpp)
     file(GLOB TEST_MOCS tests/test_*.moc)
@@ -122,5 +133,9 @@ if(Qt6Test_FOUND)
     endforeach()
     message(STATUS "Tests enabled (${TEST_SOURCES})")
 else()
-    message(STATUS "Qt6Test NOT found - tests disabled")
+    if(CMAKE_CROSSCOMPILING)
+        message(STATUS "Cross-compiling — tests disabled (CV186AH sysroot lacks OpenGL ES headers)")
+    else()
+        message(STATUS "Qt6Test NOT found - tests disabled")
+    endif()
 endif()

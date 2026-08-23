@@ -53,7 +53,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 110
                 Layout.margins: 12
-                color: "#141720"; radius: 10
+                color: "#FFFFFF"; radius: 10
 
                 RowLayout {
                     anchors.fill: parent
@@ -67,7 +67,7 @@ Item {
                         label: "安全评分"
                         value: statisticsController.securityScore.toString()
                         unit: "/100"
-                        color: scoreColor(statisticsController.securityScore)
+                        accentColor: scoreColor(statisticsController.securityScore)
                         trendText: statisticsController.dashboard.handle_rate ?
                                    "处置率 " + statisticsController.dashboard.handle_rate.toFixed(0) + "%" : ""
                         trendUp: true
@@ -80,7 +80,7 @@ Item {
                         label: "设备在线率"
                         value: statisticsController.deviceOnlineRate.toFixed(1)
                         unit: "%"
-                        color: "#00D4AA"
+                        accentColor: "#67C23A"
                         trendText: statisticsController.dashboard.online_devices + " / " +
                                    statisticsController.dashboard.total_devices
                     }
@@ -92,7 +92,7 @@ Item {
                         label: "今日告警"
                         value: statisticsController.todayAlarms.toString()
                         unit: "起"
-                        color: "#FF3D71"
+                        accentColor: "#F56C6C"
                         trendText: statisticsController.dashboard.alarm_trend !== undefined ?
                                    (statisticsController.dashboard.alarm_trend >= 0 ? "+" : "-") +
                                    Math.abs(statisticsController.dashboard.alarm_trend).toFixed(1) + "%" : ""
@@ -106,7 +106,7 @@ Item {
                         label: "在线设备"
                         value: statisticsController.dashboard.online_devices || 0
                         unit: "台"
-                        color: "#3B82F6"
+                        accentColor: "#3B82F6"
                         trendText: "总数 " + (statisticsController.dashboard.total_devices || 0)
                     }
 
@@ -117,7 +117,7 @@ Item {
                         label: "活跃算法"
                         value: statusController.activeModels || 0
                         unit: "个"
-                        color: "#6C5CE7"
+                        accentColor: "#6C5CE7"
                         trendText: "TPU " + (statusController.tpuUtilization || 0).toFixed(0) + "%"
                     }
 
@@ -129,7 +129,7 @@ Item {
                         value: statisticsController.dashboard.handle_rate ?
                                statisticsController.dashboard.handle_rate.toFixed(0) : "--"
                         unit: "%"
-                        color: "#00D4AA"
+                        accentColor: "#67C23A"
                         trendText: "已处理 / 总数"
                     }
                 }
@@ -145,19 +145,19 @@ Item {
                 // 告警分级分布
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
 
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 8
 
                         RowLayout {
-                            Text { text: "告警分级分布"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "告警分级分布"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: statisticsController.alarmLevelDist.total ?
                                       "共 " + statisticsController.alarmLevelDist.total + " 起" : "加载中..."
-                                color: "#8B8FA3"; font.pixelSize: 12
+                                color: "#909399"; font.pixelSize: 12
                             }
                         }
 
@@ -168,9 +168,9 @@ Item {
 
                             Repeater {
                                 model: [
-                                    { level: "紧急", key: "critical", color: "#FF3D71" },
+                                    { level: "紧急", key: "critical", color: "#F56C6C" },
                                     { level: "高", key: "high",     color: "#FF8800" },
-                                    { level: "中", key: "medium",   color: "#FFB800" },
+                                    { level: "中", key: "medium",   color: "#E6A23C" },
                                     { level: "低", key: "low",      color: "#3B82F6" }
                                 ]
 
@@ -188,7 +188,7 @@ Item {
                                     Rectangle {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 18
-                                        color: "#252830"; radius: 4
+                                        color: "#F5F7FA"; radius: 4
 
                                         Rectangle {
                                             anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
@@ -200,7 +200,7 @@ Item {
 
                                     Text {
                                         text: levelValue(modelData.key)
-                                        color: "#E8E8E8"
+                                        color: "#303133"
                                         font.pixelSize: 12
                                         Layout.preferredWidth: 36
                                         horizontalAlignment: Text.AlignRight
@@ -214,18 +214,18 @@ Item {
                 // 24小时告警趋势
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
 
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "24小时告警趋势"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "24小时告警趋势"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: statisticsController.hourlyTrend.length + " 段"
-                                color: "#8B8FA3"; font.pixelSize: 12
+                                color: "#909399"; font.pixelSize: 12
                             }
                         }
 
@@ -240,16 +240,16 @@ Item {
                 // 告警类型Top
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
 
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "告警类型 Top"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "告警类型 Top"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
-                            Text { text: "实时"; color: "#8B8FA3"; font.pixelSize: 12 }
+                            Text { text: "实时"; color: "#909399"; font.pixelSize: 12 }
                         }
 
                         ListView {
@@ -269,13 +269,13 @@ Item {
                                 }
                                 Text {
                                     text: alarmLabel(modelData.type || modelData.alarm_type)
-                                    color: "#E8E8E8"; font.pixelSize: 13
+                                    color: "#303133"; font.pixelSize: 13
                                     Layout.preferredWidth: 80
                                 }
                                 Rectangle {
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 6
-                                    color: "#252830"; radius: 3
+                                    color: "#F5F7FA"; radius: 3
                                     Rectangle {
                                         anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
                                         width: parent.width * ((modelData.percentage || 0) / 100.0)
@@ -285,7 +285,7 @@ Item {
                                 Text {
                                     text: (modelData.count || 0) + " (" +
                                           (modelData.percentage || 0) + "%)"
-                                    color: "#8B8FA3"; font.pixelSize: 12
+                                    color: "#909399"; font.pixelSize: 12
                                     Layout.preferredWidth: 70
                                     horizontalAlignment: Text.AlignRight
                                 }
@@ -306,37 +306,37 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: 260
                     Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 6
                         RowLayout {
-                            Text { text: "AI 推理指标"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "AI 推理指标"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
-                            Text { text: "实时"; color: "#8B8FA3"; font.pixelSize: 12 }
+                            Text { text: "实时"; color: "#909399"; font.pixelSize: 12 }
                         }
                         // 4 KPI 块
                         Repeater {
                             model: [
                                 { label: "TPS", value: statisticsController.aiTps.toFixed(1), unit: "次/s",
-                                  color: statisticsController.aiTps > 50 ? "#00D4AA" : (statisticsController.aiTps > 10 ? "#FFB800" : "#8B8FA3") },
+                                  color: statisticsController.aiTps > 50 ? "#67C23A" : (statisticsController.aiTps > 10 ? "#E6A23C" : "#909399") },
                                 { label: "P50 延迟", value: statisticsController.aiLatencyP50.toFixed(1), unit: "ms",
-                                  color: statisticsController.aiLatencyP50 > 0 && statisticsController.aiLatencyP50 < 50 ? "#00D4AA" : "#FFB800" },
+                                  color: statisticsController.aiLatencyP50 > 0 && statisticsController.aiLatencyP50 < 50 ? "#67C23A" : "#E6A23C" },
                                 { label: "P95 延迟", value: statisticsController.aiLatencyP95.toFixed(1), unit: "ms",
-                                  color: statisticsController.aiLatencyP95 < 100 ? "#00D4AA" : (statisticsController.aiLatencyP95 < 200 ? "#FFB800" : "#FF3D71") },
+                                  color: statisticsController.aiLatencyP95 < 100 ? "#67C23A" : (statisticsController.aiLatencyP95 < 200 ? "#E6A23C" : "#F56C6C") },
                                 { label: "健康模型", value: statisticsController.healthyModelCount + "/" + statisticsController.modelHealthList.length, unit: "",
-                                  color: statisticsController.healthyModelCount === statisticsController.modelHealthList.length && statisticsController.modelHealthList.length > 0 ? "#00D4AA" : "#FFB800" }
+                                  color: statisticsController.healthyModelCount === statisticsController.modelHealthList.length && statisticsController.modelHealthList.length > 0 ? "#67C23A" : "#E6A23C" }
                             ]
                             delegate: Rectangle {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 44
-                                color: "#0D0F12"; radius: 6
+                                color: "#F5F7FA"; radius: 6
                                 RowLayout {
                                     anchors.fill: parent; anchors.margins: 8; spacing: 8
                                     ColumnLayout {
                                         Layout.fillWidth: true
                                         spacing: 0
-                                        Text { text: modelData.label; color: "#8B8FA3"; font.pixelSize: 12 }
+                                        Text { text: modelData.label; color: "#909399"; font.pixelSize: 12 }
                                         Text { text: modelData.value; color: modelData.color; font.pixelSize: 18; font.bold: true }
                                     }
                                     Text { text: modelData.unit; color: "#4A4D58"; font.pixelSize: 12 }
@@ -344,12 +344,12 @@ Item {
                             }
                         }
                         // 总量与平均
-                        Rectangle { Layout.fillWidth: true; height: 1; color: "#252830" }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: "#F5F7FA" }
                         RowLayout {
                             Layout.fillWidth: true
-                            Text { text: "总推理: " + statisticsController.aiTotalInferences; color: "#8B8FA3"; font.pixelSize: 12 }
+                            Text { text: "总推理: " + statisticsController.aiTotalInferences; color: "#909399"; font.pixelSize: 12 }
                             Item { Layout.fillWidth: true }
-                            Text { text: "平均: " + statisticsController.aiLatencyAvg.toFixed(1) + "ms"; color: "#8B8FA3"; font.pixelSize: 12 }
+                            Text { text: "平均: " + statisticsController.aiLatencyAvg.toFixed(1) + "ms"; color: "#909399"; font.pixelSize: 12 }
                         }
                     }
                 }
@@ -357,16 +357,16 @@ Item {
                 // AI 实时 TPS 折线图
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
                         RowLayout {
-                            Text { text: "实时 TPS (60s)"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "实时 TPS (60s)"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: statisticsController.aiTps > 0 ?
                                       "当前 " + statisticsController.aiTps.toFixed(1) + " 次/s" : "等待推理数据..."
-                                color: statisticsController.aiTps > 0 ? "#00D4AA" : "#4A4D58"
+                                color: statisticsController.aiTps > 0 ? "#67C23A" : "#4A4D58"
                                 font.pixelSize: 12
                             }
                         }
@@ -380,18 +380,18 @@ Item {
                 // 模型健康度列表
                 Rectangle {
                     Layout.preferredWidth: 320; Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
                         RowLayout {
-                            Text { text: "模型健康度"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "模型健康度"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Button {
                                 text: "刷新"; font.pixelSize: 12
                                 onClicked: statisticsController.refreshModelHealth()
-                                background: Rectangle { color: "#252830"; radius: 4 }
+                                background: Rectangle { color: "#F5F7FA"; radius: 4 }
                                 contentItem: Text {
-                                    text: parent.text; color: "#8B8FA3"; font.pixelSize: 12
+                                    text: parent.text; color: "#909399"; font.pixelSize: 12
                                     horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                                 }
                             }
@@ -403,11 +403,11 @@ Item {
                             delegate: Rectangle {
                                 width: ListView.view.width
                                 height: 52
-                                color: "#0D0F12"; radius: 6
+                                color: "#F5F7FA"; radius: 6
                                 property string _status: modelData.status || "loaded"
-                                property color _statusColor: _status === "healthy" || _status === "active" ? "#00D4AA" :
-                                                            _status === "degraded" || _status === "warning" ? "#FFB800" :
-                                                            _status === "failed" || _status === "error" ? "#FF3D71" : "#8B8FA3"
+                                property color _statusColor: _status === "healthy" || _status === "active" ? "#67C23A" :
+                                                            _status === "degraded" || _status === "warning" ? "#E6A23C" :
+                                                            _status === "failed" || _status === "error" ? "#F56C6C" : "#909399"
                                 RowLayout {
                                     anchors.fill: parent; anchors.margins: 8; spacing: 8
                                     Rectangle {
@@ -418,12 +418,12 @@ Item {
                                         Layout.fillWidth: true; spacing: 2
                                         Text {
                                             text: modelData.name || modelData.id || modelData.model_id || "Model"
-                                            color: "#E8E8E8"; font.pixelSize: 13; font.bold: true
+                                            color: "#303133"; font.pixelSize: 13; font.bold: true
                                             elide: Text.ElideRight; Layout.fillWidth: true
                                         }
                                         Text {
                                             text: (modelData.type || "algorithm") + " · v" + (modelData.version || "1.0")
-                                            color: "#8B8FA3"; font.pixelSize: 12
+                                            color: "#909399"; font.pixelSize: 12
                                         }
                                     }
                                     ColumnLayout {
@@ -432,13 +432,13 @@ Item {
                                         Text {
                                             text: modelData.accuracy_pct !== undefined ?
                                                   modelData.accuracy_pct.toFixed(1) + "%" : "--"
-                                            color: "#00D4AA"; font.pixelSize: 12; font.bold: true
+                                            color: "#67C23A"; font.pixelSize: 12; font.bold: true
                                             horizontalAlignment: Text.AlignRight; Layout.fillWidth: true
                                         }
                                         Text {
                                             text: modelData.drift !== undefined ?
                                                   "drift " + modelData.drift.toFixed(2) : "no eval"
-                                            color: "#8B8FA3"; font.pixelSize: 12
+                                            color: "#909399"; font.pixelSize: 12
                                             horizontalAlignment: Text.AlignRight; Layout.fillWidth: true
                                         }
                                     }
@@ -448,7 +448,7 @@ Item {
                                         Text {
                                             anchors.centerIn: parent
                                             text: parent.parent.parent._status
-                                            color: "#0D0F12"; font.pixelSize: 12; font.bold: true
+                                            color: "#F5F7FA"; font.pixelSize: 12; font.bold: true
                                         }
                                     }
                                 }
@@ -475,17 +475,17 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: 380
                     Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
 
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "风险区域"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "风险区域"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Text { text: statisticsController.riskZones.length + " 个高危"
-                                   color: "#FF3D71"; font.pixelSize: 12 }
+                                   color: "#F56C6C"; font.pixelSize: 12 }
                         }
 
                         ListView {
@@ -495,35 +495,35 @@ Item {
                             delegate: Rectangle {
                                 width: ListView.view.width
                                 height: 48
-                                color: "#0D0F12"; radius: 6
+                                color: "#F5F7FA"; radius: 6
 
                                 RowLayout {
                                     anchors.fill: parent; anchors.margins: 8
                                     spacing: 8
                                     Rectangle {
                                         width: 6; Layout.fillHeight: true
-                                        color: modelData.risk_level === "HIGH" ? "#FF3D71" :
-                                               modelData.risk_level === "MEDIUM" ? "#FFB800" : "#3B82F6"
+                                        color: modelData.risk_level === "HIGH" ? "#F56C6C" :
+                                               modelData.risk_level === "MEDIUM" ? "#E6A23C" : "#3B82F6"
                                         radius: 3
                                     }
                                     ColumnLayout {
                                         Layout.fillWidth: true
                                         spacing: 2
-                                        Text { text: modelData.zone_name; color: "#E8E8E8"; font.pixelSize: 13; font.bold: true }
+                                        Text { text: modelData.zone_name; color: "#303133"; font.pixelSize: 13; font.bold: true }
                                         Text {
                                             text: "最近告警 " + (modelData.recent_alarms || 0) + " 起 · 风险等级 " +
                                                   (modelData.risk_level || "-")
-                                            color: "#8B8FA3"; font.pixelSize: 12
+                                            color: "#909399"; font.pixelSize: 12
                                         }
                                     }
                                     Rectangle {
                                         width: 60; height: 22; radius: 4
-                                        color: modelData.risk_level === "HIGH" ? "#FF3D71" :
-                                               modelData.risk_level === "MEDIUM" ? "#FFB800" : "#3B82F6"
+                                        color: modelData.risk_level === "HIGH" ? "#F56C6C" :
+                                               modelData.risk_level === "MEDIUM" ? "#E6A23C" : "#3B82F6"
                                         Text {
                                             anchors.centerIn: parent
                                             text: modelData.risk_level || "-"
-                                            color: "#0D0F12"; font.pixelSize: 12; font.bold: true
+                                            color: "#F5F7FA"; font.pixelSize: 12; font.bold: true
                                         }
                                     }
                                 }
@@ -535,22 +535,22 @@ Item {
                 // 最近事件流
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "#141720"; radius: 10
+                    color: "#FFFFFF"; radius: 10
 
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 12
                         spacing: 6
 
                         RowLayout {
-                            Text { text: "最近事件"; color: "#E8E8E8"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "最近事件"; color: "#303133"; font.pixelSize: 14; font.bold: true }
                             Item { Layout.fillWidth: true }
                             Button {
                                 text: "刷新"
                                 font.pixelSize: 12
                                 onClicked: statisticsController.refreshRecentEvents(20)
-                                background: Rectangle { color: "#252830"; radius: 4 }
+                                background: Rectangle { color: "#F5F7FA"; radius: 4 }
                                 contentItem: Text {
-                                    text: parent.text; color: "#8B8FA3"; font.pixelSize: 12
+                                    text: parent.text; color: "#909399"; font.pixelSize: 12
                                     horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                                 }
                             }
@@ -562,7 +562,7 @@ Item {
                             model: statisticsController.recentEvents
                             delegate: Rectangle {
                                 width: ListView.view.width; height: 40
-                                color: index % 2 === 0 ? "#0D0F12" : "transparent"
+                                color: index % 2 === 0 ? "#F5F7FA" : "transparent"
                                 RowLayout {
                                     anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
                                     spacing: 8
@@ -573,17 +573,17 @@ Item {
                                     }
                                     Text {
                                         text: Qt.formatDateTime(new Date(modelData.timestamp || 0), "MM-dd hh:mm:ss")
-                                        color: "#8B8FA3"; font.pixelSize: 12
+                                        color: "#909399"; font.pixelSize: 12
                                         Layout.preferredWidth: 110
                                     }
                                     Text {
                                         text: alarmLabel(modelData.alarm_type)
-                                        color: "#E8E8E8"; font.pixelSize: 13
+                                        color: "#303133"; font.pixelSize: 13
                                         Layout.preferredWidth: 100
                                     }
                                     Text {
                                         text: modelData.description || modelData.channel_id || ""
-                                        color: "#8B8FA3"; font.pixelSize: 12
+                                        color: "#909399"; font.pixelSize: 12
                                         Layout.fillWidth: true
                                         elide: Text.ElideRight
                                     }
@@ -611,10 +611,10 @@ Item {
 
     // ── 工具函数 ──
     function scoreColor(s) {
-        if (s >= 90) return "#00D4AA";
-        if (s >= 75) return "#FFB800";
+        if (s >= 90) return "#67C23A";
+        if (s >= 75) return "#E6A23C";
         if (s >= 60) return "#FF8800";
-        return "#FF3D71";
+        return "#F56C6C";
     }
     function levelValue(key) {
         var d = statisticsController.alarmLevelDist.by_level || statisticsController.alarmLevelDist;
@@ -629,13 +629,13 @@ Item {
     }
     function alarmColor(type) {
         switch (type) {
-            case "intrusion": return "#FF3D71";
-            case "helmet": return "#FFB800";
+            case "intrusion": return "#F56C6C";
+            case "helmet": return "#E6A23C";
             case "fire_smoke": return "#FF8800";
             case "behavior": return "#3B82F6";
-            case "face": return "#00D4AA";
+            case "face": return "#67C23A";
             case "vehicle": return "#6C5CE7";
-            default: return "#8B8FA3";
+            default: return "#909399";
         }
     }
     function alarmLabel(type) {
@@ -651,11 +651,11 @@ Item {
     }
     function alarmLevelColor(lv) {
         switch (lv) {
-            case 4: case 5: case "critical": return "#FF3D71";
+            case 4: case 5: case "critical": return "#F56C6C";
             case 3: case "high": return "#FF8800";
-            case 2: case "medium": return "#FFB800";
+            case 2: case "medium": return "#E6A23C";
             case 1: case "low": return "#3B82F6";
-            default: return "#8B8FA3";
+            default: return "#909399";
         }
     }
 
@@ -667,21 +667,21 @@ Item {
         property string unit: ""
         property string trendText: ""
         property bool trendUp: true
-        property color color: "#00D4AA"
+        property color accentColor: "#67C23A"
 
-        color: "#0D0F12"; radius: 8
+        color: "#F5F7FA"; radius: 8
         ColumnLayout {
             anchors.fill: parent; anchors.margins: 10
             spacing: 4
             RowLayout {
                 spacing: 4
                 Text { text: parent.parent.parent.icon; font.pixelSize: 14 }
-                Text { text: parent.parent.parent.label; color: "#8B8FA3"; font.pixelSize: 12 }
+                Text { text: parent.parent.parent.label; color: "#909399"; font.pixelSize: 12 }
             }
             RowLayout {
                 spacing: 4
-                Text { text: parent.parent.parent.value; color: parent.parent.parent.color; font.pixelSize: 26; font.bold: true }
-                Text { text: parent.parent.parent.unit; color: "#8B8FA3"; font.pixelSize: 12 }
+                Text { text: parent.parent.parent.value; color: parent.parent.parent.accentColor; font.pixelSize: 26; font.bold: true }
+                Text { text: parent.parent.parent.unit; color: "#909399"; font.pixelSize: 12 }
                 Item { Layout.fillWidth: true }
                 Text {
                     text: parent.parent.parent.trendText
@@ -700,7 +700,7 @@ Item {
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
-            ctx.fillStyle = "#0D0F12"; ctx.fillRect(0, 0, width, height)
+            ctx.fillStyle = "#F5F7FA"; ctx.fillRect(0, 0, width, height)
             if (!chartData || chartData.length === 0) {
                 ctx.fillStyle = "#4A4D58"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"
                 ctx.fillText("暂无数据", width / 2, height / 2)
@@ -715,10 +715,10 @@ Item {
                 var x = i * (barW + 2) + 1
                 var y = height - 20 - h
                 var grad = ctx.createLinearGradient(x, y, x, height - 20)
-                grad.addColorStop(0, "#00D4AA"); grad.addColorStop(1, "rgba(0,212,170,0.15)")
+                grad.addColorStop(0, "#67C23A"); grad.addColorStop(1, "rgba(0,212,170,0.15)")
                 ctx.fillStyle = grad
                 ctx.fillRect(x, y, barW, h)
-                ctx.fillStyle = "#8B8FA3"; ctx.font = "9px sans-serif"; ctx.textAlign = "center"
+                ctx.fillStyle = "#909399"; ctx.font = "9px sans-serif"; ctx.textAlign = "center"
                 if (chartData[i].hour !== undefined)
                     ctx.fillText(chartData[i].hour, x + barW / 2, height - 6)
             }
@@ -732,7 +732,7 @@ Item {
         onPaint: {
             var ctx = getContext("2d")
             ctx.clearRect(0, 0, width, height)
-            ctx.fillStyle = "#0D0F12"; ctx.fillRect(0, 0, width, height)
+            ctx.fillStyle = "#F5F7FA"; ctx.fillRect(0, 0, width, height)
             if (!chartData || chartData.length === 0) {
                 ctx.fillStyle = "#4A4D58"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"
                 ctx.fillText("等待 WS 推理数据 (ai_inference)...", width / 2, height / 2)
@@ -747,7 +747,7 @@ Item {
             var chartW = width - padL - padR
             var chartH = height - padT - padB
             // 网格 (4 条横线)
-            ctx.strokeStyle = "#252830"; ctx.lineWidth = 1
+            ctx.strokeStyle = "#F5F7FA"; ctx.lineWidth = 1
             ctx.fillStyle = "#4A4D58"; ctx.font = "9px sans-serif"; ctx.textAlign = "right"
             for (var g = 0; g <= 4; g++) {
                 var gy = padT + (chartH * g / 4)
@@ -757,7 +757,7 @@ Item {
             }
             // 折线
             var stepX = data.length > 1 ? chartW / (data.length - 1) : 0
-            ctx.strokeStyle = "#00D4AA"; ctx.lineWidth = 2; ctx.beginPath()
+            ctx.strokeStyle = "#67C23A"; ctx.lineWidth = 2; ctx.beginPath()
             for (var i = 0; i < data.length; i++) {
                 var x = padL + i * stepX
                 var y = padT + chartH * (1 - vals[i] / maxV)
@@ -774,7 +774,7 @@ Item {
             ctx.closePath()
             ctx.fill()
             // 数据点
-            ctx.fillStyle = "#00D4AA"
+            ctx.fillStyle = "#67C23A"
             for (var j = 0; j < data.length; j++) {
                 var px = padL + j * stepX
                 var py = padT + chartH * (1 - vals[j] / maxV)
@@ -783,7 +783,7 @@ Item {
             // 最新值
             if (data.length > 0) {
                 var lastV = vals[vals.length - 1]
-                ctx.fillStyle = "#FFB800"; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "left"
+                ctx.fillStyle = "#E6A23C"; ctx.font = "bold 10px sans-serif"; ctx.textAlign = "left"
                 ctx.fillText("now: " + lastV.toFixed(1) + " tps", padL + 4, padT + 10)
             }
         }

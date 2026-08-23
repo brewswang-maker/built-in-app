@@ -1,366 +1,856 @@
 // ========================================================================
-// ChannelView.qml — 通道管理 (码流配置 + 通道映射 + 多画面轮巡)
-// 接入 deviceController + mediaController — box-sdk REST API
+// ChannelView.qml — 通道管理 (1:1 对齐 Web 端 /channels 截图)
+//   - 工具栏: 搜索 + 按设备/状态/协议筛选 + 卡片/列表切换 + 共N个通道 + 刷新
+//   - 列表视图: 通道号/通道名称/所属设备/状态/编码/分辨率/帧率/算法/操作 + 分页
+//   - 卡片视图: CH badge + 基本信息 + 性能指标 + 算法配置 + 操作按钮
+//   - 数据源: box-sdk REST GET/PUT/DELETE /api/v1/channels
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
-    id: channelView
+    id: root
 
-    property var selectedChannel: null
-    property var selectedDevice: null
-    property var channelTreeModel: []
-    property var selectedChannels: []
-    property bool showBatchConfig: false
-    property bool showPatrolDialog: false
-    property string batchCodec: "H.265"
-    property string batchResolution: "1920x1080"
-    property int batchFps: 25
-    property int batchBitrate: 4096
-    property string patrolName: ""
-    property int patrolInterval: 10
-    property string statusMsg: ""
+    // ── 状态 ──
+    property var allChannels: []        // 原始通道数据 (来自 REST)
+    property bool loading: false
+    property string loadError: ""
+    property string viewMode: "card"    // "card" | "list"
+    property string searchKey: ""
+    property string filterDevice: ""    // device_id, 空=全部
+    property string filterStatus: ""    // "" | "online" | "offline"
+    property string filterProtocol: ""  // "" | "gb28181" | ...
+    property string sortKey: ""         // "" | "no" | "name"
+    property bool sortAsc: true
+    property int curPage: 1
+    property int pageSize: 20
 
-    Component.onCompleted: {
-        deviceController.refreshDevices()
-        mediaController.refreshStreams()
-    }
+    property var renameTarget: null
+    property var deleteTarget: null
 
-    Connections {
-        target: deviceController
-        function onDevicesUpdated() { buildChannelTree() }
-        function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
-    }
+    Component.onCompleted: loadChannels()
 
-    Connections {
-        target: mediaController
-        function onChannelsUpdated() { /* refresh channel info */ }
-        function onStreamStarted(channelId) { statusMsg = "Preview started: " + channelId; statusTimer.start() }
-        function onStreamStopped(channelId) { statusMsg = "Preview stopped: " + channelId; statusTimer.start() }
-        function onErrorOccurred(code, message) { statusMsg = "Error: " + message; statusTimer.start() }
-    }
-
-    Timer { id: statusTimer; interval: 3000; onTriggered: statusMsg = "" }
-
-    function buildChannelTree() {
-        var devices = deviceController.devices
-        var tree = []
-        for (var i = 0; i < devices.length; i++) {
-            var dev = devices[i]
-            tree.push({ type: "device", name: dev.name || "Device", deviceId: dev.deviceId || dev.id || "", status: dev.status || "offline", protocol: dev.protocol || "-", ip: dev.ip || "-", channelCount: dev.channelCount || 0, indent: 0 })
-            var channels = dev.channels || []
-            for (var j = 0; j < channels.length; j++) {
-                var ch = channels[j]
-                tree.push({ type: "channel", name: ch.name || ("CH" + (j+1)), channelId: ch.channelId || (dev.deviceId + "_ch" + j), streamType: ch.streamType || "main", codec: ch.codec || "H.265", resolution: ch.resolution || "-", fps: ch.fps || 25, bitrate: ch.bitrate || 0, enabled: ch.enabled !== false, status: ch.status || (dev.status === "online" ? "online" : "offline"), deviceName: dev.name || "", indent: 1 })
+    // ── REST ──
+    function xhrRequest(method, url, body, cb) {
+        var xhr = new XMLHttpRequest()
+        xhr.open(method, url)
+        xhr.setRequestHeader("Content-Type", "application/json")
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                var obj = null
+                try { obj = JSON.parse(xhr.responseText) } catch (e) {}
+                cb(xhr.status, obj)
             }
         }
-        channelTreeModel = tree
+        xhr.send(body ? JSON.stringify(body) : null)
     }
 
-    function getChannelStreamInfo(channelId) {
-        var streams = mediaController.streams
-        for (var i = 0; i < streams.length; i++) {
-            if (streams[i].channelId === channelId) return streams[i]
+    function loadChannels() {
+        loading = true
+        loadError = ""
+        xhrRequest("GET", "http://localhost:8080/api/v1/channels?limit=500", null,
+            function (status, resp) {
+                loading = false
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    var d = resp.data || {}
+                    allChannels = d.channels || d.items || []
+                    if (curPage > totalPages()) curPage = Math.max(1, totalPages())
+                } else {
+                    allChannels = []
+                    loadError = "通道数据加载失败 (后端服务不可用或返回异常)"
+                }
+            })
+    }
+
+    function doRename(chId, newName) {
+        xhrRequest("PUT", "http://localhost:8080/api/v1/channels/" + encodeURIComponent(chId),
+            { id: chId, channel_id: chId, name: newName },
+            function (status, resp) {
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    showToast("重命名成功")
+                    loadChannels()
+                } else {
+                    showToast("重命名失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status)))
+                }
+            })
+    }
+
+    function doDelete(chId) {
+        xhrRequest("DELETE", "http://localhost:8080/api/v1/channels/" + encodeURIComponent(chId),
+            { id: chId },
+            function (status, resp) {
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    showToast("通道已删除")
+                    loadChannels()
+                } else {
+                    showToast("删除失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status)))
+                }
+            })
+    }
+
+    // ── 过滤 / 排序 / 分页 ──
+    function filteredList() {
+        var list = []
+        for (var i = 0; i < allChannels.length; i++) {
+            var ch = allChannels[i]
+            var name = ch.name || ""
+            var cid = String(ch.channel_id || "")
+            if (searchKey.length > 0
+                && name.toLowerCase().indexOf(searchKey.toLowerCase()) < 0
+                && cid.toLowerCase().indexOf(searchKey.toLowerCase()) < 0)
+                continue
+            if (filterDevice.length > 0 && String(ch.device_id || "") !== filterDevice)
+                continue
+            if (filterStatus.length > 0 && String(ch.status || "") !== filterStatus)
+                continue
+            if (filterProtocol.length > 0 && String(ch.protocol || "").toLowerCase() !== filterProtocol.toLowerCase())
+                continue
+            list.push(ch)
         }
-        return null
+        if (sortKey === "no") {
+            list.sort(function (a, b) {
+                return sortAsc ? (a.channelNo || 0) - (b.channelNo || 0)
+                               : (b.channelNo || 0) - (a.channelNo || 0)
+            })
+        } else if (sortKey === "name") {
+            list.sort(function (a, b) {
+                var s = String(a.name || "").localeCompare(String(b.name || ""))
+                return sortAsc ? s : -s
+            })
+        }
+        return list
     }
 
-    function toggleChannelSelect(channelId) {
-        var idx = selectedChannels.indexOf(channelId)
-        var copy = selectedChannels.slice()
-        if (idx >= 0) copy.splice(idx, 1); else copy.push(channelId)
-        selectedChannels = copy
+    function totalPages() {
+        return Math.max(1, Math.ceil(filteredList().length / pageSize))
     }
 
-    // ═══ Toolbar ═══
+    function pageList() {
+        var list = filteredList()
+        var start = (curPage - 1) * pageSize
+        return list.slice(start, start + pageSize)
+    }
+
+    function deviceOptions() {
+        var seen = {}
+        var opts = []
+        for (var i = 0; i < allChannels.length; i++) {
+            var did = String(allChannels[i].device_id || "")
+            if (did.length > 0 && !seen[did]) { seen[did] = true; opts.push(did) }
+        }
+        return opts
+    }
+
+    function protocolOptions() {
+        var seen = {}
+        var opts = []
+        for (var i = 0; i < allChannels.length; i++) {
+            var p = String(allChannels[i].protocol || "").toUpperCase()
+            if (p.length > 0 && !seen[p]) { seen[p] = true; opts.push(p) }
+        }
+        return opts
+    }
+
+    function toggleSort(key) {
+        if (sortKey === key) sortAsc = !sortAsc
+        else { sortKey = key; sortAsc = true }
+    }
+
+    function algoText(ch) {
+        var a = ch.algoPlugin || ch.algo_plugin || ""
+        if (a === "" || a === "无" || a === "null") return ""
+        return a
+    }
+
+    function rootWindowGoto(idx) {
+        // root 定义在 main.qml, 通过 Window attached property 访问
+        try {
+            var w = root.Window.window
+            if (w) w.sidebarCurrentIndex = idx
+        } catch (e) {
+            console.warn("[ChannelView] goto page failed:", e)
+        }
+    }
+
+    function showToast(msg) {
+        toastMsg.text = msg
+        toastBox.visible = true
+        toastTimer.restart()
+    }
+
+    function chLabel(ch) {
+        return (ch.channelNo !== undefined) ? ("CH" + ch.channelNo) : "CH-"
+    }
+
+    // ═══ 页面骨架 ═══
     Rectangle {
-        id: toolbar
-        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 52; color: "#141720"
-
-        RowLayout {
-            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-            Text { text: "Channel Mgmt"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-            Text { text: deviceController.deviceCount + " devices"; font.pixelSize: 12; color: "#8B8FA3" }
-            Item { Layout.fillWidth: true }
-            Text { text: statusMsg; font.pixelSize: 12; color: "#FFB800"; visible: statusMsg !== "" }
-
-            Button {
-                text: "Batch Config (" + selectedChannels.length + ")"; font.pixelSize: 12
-                enabled: selectedChannels.length > 0; onClicked: showBatchConfig = true
-                background: Rectangle { color: selectedChannels.length > 0 ? "#3B82F6" : "#252830"; radius: 6; width: 140; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: selectedChannels.length > 0 ? "#FFF" : "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            }
-            Button {
-                text: "New Patrol"; font.pixelSize: 12; onClicked: showPatrolDialog = true
-                background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            }
-            Button {
-                text: "Refresh"; font.pixelSize: 12
-                onClicked: { deviceController.refreshDevices(); mediaController.refreshStreams() }
-                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-            }
-        }
+        anchors.fill: parent
+        color: "#F5F7FA"
     }
 
-    // ═══ Main Content ═══
-    RowLayout {
-        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
-        anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: 8; spacing: 8
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 12
 
-        // ── Left: channel tree ──
+        // ── 页标题 ──
+        Text {
+            text: "通道管理"
+            font.pixelSize: 18
+            font.bold: true
+            color: "#303133"
+        }
+
+        // ── 工具栏卡片 ──
         Rectangle {
-            Layout.fillHeight: true; Layout.preferredWidth: 280; color: "#141720"; radius: 8
-            Column {
-                anchors.fill: parent; anchors.margins: 12; spacing: 8
-                Text { text: "Device-Channel Tree"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+            Layout.fillWidth: true
+            height: 56
+            color: "#FFFFFF"
+            radius: 4
+            border.color: "#EBEEF5"
+            border.width: 1
 
-                TextField {
-                    width: parent.width - 24; height: 28
-                    placeholderText: "Search..."; placeholderTextColor: "#4A4D58"
-                    color: "#E8E8E8"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 4 }
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 10
+
+                // 搜索框
+                Rectangle {
+                    Layout.preferredWidth: 230
+                    Layout.preferredHeight: 32
+                    radius: 4
+                    color: "#FFFFFF"
+                    border.color: searchField.activeFocus ? "#409EFF" : "#DCDFE6"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 6
+                        AppIcon { name: "search"; size: 14; iconColor: "#C0C4CC" }
+                        TextInput {
+                            id: searchField
+                            Layout.fillWidth: true
+                            font.pixelSize: 13
+                            color: "#303133"
+                            clip: true
+                            onTextChanged: { root.searchKey = text; root.curPage = 1 }
+                            Text {
+                                anchors.fill: parent
+                                verticalAlignment: Text.AlignVCenter
+                                text: "搜索通道名称/ID…"
+                                color: "#C0C4CC"
+                                font.pixelSize: 13
+                                visible: searchField.text === "" && !searchField.activeFocus
+                            }
+                        }
+                    }
                 }
 
+                // 按设备筛选
+                LightCombo {
+                    id: deviceCombo
+                    Layout.preferredWidth: 190
+                    defaultLabel: "按设备筛选"
+                    optionModel: root.deviceOptions()
+                    onOptionSelected: function(opt) {
+                        root.filterDevice = (opt === "按设备筛选") ? "" : opt
+                        root.curPage = 1
+                    }
+                }
+
+                // 按状态
+                LightCombo {
+                    id: statusCombo
+                    Layout.preferredWidth: 110
+                    defaultLabel: "按状态"
+                    optionModel: ["在线", "离线"]
+                    onOptionSelected: function(opt) {
+                        root.filterStatus = (opt === "在线") ? "online" : (opt === "离线") ? "offline" : ""
+                        root.curPage = 1
+                    }
+                }
+
+                // 按协议
+                LightCombo {
+                    id: protocolCombo
+                    Layout.preferredWidth: 120
+                    defaultLabel: "按协议"
+                    optionModel: root.protocolOptions()
+                    onOptionSelected: function(opt) {
+                        root.filterProtocol = (opt === "按协议") ? "" : opt
+                        root.curPage = 1
+                    }
+                }
+
+                // 卡片/列表切换
+                Row {
+                    Layout.preferredHeight: 32
+                    spacing: 0
+                    ViewToggleBtn {
+                        label: "卡片"
+                        selected: root.viewMode === "card"
+                        leftSide: true
+                        onTap: root.viewMode = "card"
+                    }
+                    ViewToggleBtn {
+                        label: "列表"
+                        selected: root.viewMode === "list"
+                        leftSide: false
+                        onTap: root.viewMode = "list"
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Text {
+                    text: "共 " + root.filteredList().length + " 个通道"
+                    font.pixelSize: 13
+                    color: "#909399"
+                }
+
+                // 刷新按钮
+                Rectangle {
+                    Layout.preferredWidth: 76
+                    Layout.preferredHeight: 32
+                    radius: 4
+                    color: refreshMa.containsMouse ? "#ECF5FF" : "#FFFFFF"
+                    border.color: refreshMa.containsMouse ? "#B3D8FF" : "#DCDFE6"
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 5
+                        AppIcon { name: "refresh"; size: 14; iconColor: "#409EFF"; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: "刷新"; font.pixelSize: 13; color: "#409EFF"; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                    MouseArea {
+                        id: refreshMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.loadChannels()
+                    }
+                }
+            }
+        }
+
+        // ── 加载态 / 错误态 ──
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.loading || root.loadError !== ""
+            color: "#FFFFFF"
+            radius: 4
+            border.color: "#EBEEF5"
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 10
+                BusyIndicator { running: root.loading; anchors.horizontalCenter: parent.horizontalCenter }
+                Text {
+                    visible: root.loading
+                    text: "加载中…"
+                    font.pixelSize: 13
+                    color: "#909399"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+                Text {
+                    visible: !root.loading && root.loadError !== ""
+                    text: root.loadError
+                    font.pixelSize: 13
+                    color: "#F56C6C"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+                Rectangle {
+                    visible: !root.loading && root.loadError !== ""
+                    width: retryRow.width + 24; height: 30; radius: 4
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    color: retryMa.containsMouse ? "#ECF5FF" : "#FFFFFF"
+                    border.color: "#DCDFE6"
+                    Row {
+                        id: retryRow
+                        anchors.centerIn: parent
+                        spacing: 5
+                        Text { text: "重试"; font.pixelSize: 13; color: "#409EFF" }
+                    }
+                    MouseArea { id: retryMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.loadChannels() }
+                }
+            }
+        }
+
+        // ── 列表视图 ──
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.viewMode === "list" && !root.loading && root.loadError === ""
+            color: "#FFFFFF"
+            radius: 4
+            border.color: "#EBEEF5"
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                // 表头
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 44
+                    color: "#F5F7FA"
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 0
+                        ThCell { text: "通道号"; cellWidth: 80; sortable: true; onClicked: root.toggleSort("no") }
+                        ThCell { text: "通道名称"; fill: true; sortable: true; onClicked: root.toggleSort("name") }
+                        ThCell { text: "所属设备"; cellWidth: 200 }
+                        ThCell { text: "状态"; cellWidth: 80 }
+                        ThCell { text: "编码"; cellWidth: 90 }
+                        ThCell { text: "分辨率"; cellWidth: 110 }
+                        ThCell { text: "帧率"; cellWidth: 60 }
+                        ThCell { text: "算法"; cellWidth: 110 }
+                        ThCell { text: "操作"; cellWidth: 150 }
+                    }
+                }
+
+                // 表体
                 ListView {
-                    id: channelTree
-                    width: parent.width - 24; height: parent.height - 80
-                    clip: true; spacing: 1
-                    model: channelTreeModel
+                    id: tableView
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    model: root.pageList()
 
                     delegate: Rectangle {
-                        width: ListView.view.width
-                        height: modelData.type === "device" ? 32 : 28
-                        color: {
-                            if (treeMouse.containsMouse) return "#1A1D23"
-                            if (modelData.type === "channel" && selectedChannel && selectedChannel.channelId === modelData.channelId) return "#1A2A3A"
-                            return "transparent"
+                        width: tableView.width
+                        height: 48
+                        color: rowMa.containsMouse ? "#F5F7FA" : "#FFFFFF"
+
+                        Rectangle {
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+                            height: 1; color: "#EBEEF5"
                         }
 
-                        MouseArea {
-                            id: treeMouse; anchors.fill: parent; hoverEnabled: true
-                            onClicked: {
-                                if (modelData.type === "device") selectedDevice = modelData
-                                else selectedChannel = modelData
+                        MouseArea { id: rowMa; anchors.fill: parent; hoverEnabled: true }
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            anchors.rightMargin: 16
+                            spacing: 0
+
+                            // 通道号
+                            Text { text: modelData.channelNo !== undefined ? String(modelData.channelNo) : "-"; width: 80; font.pixelSize: 13; color: "#606266" }
+                            // 通道名称
+                            Text { text: modelData.name || "-"; Layout.fillWidth: true; elide: Text.ElideRight; font.pixelSize: 13; color: "#303133" }
+                            // 所属设备 (超长省略)
+                            Text { text: String(modelData.device_id || "-"); width: 200; elide: Text.ElideMiddle; font.pixelSize: 13; color: "#606266" }
+                            // 状态 tag
+                            Item {
+                                width: 80; height: 48
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: statusTagText.implicitWidth + 16; height: 22; radius: 3
+                                    color: (modelData.status === "online") ? "#F0F9EB" : "#F4F4F5"
+                                    border.color: (modelData.status === "online") ? "#E1F3D8" : "#E9E9EB"
+                                    Text {
+                                        id: statusTagText
+                                        anchors.centerIn: parent
+                                        text: (modelData.status === "online") ? "在线" : "离线"
+                                        font.pixelSize: 12
+                                        color: (modelData.status === "online") ? "#67C23A" : "#909399"
+                                    }
+                                }
+                            }
+                            // 编码 tag
+                            Item {
+                                width: 90; height: 48
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: codecTagText.implicitWidth + 16; height: 22; radius: 3
+                                    color: "#ECF5FF"
+                                    border.color: "#D9ECFF"
+                                    Text {
+                                        id: codecTagText
+                                        anchors.centerIn: parent
+                                        text: modelData.codec || "-"
+                                        font.pixelSize: 12
+                                        color: "#409EFF"
+                                    }
+                                }
+                            }
+                            // 分辨率
+                            Text { text: modelData.resolution || "-"; width: 110; font.pixelSize: 13; color: "#606266" }
+                            // 帧率
+                            Text { text: modelData.fps !== undefined ? String(modelData.fps) : "-"; width: 60; font.pixelSize: 13; color: "#606266" }
+                            // 算法
+                            Text {
+                                width: 110; elide: Text.ElideRight
+                                text: root.algoText(modelData).length > 0 ? root.algoText(modelData) : "-"
+                                font.pixelSize: 13; color: "#606266"
+                            }
+                            // 操作
+                            Row {
+                                width: 150; spacing: 10
+                                OpIconBtn { icon: "play"; tip: "预览"; color: "#409EFF"; onTap: root.rootWindowGoto(1) }
+                                OpIconBtn { icon: "info"; tip: "详情"; color: "#909399"; onTap: { root.viewMode = "card" } }
+                                OpIconBtn { icon: "edit"; tip: "重命名"; color: "#E6A23C"; onTap: { root.renameTarget = modelData; renameField.text = modelData.name || ""; renameDialog.visible = true } }
+                                OpIconBtn { icon: "delete"; tip: "删除"; color: "#F56C6C"; onTap: { root.deleteTarget = modelData; deleteDialog.visible = true } }
+                            }
+                        }
+                    }
+
+                    // 空态
+                    Column {
+                        visible: tableView.count === 0
+                        anchors.centerIn: parent
+                        spacing: 8
+                        AppIcon { name: "channel"; size: 40; iconColor: "#C0C4CC"; anchors.horizontalCenter: parent.horizontalCenter }
+                        Text {
+                            text: "暂无通道"
+                            font.pixelSize: 13
+                            color: "#909399"
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                    }
+                }
+
+                // 分页条
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 48
+                    color: "#FFFFFF"
+                    Rectangle { anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 10
+
+                        Text { text: "共 " + root.filteredList().length + " 条"; font.pixelSize: 13; color: "#606266" }
+
+                        LightCombo {
+                            id: pageSizeCombo
+                            Layout.preferredWidth: 100
+                            defaultLabel: root.pageSize + "条/页"
+                            optionModel: ["10条/页", "20条/页", "50条/页"]
+                            onOptionSelected: function(opt) {
+                                root.pageSize = parseInt(opt) || 20
+                                root.curPage = 1
                             }
                         }
 
+                        Item { Layout.fillWidth: true }
+
+                        // 页码导航
                         Row {
-                            x: modelData.indent * 20 + 8; spacing: 6; anchors.verticalCenter: parent.verticalCenter
+                            spacing: 4
+                            PageBtn { label: "<"; enabled: root.curPage > 1; onTap: root.curPage-- }
+                            PageBtn { label: String(root.curPage); active: true; onTap: {} }
+                            PageBtn { label: ">"; enabled: root.curPage < root.totalPages(); onTap: root.curPage++ }
+                        }
 
-                            // Checkbox for channels
-                            Rectangle {
-                                visible: modelData.type === "channel"; width: 14; height: 14; radius: 2
-                                anchors.verticalCenter: parent.verticalCenter
-                                color: selectedChannels.indexOf(modelData.channelId) >= 0 ? "#3B82F6" : "transparent"
-                                border.color: selectedChannels.indexOf(modelData.channelId) >= 0 ? "#3B82F6" : "#4A4D58"; border.width: 1
-                                MouseArea { anchors.fill: parent; onClicked: toggleChannelSelect(modelData.channelId) }
-                            }
-
-                            // Status dot
-                            Rectangle {
-                                width: modelData.type === "device" ? 8 : 6; height: width; radius: width / 2
-                                color: modelData.status === "online" ? "#00D4AA" : "#FF3D71"
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Text {
-                                text: modelData.type === "device" ? "D" : "-"
-                                font.pixelSize: modelData.type === "device" ? 12 : 8
-                                color: modelData.status === "online" ? "#00D4AA" : "#FF3D71"
-                            }
-
-                            Text {
-                                text: modelData.name
-                                font.pixelSize: modelData.type === "device" ? 12 : 11
-                                color: modelData.status === "online" ? "#E8E8E8" : "#4A4D58"
-                                font.bold: modelData.type === "device"
-                                elide: Text.ElideRight; width: 140
-                            }
-
-                            // Protocol tag (device)
-                            Rectangle {
-                                visible: modelData.type === "device"
-                                width: 50; height: 14; radius: 3; color: "#1A2A3A"
-                                Text { text: modelData.protocol || ""; font.pixelSize: 8; color: "#3B82F6"; anchors.centerIn: parent }
-                            }
-
-                            // Codec tag (channel)
-                            Rectangle {
-                                visible: modelData.type === "channel"
-                                width: 36; height: 14; radius: 3; color: "#1A3A2A"
-                                Text { text: modelData.codec || ""; font.pixelSize: 8; color: "#00D4AA"; anchors.centerIn: parent }
+                        Text { text: "前往"; font.pixelSize: 13; color: "#606266" }
+                        Rectangle {
+                            width: 44; height: 28; radius: 4
+                            border.color: jumpInput.activeFocus ? "#409EFF" : "#DCDFE6"
+                            TextInput {
+                                id: jumpInput
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                font.pixelSize: 13
+                                color: "#303133"
+                                horizontalAlignment: TextInput.AlignHCenter
+                                validator: IntValidator { bottom: 1 }
+                                onAccepted: {
+                                    var p = parseInt(text) || 1
+                                    root.curPage = Math.min(Math.max(1, p), root.totalPages())
+                                }
                             }
                         }
+                        Text { text: "页"; font.pixelSize: 13; color: "#606266" }
                     }
                 }
             }
         }
 
-        // ── Right: channel detail + config + PTZ + patrol ──
+        // ── 卡片视图 ──
         Rectangle {
-            Layout.fillHeight: true; Layout.fillWidth: true; color: "#0D0F12"; radius: 8
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.viewMode === "card" && !root.loading && root.loadError === ""
+            color: "transparent"
 
-            ScrollView {
-                anchors.fill: parent; anchors.margins: 12; clip: true
+            Flickable {
+                anchors.fill: parent
+                contentWidth: width
+                contentHeight: cardColWrap.height
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
 
                 Column {
-                    width: parent.width - 24; spacing: 10
+                    id: cardColWrap
+                    width: parent.width
+                    spacing: 12
 
-                    Text { text: "Channel Config"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Grid {
+                        id: cardGrid
+                        width: parent.width
+                        spacing: 12
+                        columns: Math.max(1, Math.floor(width / 440))
 
-                    // Channel config panel
+                        Repeater {
+                            id: cardRepeater
+                            model: root.pageList()
+                            delegate: ChannelCard { ch: modelData }
+                        }
+                    }
+
+                    // 空态
                     Rectangle {
-                        visible: selectedChannel !== null
-                        width: parent.width; height: 220; color: "#141720"; radius: 8
-
+                        visible: cardRepeater.count === 0
+                        width: parent.width
+                        height: 160
+                        radius: 4
+                        color: "#FFFFFF"
+                        border.color: "#EBEEF5"
                         Column {
-                            anchors.fill: parent; anchors.margins: 16; spacing: 8
-
-                            Row { spacing: 8
-                                Text { text: selectedChannel ? selectedChannel.name : ""; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                                Rectangle { width: 8; height: 8; radius: 4; color: selectedChannel && selectedChannel.status === "online" ? "#00D4AA" : "#FF3D71"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: selectedChannel ? ("(" + selectedChannel.deviceName + ")") : ""; font.pixelSize: 12; color: "#8B8FA3" }
-                            }
-
-                            Grid { columns: 4; spacing: 12; rowSpacing: 8; width: parent.width
-                                Text { text: "Stream:"; font.pixelSize: 12; color: "#8B8FA3" }
-                                ComboBox { width: 120; height: 28; model: ["Main", "Sub", "Third"]
-                                    background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-
-                                Text { text: "Enabled:"; font.pixelSize: 12; color: "#8B8FA3" }
-                                Switch { checked: selectedChannel ? selectedChannel.enabled : false }
-
-                                Text { text: "Codec:"; font.pixelSize: 12; color: "#8B8FA3" }
-                                ComboBox { width: 120; height: 28; model: ["H.265", "H.264", "MJPEG"]
-                                    background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-
-                                Text { text: "Resolution:"; font.pixelSize: 12; color: "#8B8FA3" }
-                                ComboBox { width: 120; height: 28; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
-                                    background: Rectangle { color: "#252830"; radius: 4 }
-                                    contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-
-                                Text { text: "FPS:"; font.pixelSize: 12; color: "#8B8FA3" }
-                                SpinBox { from: 1; to: 30; value: selectedChannel ? selectedChannel.fps : 25; height: 28 }
-
-                                Text { text: "Bitrate(K):"; font.pixelSize: 12; color: "#8B8FA3" }
-                                SpinBox { from: 256; to: 16384; value: selectedChannel ? selectedChannel.bitrate : 4096; stepSize: 512; height: 28 }
-                            }
-
-                            Row { spacing: 8
-                                Button { text: "Preview"; font.pixelSize: 12
-                                    onClicked: { if (selectedChannel) mediaController.startStream(selectedChannel.channelId, "main") }
-                                    background: Rectangle { color: "#00D4AA"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Snapshot"; font.pixelSize: 12
-                                    onClicked: { if (selectedChannel) mediaController.snapshot(selectedChannel.channelId) }
-                                    background: Rectangle { color: "#252830"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Record"; font.pixelSize: 12
-                                    onClicked: { if (selectedChannel) mediaController.startRecording(selectedChannel.channelId) }
-                                    background: Rectangle { color: "#FF3D71"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Stop Rec"; font.pixelSize: 12
-                                    onClicked: { if (selectedChannel) mediaController.stopRecording(selectedChannel.channelId) }
-                                    background: Rectangle { color: "#252830"; radius: 4; width: 70; height: 28 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                            anchors.centerIn: parent
+                            spacing: 8
+                            AppIcon { name: "channel"; size: 40; iconColor: "#C0C4CC"; anchors.horizontalCenter: parent.horizontalCenter }
+                            Text {
+                                text: "暂无通道"
+                                font.pixelSize: 13
+                                color: "#909399"
+                                anchors.horizontalCenter: parent.horizontalCenter
                             }
                         }
                     }
 
-                    // Empty state
+                    // 分页条 (卡片视图同样显示, 对齐截图)
                     Rectangle {
-                        visible: selectedChannel === null
-                        width: parent.width; height: 100; color: "#141720"; radius: 8
-                        Text { anchors.centerIn: parent; text: "Select a channel from the left"; font.pixelSize: 13; color: "#4A4D58" }
-                    }
+                        visible: root.filteredList().length > 0
+                        width: parent.width
+                        height: 48
+                        radius: 4
+                        color: "#FFFFFF"
+                        border.color: "#EBEEF5"
 
-                    // PTZ panel
-                    Rectangle {
-                        visible: selectedChannel !== null
-                        width: parent.width; height: 130; color: "#141720"; radius: 8
-                        Column {
-                            anchors.fill: parent; anchors.margins: 12; spacing: 6
-                            Text { text: "PTZ Control"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                            Row { spacing: 12
-                                Grid { columns: 3; spacing: 4
-                                    Repeater {
-                                        model: ["leftUp", "up", "rightUp", "left", "stop", "right", "leftDown", "down", "rightDown"]
-                                        delegate: Button {
-                                            text: modelData.charAt(0).toUpperCase(); font.pixelSize: 12
-                                            onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, modelData, 0.5) }
-                                            background: Rectangle { color: "#252830"; radius: 4; width: 34; height: 26 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                        }
-                                    }
-                                }
-                                Column { spacing: 4; anchors.verticalCenter: parent.verticalCenter
-                                    Row { spacing: 4
-                                        Button { text: "Z+"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomIn", 0.3) }
-                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                        Button { text: "Z-"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "zoomOut", 0.3) }
-                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                    }
-                                    Row { spacing: 4
-                                        Button { text: "F+"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusNear", 0.3) }
-                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                        Button { text: "F-"; font.pixelSize: 12; onClicked: { if (selectedChannel) mediaController.ptzControl(selectedChannel.channelId, "focusFar", 0.3) }
-                                            background: Rectangle { color: "#252830"; radius: 3; width: 32; height: 22 }
-                                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                    }
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            anchors.rightMargin: 16
+                            spacing: 10
+
+                            Text { text: "共 " + root.filteredList().length + " 条"; font.pixelSize: 13; color: "#606266" }
+
+                            LightCombo {
+                                Layout.preferredWidth: 100
+                                defaultLabel: root.pageSize + "条/页"
+                                optionModel: ["10条/页", "20条/页", "50条/页"]
+                                onOptionSelected: function(opt) {
+                                    root.pageSize = parseInt(opt) || 20
+                                    root.curPage = 1
                                 }
                             }
-                        }
-                    }
 
-                    // Stream info
-                    Rectangle {
-                        visible: selectedChannel !== null
-                        width: parent.width; height: 70; color: "#141720"; radius: 8
-                        Column {
-                            anchors.fill: parent; anchors.margins: 12; spacing: 4
-                            Text { text: "Stream Info"; font.pixelSize: 12; font.bold: true; color: "#E8E8E8" }
-                            Row { spacing: 20
-                                Text { text: "Res: " + (selectedChannel ? (selectedChannel.resolution || "-") : "-"); font.pixelSize: 12; color: "#8B8FA3" }
-                                Text { text: "FPS: " + (selectedChannel ? (selectedChannel.fps || 0) : 0); font.pixelSize: 12; color: "#8B8FA3" }
-                                Text { text: "Codec: " + (selectedChannel ? (selectedChannel.codec || "-") : "-"); font.pixelSize: 12; color: "#00D4AA" }
-                                Text { text: "Bitrate: " + (selectedChannel ? (selectedChannel.bitrate || 0) : 0) + " Kbps"; font.pixelSize: 12; color: "#FFB800" }
-                            }
-                        }
-                    }
+                            Item { Layout.fillWidth: true }
 
-                    // Patrol schemes
-                    Text { text: "Patrol Schemes"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8"; topPadding: 8 }
-
-                    ListView {
-                        width: parent.width; height: 160; clip: true; spacing: 4
-                        model: [{ name: "Default Patrol (All)", interval: 10, layout: "4", channels: 12, active: true }, { name: "Key Area Patrol", interval: 5, layout: "1", channels: 4, active: false }, { name: "Parking Night", interval: 15, layout: "4", channels: 6, active: false }]
-                        delegate: Rectangle {
-                            width: ListView.view.width; height: 44; color: "#141720"; radius: 6
                             Row {
-                                anchors.fill: parent; anchors.margins: 8; spacing: 12
-                                Rectangle { width: 6; height: 6; radius: 3; color: modelData.active ? "#00D4AA" : "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-                                Text { text: modelData.name; font.pixelSize: 12; font.bold: true; color: "#E8E8E8"; width: 180 }
-                                Text { text: "Interval:" + modelData.interval + "s"; font.pixelSize: 12; color: "#8B8FA3" }
-                                Text { text: modelData.layout + "-grid"; font.pixelSize: 12; color: "#3B82F6" }
-                                Text { text: modelData.channels + " ch"; font.pixelSize: 12; color: "#8B8FA3" }
-                                Item { width: 20 }
-                                Button { text: modelData.active ? "Stop" : "Start"; font.pixelSize: 12
-                                    background: Rectangle { color: modelData.active ? "#FF3D71" : "#00D4AA"; radius: 4; width: 48; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: modelData.active ? "#FFF" : "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                                Button { text: "Edit"; font.pixelSize: 12
-                                    background: Rectangle { color: "#252830"; radius: 4; width: 36; height: 20 }
-                                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                                spacing: 4
+                                PageBtn { label: "<"; enabled: root.curPage > 1; onTap: root.curPage-- }
+                                PageBtn { label: String(root.curPage); active: true; onTap: {} }
+                                PageBtn { label: ">"; enabled: root.curPage < root.totalPages(); onTap: root.curPage++ }
+                            }
+
+                            Text { text: "前往"; font.pixelSize: 13; color: "#606266" }
+                            Rectangle {
+                                width: 44; height: 28; radius: 4
+                                border.color: cardJumpInput.activeFocus ? "#409EFF" : "#DCDFE6"
+                                TextInput {
+                                    id: cardJumpInput
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    font.pixelSize: 13
+                                    color: "#303133"
+                                    horizontalAlignment: TextInput.AlignHCenter
+                                    validator: IntValidator { bottom: 1 }
+                                    onAccepted: {
+                                        var p = parseInt(text) || 1
+                                        root.curPage = Math.min(Math.max(1, p), root.totalPages())
+                                    }
+                                }
+                            }
+                            Text { text: "页"; font.pixelSize: 13; color: "#606266" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ═══ 内联组件 ═══
+    component ThCell: Item {
+        property alias text: thText.text
+        property bool sortable: false
+        property bool fill: false
+        property int cellWidth: 100
+        signal clicked()
+        Layout.fillWidth: fill
+        Layout.preferredWidth: fill ? 0 : cellWidth
+        Layout.fillHeight: true
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
+            Text { id: thText; font.pixelSize: 13; font.bold: true; color: "#909399" }
+            AppIcon { visible: sortable; name: "sort"; size: 12; iconColor: "#C0C4CC"; anchors.verticalCenter: parent.verticalCenter }
+        }
+        MouseArea { anchors.fill: parent; cursorShape: sortable ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: parent.clicked() }
+    }
+
+    component OpIconBtn: Item {
+        property string icon: "play"
+        property string tip: ""
+        property color color: "#409EFF"
+        signal tap()
+        width: 24; height: 48
+        AppIcon {
+            anchors.centerIn: parent
+            name: icon
+            size: 16
+            iconColor: opBtnMa.containsMouse ? Qt.darker(color, 1.2) : color
+        }
+        MouseArea {
+            id: opBtnMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tap()
+        }
+        ToolTip.visible: opBtnMa.containsMouse && tip !== ""
+        ToolTip.text: tip
+        ToolTip.delay: 300
+    }
+
+    component ViewToggleBtn: Rectangle {
+        property string label: ""
+        property bool selected: false
+        property bool leftSide: true
+        signal tap()
+        width: 56; height: 32
+        radius: 0
+        color: selected ? "#409EFF" : (vtMa.containsMouse ? "#ECF5FF" : "#FFFFFF")
+        border.color: selected ? "#409EFF" : "#DCDFE6"
+        Text {
+            anchors.centerIn: parent
+            text: label
+            font.pixelSize: 13
+            color: selected ? "#FFFFFF" : "#606266"
+        }
+        MouseArea { id: vtMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tap() }
+    }
+
+    component PageBtn: Rectangle {
+        property string label: ""
+        property bool active: false
+        signal tap()
+        width: 28; height: 28; radius: 4
+        color: active ? "#409EFF" : (pbMa.containsMouse ? "#F5F7FA" : "#FFFFFF")
+        border.color: active ? "#409EFF" : "#DCDFE6"
+        Text { anchors.centerIn: parent; text: label; font.pixelSize: 13; color: active ? "#FFFFFF" : "#606266" }
+        MouseArea { id: pbMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tap() }
+    }
+
+    // ═══ LightCombo (浅色下拉) ═══
+    component LightCombo: Item {
+        id: comboRoot
+        property string defaultLabel: ""
+        property var optionModel: []
+        property string current: ""
+        signal optionSelected(string opt)
+        implicitWidth: 120
+        implicitHeight: 32
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 4
+            color: "#FFFFFF"
+            border.color: comboMa.containsMouse ? "#C0C4CC" : "#DCDFE6"
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 8
+                spacing: 4
+                Text {
+                    Layout.fillWidth: true
+                    text: comboRoot.current !== "" ? comboRoot.current : comboRoot.defaultLabel
+                    font.pixelSize: 13
+                    color: comboRoot.current !== "" ? "#303133" : "#909399"
+                    elide: Text.ElideRight
+                }
+                AppIcon { name: "chevronDown"; size: 12; iconColor: "#C0C4CC" }
+            }
+
+            MouseArea {
+                id: comboMa
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: comboPopup.visible ? comboPopup.close() : comboPopup.open()
+            }
+        }
+
+        Popup {
+            id: comboPopup
+            y: comboRoot.height + 4
+            width: Math.max(comboRoot.width, 170)
+            padding: 5
+            background: Rectangle {
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#E4E7ED"
+            }
+
+            Column {
+                width: parent.width
+                Repeater {
+                    model: [comboRoot.defaultLabel].concat(comboRoot.optionModel)
+                    delegate: Rectangle {
+                        width: comboPopup.width - 10
+                        height: 30
+                        radius: 3
+                        color: comboItemMa.containsMouse ? "#F5F7FA" : "transparent"
+                        Text {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            verticalAlignment: Text.AlignVCenter
+                            text: modelData
+                            font.pixelSize: 13
+                            elide: Text.ElideMiddle
+                            color: (modelData === comboRoot.current) ? "#409EFF"
+                                 : (modelData === comboRoot.defaultLabel && comboRoot.current === "") ? "#909399"
+                                 : "#606266"
+                        }
+                        MouseArea {
+                            id: comboItemMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (modelData === comboRoot.defaultLabel) {
+                                    comboRoot.current = ""
+                                    comboRoot.optionSelected(comboRoot.defaultLabel)
+                                } else {
+                                    comboRoot.current = modelData
+                                    comboRoot.optionSelected(modelData)
+                                }
+                                comboPopup.close()
                             }
                         }
                     }
@@ -369,79 +859,422 @@ Item {
         }
     }
 
-    // ═══ Batch config dialog ═══
-    Rectangle {
-        visible: showBatchConfig; anchors.fill: parent; color: "#80000000"; z: 100
-        MouseArea { anchors.fill: parent; onClicked: showBatchConfig = false }
-        Rectangle {
-            width: 420; height: 340; color: "#141720"; radius: 12; anchors.centerIn: parent
-            Column {
-                anchors.fill: parent; anchors.margins: 20; spacing: 12
-                Row { spacing: 8; width: parent.width
-                    Text { text: "Batch Config (" + selectedChannels.length + " channels)"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    Item { width: parent.width - 300 }
-                    Text { text: "X"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showBatchConfig = false } }
+    // ═══ ChannelCard (卡片视图单元, 对齐截图) ═══
+    component ChannelCard: Rectangle {
+        id: card
+        property var ch: ({})
+        property bool recording: false
+        Component.onCompleted: recording = (ch && ch.isRecording === true)
+
+        width: 428
+        height: cardBody.implicitHeight + 32
+        radius: 4
+        color: "#FFFFFF"
+        border.color: "#EBEEF5"
+
+        Column {
+            id: cardBody
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 16
+            spacing: 12
+
+            // ── 头部: CH badge + 名称 + 状态 + 停止 ──
+            Row {
+                spacing: 10
+                Rectangle {
+                    width: chBadgeText.implicitWidth + 14
+                    height: 22
+                    radius: 3
+                    color: "#409EFF"
+                    anchors.verticalCenter: parent.verticalCenter
+                    Text {
+                        id: chBadgeText
+                        anchors.centerIn: parent
+                        text: card.ch.channelNo !== undefined ? ("CH" + card.ch.channelNo) : "CH"
+                        font.pixelSize: 12
+                        font.bold: true
+                        color: "#FFFFFF"
+                    }
                 }
-                Grid { columns: 2; columnSpacing: 12; rowSpacing: 10; width: parent.width
-                    Text { text: "Codec:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox { width: 200; height: 28; model: ["H.265", "H.264", "MJPEG"]
-                        background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                    Text { text: "Resolution:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox { width: 200; height: 28; model: ["3840x2160", "2560x1440", "1920x1080", "1280x720"]
-                        background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                    Text { text: "FPS:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { from: 1; to: 30; value: batchFps; onValueChanged: batchFps = value; height: 28 }
-                    Text { text: "Bitrate(K):"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { from: 256; to: 16384; value: batchBitrate; onValueChanged: batchBitrate = value; stepSize: 512; height: 28 }
+                Text {
+                    text: card.ch.name || card.ch.channel_id || "-"
+                    font.pixelSize: 15
+                    font.bold: true
+                    color: "#303133"
+                    anchors.verticalCenter: parent.verticalCenter
                 }
-                Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
-                    Button { text: "Cancel"; font.pixelSize: 13; onClicked: showBatchConfig = false
-                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 36 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "Apply"; font.pixelSize: 13
-                        onClicked: { statusMsg = "Batch config applied to " + selectedChannels.length + " channels"; showBatchConfig = false; selectedChannels = []; statusTimer.start() }
-                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 100; height: 36 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+                Rectangle {
+                    width: cardStatusText.implicitWidth + 16
+                    height: 24
+                    radius: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: (card.ch.status === "online") ? "#F0F9EB" : "#F4F4F5"
+                    border.color: (card.ch.status === "online") ? "#E1F3D8" : "#E9E9EB"
+                    Text {
+                        id: cardStatusText
+                        anchors.centerIn: parent
+                        text: (card.ch.status === "online") ? "在线" : "离线"
+                        font.pixelSize: 12
+                        color: (card.ch.status === "online") ? "#67C23A" : "#909399"
+                    }
+                }
+                Rectangle {
+                    width: 52
+                    height: 24
+                    radius: 3
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: stopMa.containsMouse ? "#F5F7FA" : "#FFFFFF"
+                    border.color: "#DCDFE6"
+                    Text { anchors.centerIn: parent; text: "停止"; font.pixelSize: 12; color: "#909399" }
+                    MouseArea {
+                        id: stopMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            mediaController.stopAllStreams()
+                            if (card.recording) {
+                                mediaController.stopRecording(String(card.ch.channel_id || ""))
+                                card.recording = false
+                            }
+                            root.showToast("已停止")
+                        }
+                    }
+                }
+            }
+
+            // ── 基本信息 ──
+            Row {
+                spacing: 6
+                Rectangle { width: 3; height: 14; color: "#409EFF"; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "基本信息"; font.pixelSize: 14; font.bold: true; color: "#303133" }
+            }
+            Grid {
+                width: parent.width
+                columns: 2
+                columnSpacing: 20
+                rowSpacing: 8
+                InfoItem { itemLabel: "通道号"; itemValue: card.ch.channelNo !== undefined ? String(card.ch.channelNo) : "-" }
+                InfoItem { itemLabel: "分辨率"; itemValue: card.ch.resolution || "-" }
+                InfoItem { itemLabel: "帧率"; itemValue: card.ch.fps !== undefined ? (card.ch.fps + " fps") : "-" }
+                InfoItem { itemLabel: "RTSP 地址"; itemValue: card.ch.rtspUrl || card.ch.source_url || "-" }
+                InfoItem { itemLabel: "通道名称"; itemValue: card.ch.name || "-" }
+                // 编码格式 (蓝色 badge)
+                Item {
+                    width: 188
+                    height: 20
+                    Row {
+                        spacing: 8
+                        Text { text: "编码格式"; font.pixelSize: 13; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                        Rectangle {
+                            width: codecBadge.implicitWidth + 14
+                            height: 20
+                            radius: 3
+                            color: "#ECF5FF"
+                            border.color: "#D9ECFF"
+                            Text { id: codecBadge; anchors.centerIn: parent; text: card.ch.codec || "-"; font.pixelSize: 12; color: "#409EFF" }
+                        }
+                    }
+                }
+                InfoItem { itemLabel: "码率"; itemValue: card.ch.bitrate || "-" }
+                InfoItem { itemLabel: "丢包率"; itemValue: (card.ch.packetLoss !== undefined && card.ch.packetLoss !== "") ? (card.ch.packetLoss + "%") : "-" }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: "#EBEEF5" }
+
+            // ── 性能指标 ──
+            Row {
+                spacing: 6
+                Rectangle { width: 3; height: 14; color: "#409EFF"; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "性能指标"; font.pixelSize: 14; font.bold: true; color: "#303133" }
+            }
+            Row {
+                width: parent.width
+                spacing: 48
+                MetricItem { metricValue: card.ch.bitrate || "-"; metricLabel: "码率" }
+                MetricItem {
+                    metricValue: (card.ch.status === "online" && card.ch.latency !== undefined) ? (card.ch.latency + " ms") : "-"
+                    metricLabel: "延迟"
+                    valueColor: "#409EFF"
+                }
+                MetricItem { metricValue: (card.ch.packetLoss !== undefined && card.ch.packetLoss !== "") ? (card.ch.packetLoss + "%") : "-"; metricLabel: "丢包率" }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: "#EBEEF5" }
+
+            // ── 算法配置 ──
+            Row {
+                spacing: 6
+                Rectangle { width: 3; height: 14; color: "#409EFF"; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "算法配置"; font.pixelSize: 14; font.bold: true; color: "#303133" }
+            }
+            Row {
+                spacing: 8
+                Text { text: "当前算法:"; font.pixelSize: 13; color: "#606266" }
+                Text {
+                    text: root.algoText(card.ch).length > 0 ? root.algoText(card.ch) : "未配置"
+                    font.pixelSize: 13
+                    color: root.algoText(card.ch).length > 0 ? "#303133" : "#909399"
+                }
+            }
+
+            // ── 操作按钮 ──
+            Row {
+                spacing: 8
+                CardBtn { label: "实时预览"; filled: true; onTap: root.rootWindowGoto(1) }
+                CardBtn { label: "截图"; onTap: { mediaController.snapshotToFile(String(card.ch.channel_id || "")); root.showToast("截图已保存") } }
+                CardBtn {
+                    label: card.recording ? "停止录像" : "开始录像"
+                    danger: card.recording
+                    onTap: {
+                        var cid = String(card.ch.channel_id || "")
+                        if (card.recording) {
+                            mediaController.stopRecording(cid)
+                            card.recording = false
+                            root.showToast("录像已停止")
+                        } else {
+                            mediaController.startRecording(cid)
+                            card.recording = true
+                            root.showToast("开始录像")
+                        }
+                    }
+                }
+                CardBtn {
+                    label: "更多 ▾"
+                    onTap: {
+                        moreMenu.card = card.ch
+                        moreMenu.popup()
+                    }
                 }
             }
         }
     }
 
-    // ═══ Patrol dialog ═══
-    Rectangle {
-        visible: showPatrolDialog; anchors.fill: parent; color: "#80000000"; z: 100
-        MouseArea { anchors.fill: parent; onClicked: showPatrolDialog = false }
-        Rectangle {
-            width: 400; height: 300; color: "#141720"; radius: 12; anchors.centerIn: parent
-            Column {
-                anchors.fill: parent; anchors.margins: 20; spacing: 12
-                Row { spacing: 8; width: parent.width
-                    Text { text: "New Patrol"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-                    Item { width: parent.width - 120 }
-                    Text { text: "X"; font.pixelSize: 16; color: "#8B8FA3"; MouseArea { anchors.fill: parent; onClicked: showPatrolDialog = false } }
-                }
-                Grid { columns: 2; columnSpacing: 12; rowSpacing: 10; width: parent.width
-                    Text { text: "Name:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    TextField { text: patrolName; onTextChanged: patrolName = text; width: 200; height: 28; color: "#E8E8E8"; font.pixelSize: 12; placeholderText: "Patrol name"; placeholderTextColor: "#4A4D58"; background: Rectangle { color: "#252830"; radius: 4 } }
-                    Text { text: "Interval(s):"; font.pixelSize: 12; color: "#8B8FA3" }
-                    SpinBox { from: 3; to: 60; value: patrolInterval; onValueChanged: patrolInterval = value; height: 28 }
-                    Text { text: "Layout:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    ComboBox { width: 200; height: 28; model: ["1-grid", "4-grid", "9-grid", "16-grid"]
-                        background: Rectangle { color: "#252830"; radius: 4 }
-                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#E8E8E8"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
-                }
-                Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
-                    Button { text: "Cancel"; font.pixelSize: 13; onClicked: showPatrolDialog = false
-                        background: Rectangle { color: "#252830"; radius: 8; width: 100; height: 36 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
-                    Button { text: "Create"; font.pixelSize: 13
-                        onClicked: { statusMsg = "Patrol created: " + patrolName; showPatrolDialog = false; statusTimer.start() }
-                        background: Rectangle { color: "#3B82F6"; radius: 8; width: 100; height: 36 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
+    component InfoItem: Item {
+        property string itemLabel: ""
+        property string itemValue: "-"
+        width: 188
+        height: 20
+        Row {
+            spacing: 8
+            Text { text: itemLabel; font.pixelSize: 13; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+            Text {
+                text: itemValue
+                font.pixelSize: 13
+                color: "#303133"
+                width: 120
+                elide: Text.ElideMiddle
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+    }
+
+    component MetricItem: Column {
+        property string metricValue: "-"
+        property string metricLabel: ""
+        property color valueColor: "#303133"
+        spacing: 4
+        Text { text: metricValue; font.pixelSize: 18; font.bold: true; color: valueColor }
+        Text { text: metricLabel; font.pixelSize: 12; color: "#909399" }
+    }
+
+    component CardBtn: Rectangle {
+        property string label: ""
+        property bool filled: false
+        property bool danger: false
+        property bool dangerFilled: false
+        signal tap()
+        width: cardBtnText.implicitWidth + 24
+        height: 32
+        radius: 4
+        color: filled ? (cardBtnMa.containsMouse ? "#66B1FF" : "#409EFF")
+             : dangerFilled ? (cardBtnMa.containsMouse ? "#F78989" : "#F56C6C")
+             : (cardBtnMa.containsMouse ? "#F5F7FA" : "#FFFFFF")
+        border.color: filled ? "#409EFF" : dangerFilled ? "#F56C6C" : (danger ? "#FDE2E2" : "#DCDFE6")
+        Text {
+            id: cardBtnText
+            anchors.centerIn: parent
+            text: label
+            font.pixelSize: 13
+            color: (filled || dangerFilled) ? "#FFFFFF" : (danger ? "#F56C6C" : "#606266")
+        }
+        MouseArea {
+            id: cardBtnMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tap()
+        }
+    }
+
+    // ═══ “更多” 菜单 (卡片视图) ═══
+    Menu {
+        id: moreMenu
+        property var card: null
+        MenuItem {
+            text: "详情"
+            onTriggered: { /* 卡片视图即详情, 无额外动作 */ }
+        }
+        MenuItem {
+            text: "重命名"
+            onTriggered: {
+                if (moreMenu.card) {
+                    root.renameTarget = moreMenu.card
+                    renameField.text = moreMenu.card.name || ""
+                    renameDialog.visible = true
                 }
             }
         }
+        MenuItem {
+            text: "删除"
+            onTriggered: {
+                if (moreMenu.card) {
+                    root.deleteTarget = moreMenu.card
+                    deleteDialog.visible = true
+                }
+            }
+        }
+    }
+
+    // ═══ 重命名弹窗 ═══
+    Rectangle {
+        id: renameDialog
+        visible: false
+        anchors.fill: parent
+        color: "#80000000"
+        z: 100
+        MouseArea { anchors.fill: parent }
+
+        Rectangle {
+            width: 420
+            height: 190
+            anchors.centerIn: parent
+            radius: 4
+            color: "#FFFFFF"
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 14
+
+                Text { text: "重命名通道"; font.pixelSize: 16; font.bold: true; color: "#303133" }
+                Text {
+                    text: "通道 ID: " + (root.renameTarget ? String(root.renameTarget.channel_id || "") : "")
+                    font.pixelSize: 12
+                    color: "#909399"
+                }
+                Rectangle {
+                    width: parent.width
+                    height: 36
+                    radius: 4
+                    border.color: renameField.activeFocus ? "#409EFF" : "#DCDFE6"
+                    TextInput {
+                        id: renameField
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        font.pixelSize: 13
+                        color: "#303133"
+                        focus: true
+                    }
+                }
+                Item { width: 1; height: 1 }
+                Row {
+                    spacing: 10
+                    anchors.right: parent.right
+                    CardBtn { label: "取消"; onTap: renameDialog.visible = false }
+                    CardBtn {
+                        label: "确定"
+                        filled: true
+                        onTap: {
+                            if (root.renameTarget && renameField.text.trim().length > 0) {
+                                root.doRename(String(root.renameTarget.channel_id || ""), renameField.text.trim())
+                                renameDialog.visible = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ═══ 删除确认弹窗 ═══
+    Rectangle {
+        id: deleteDialog
+        visible: false
+        anchors.fill: parent
+        color: "#80000000"
+        z: 100
+        MouseArea { anchors.fill: parent }
+
+        Rectangle {
+            width: 400
+            height: 170
+            anchors.centerIn: parent
+            radius: 4
+            color: "#FFFFFF"
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 12
+
+                Row {
+                    spacing: 8
+                    AppIcon { name: "warning"; size: 18; iconColor: "#E6A23C" }
+                    Text { text: "删除通道"; font.pixelSize: 16; font.bold: true; color: "#303133" }
+                }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    text: "确定删除通道 \"" + (root.deleteTarget ? (root.deleteTarget.name || root.deleteTarget.channel_id) : "") + "\" 吗？删除后不可恢复。"
+                    font.pixelSize: 13
+                    color: "#606266"
+                }
+                Item { width: 1; height: 1 }
+                Row {
+                    spacing: 10
+                    anchors.right: parent.right
+                    CardBtn { label: "取消"; onTap: deleteDialog.visible = false }
+                    CardBtn {
+                        label: "删除"
+                        dangerFilled: true
+                        onTap: {
+                            if (root.deleteTarget) {
+                                root.doDelete(String(root.deleteTarget.channel_id || ""))
+                                deleteDialog.visible = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ═══ Toast ═══
+    Rectangle {
+        id: toastBox
+        visible: false
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 28
+        width: toastMsg.implicitWidth + 32
+        height: 36
+        radius: 4
+        color: "#FFFFFF"
+        border.color: "#EBEEF5"
+        z: 200
+        Text {
+            id: toastMsg
+            anchors.centerIn: parent
+            font.pixelSize: 13
+            color: "#606266"
+        }
+    }
+    Timer {
+        id: toastTimer
+        interval: 2500
+        onTriggered: toastBox.visible = false
     }
 }

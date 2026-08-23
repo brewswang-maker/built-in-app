@@ -21,7 +21,7 @@ Dialog {
     background: Rectangle {
         color: "#1A1D23"
         radius: 12
-        border.color: "#252830"
+        border.color: "#E4E7ED"
         border.width: 1
     }
 
@@ -34,7 +34,7 @@ Dialog {
 
         Text {
             text: "确定要清空以下分组的所有人员吗？"
-            font.pixelSize: 15; color: "#E8E8E8"
+            font.pixelSize: 15; color: "#303133"
         }
 
         ComboBox {
@@ -42,10 +42,10 @@ Dialog {
             Layout.fillWidth: true; height: 40
             currentIndex: 0
             model: ["黑名单 (blacklist)", "白名单 (whitelist)", "访客 (visitor)"]
-            background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+            background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
             contentItem: Text {
                 text: groupSelector.displayText
-                color: "#E8E8E8"; font.pixelSize: 13; verticalAlignment: Text.AlignVCenter; leftPadding: 10
+                color: "#303133"; font.pixelSize: 13; verticalAlignment: Text.AlignVCenter; leftPadding: 10
             }
             onCurrentTextChanged: {
                 var map = {"黑名单 (blacklist)": "blacklist", "白名单 (whitelist)": "whitelist", "访客 (visitor)": "visitor"}
@@ -55,7 +55,7 @@ Dialog {
 
         Text {
             text: "此操作不可恢复，请谨慎操作！"
-            font.pixelSize: 12; color: "#FF3D71"
+            font.pixelSize: 12; color: "#F56C6C"
         }
 
         Row {
@@ -66,14 +66,14 @@ Dialog {
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
+                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.close()
             }
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#FF3D71"; radius: 6 }
+                background: Rectangle { color: "#F56C6C"; radius: 6 }
                 contentItem: Text { text: "确认清空"; font.pixelSize: 13; color: "#fff"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     onClearGroup(root.selectedGroup)

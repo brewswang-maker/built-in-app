@@ -159,6 +159,11 @@ signals:
     void lastEventIdChanged();
     void authFailed(const QString& reason);
 
+    // [P1-5 优化 2026-08-18] 断线后重连成功 (仅 drop 后恢复时发, 首次连接不发)。
+    //   消费方 (AlarmController 等) 收到后 REST 补拉, 弥补断连窗口内丢失的
+    //   WS 推送 (alarm_latency_diagnosis_report.md P1-5: 重连后补拉告警)。
+    void reconnected();
+
     // ── 调试信号(QML 可订阅) ──
     void rawMessageReceived(const QString& rawJson);
 

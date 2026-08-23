@@ -22,7 +22,7 @@ Dialog {
     background: Rectangle {
         color: "#1A1D23"
         radius: 12
-        border.color: "#252830"
+        border.color: "#E4E7ED"
         border.width: 1
     }
 
@@ -33,26 +33,26 @@ Dialog {
 
         Text {
             text: "批量导入人员 (JSON 格式)"
-            font.pixelSize: 18; font.bold: true; color: "#E8E8E8"
+            font.pixelSize: 18; font.bold: true; color: "#303133"
         }
 
         Text {
             text: "每条记录包含: name(必填), group_type(blacklist/whitelist/visitor), phone, email, gender, age"
-            font.pixelSize: 12; color: "#8B8FA3"; wrapMode: Text.Wrap
+            font.pixelSize: 12; color: "#909399"; wrapMode: Text.Wrap
         }
 
         TextArea {
             id: jsonInput
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#E8E8E8"
+            color: "#303133"
             font.family: "monospace"
             font.pixelSize: 12
             wrapMode: Text.Wrap
             background: Rectangle {
                 color: "#141420"
                 radius: 6
-                border.color: "#252830"
+                border.color: "#E4E7ED"
                 border.width: 1
             }
             placeholderText: '示例:\n[\n  {"name": "张三", "group_type": "whitelist", "phone": "13800138000"},\n  {"name": "李四", "group_type": "blacklist"}\n]'
@@ -60,7 +60,7 @@ Dialog {
 
         Text {
             id: errorLabel
-            font.pixelSize: 12; color: "#FF3D71"; visible: false
+            font.pixelSize: 12; color: "#F56C6C"; visible: false
         }
 
         Row {
@@ -69,8 +69,8 @@ Dialog {
 
             Button {
                 implicitWidth: 100; height: 36
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: "清空内容"; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
+                contentItem: Text { text: "清空内容"; font.pixelSize: 13; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: jsonInput.text = ""
             }
 
@@ -78,15 +78,15 @@ Dialog {
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
+                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.close()
             }
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#00D4AA"; radius: 6 }
-                contentItem: Text { text: "导入"; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#67C23A"; radius: 6 }
+                contentItem: Text { text: "导入"; font.pixelSize: 13; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     errorLabel.visible = false
                     try {

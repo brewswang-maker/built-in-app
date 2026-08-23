@@ -30,6 +30,8 @@
 #include "controllers/StreamingController.h"
 #include "controllers/RecordingController.h"
 #include "controllers/FaceController.h"
+// [P1-#2 v7.0+] 首页态势大屏 — Web 端 1:1 对齐
+#include "controllers/SituationController.h"
 #include "streaming/StreamingDegradationChain.h"
 #include "models/DeviceListModel.h"
 #include "models/AlarmListModel.h"
@@ -108,6 +110,9 @@ int main(int argc, char *argv[]) {
     // [P1-#1 v3.0 R1-2] 人脸库管理 Controller
     FaceController faceController(&apiClient);
 
+    // [P1-#2 v7.0+] 首页态势大屏 (overview/agents/hourly/realtime/trend/map/channels)
+    SituationController situationController(&apiClient);
+
     // ── QML Engine ──
     QQmlApplicationEngine engine;
 
@@ -135,6 +140,8 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("streamingController", &streamingController);
     engine.rootContext()->setContextProperty("recordingController", &recordingController);
     engine.rootContext()->setContextProperty("faceController", &faceController);
+    // [P1-#2 v7.0+] 首页态势大屏 (与 Web 端 SituationScreen.vue 1:1 对齐)
+    engine.rootContext()->setContextProperty("situationController", &situationController);
     engine.rootContext()->setContextProperty("channelModel", &channelModel);
     engine.rootContext()->setContextProperty("streamModel", &streamModel);
     // 统一 WS 路由器 (规范 b4ced019): QML 可订阅 stateString / reconnectAttempts

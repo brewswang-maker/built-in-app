@@ -25,7 +25,7 @@ Dialog {
     background: Rectangle {
         color: "#1A1D23"
         radius: 12
-        border.color: "#252830"
+        border.color: "#E4E7ED"
         border.width: 1
     }
 
@@ -51,7 +51,7 @@ Dialog {
         // 标题
         Text {
             text: dialogTitle
-            font.pixelSize: 18; font.bold: true; color: "#E8E8E8"
+            font.pixelSize: 18; font.bold: true; color: "#303133"
         }
 
         // 表单
@@ -65,13 +65,13 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "姓名 *"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "姓名 *"; font.pixelSize: 13; color: "#909399" }
                 TextField {
                     id: nameField
                     width: parent.width; height: 36
                     text: root.fieldName
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    color: "#303133"; font.pixelSize: 13
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     onTextChanged: root.fieldName = text
                 }
             }
@@ -80,13 +80,13 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "手机号"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "手机号"; font.pixelSize: 13; color: "#909399" }
                 TextField {
                     id: phoneField
                     width: parent.width; height: 36
                     text: root.fieldPhone
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    color: "#303133"; font.pixelSize: 13
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     onTextChanged: root.fieldPhone = text
                 }
             }
@@ -95,13 +95,13 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "邮箱"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "邮箱"; font.pixelSize: 13; color: "#909399" }
                 TextField {
                     id: emailField
                     width: parent.width; height: 36
                     text: root.fieldEmail
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    color: "#303133"; font.pixelSize: 13
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     onTextChanged: root.fieldEmail = text
                 }
             }
@@ -110,13 +110,13 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "身份证"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "身份证"; font.pixelSize: 13; color: "#909399" }
                 TextField {
                     id: idNumField
                     width: parent.width; height: 36
                     text: root.fieldIdNumber
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    color: "#303133"; font.pixelSize: 13
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     onTextChanged: root.fieldIdNumber = text
                 }
             }
@@ -125,16 +125,16 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "分组 *"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "分组 *"; font.pixelSize: 13; color: "#909399" }
                 ComboBox {
                     id: groupCombo
                     width: parent.width; height: 36
                     currentIndex: groupComboIndex(root.fieldGroupType)
                     model: ["黑名单", "白名单", "访客"]
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     contentItem: Text {
                         text: groupCombo.displayText
-                        color: "#E8E8E8"; font.pixelSize: 13; verticalAlignment: Text.AlignVCenter; leftPadding: 10
+                        color: "#303133"; font.pixelSize: 13; verticalAlignment: Text.AlignVCenter; leftPadding: 10
                     }
                     onCurrentIndexChanged: {
                         var map = [ "blacklist", "whitelist", "visitor" ]
@@ -147,19 +147,19 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "性别"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "性别"; font.pixelSize: 13; color: "#909399" }
                 Row {
                     spacing: 8
                     RadioButton {
                         checked: root.fieldGender === "male" || root.fieldGender === ""
                         text: "男"
-                        indicator: Rectangle { width: 16; height: 16; radius: 8; color: checked ? "#00D4AA" : "#252830"; border.color: checked ? "#00D4AA" : "#4A4D58" }
+                        indicator: Rectangle { width: 16; height: 16; radius: 8; color: parent.checked ? "#67C23A" : "#F5F7FA"; border.color: parent.checked ? "#67C23A" : "#4A4D58" }
                         onCheckedChanged: if (checked) root.fieldGender = "male"
                     }
                     RadioButton {
                         checked: root.fieldGender === "female"
                         text: "女"
-                        indicator: Rectangle { width: 16; height: 16; radius: 8; color: checked ? "#00D4AA" : "#252830"; border.color: checked ? "#00D4AA" : "#4A4D58" }
+                        indicator: Rectangle { width: 16; height: 16; radius: 8; color: parent.checked ? "#67C23A" : "#F5F7FA"; border.color: parent.checked ? "#67C23A" : "#4A4D58" }
                         onCheckedChanged: if (checked) root.fieldGender = "female"
                     }
                 }
@@ -169,13 +169,13 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "年龄"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "年龄"; font.pixelSize: 13; color: "#909399" }
                 TextField {
                     id: ageField
                     width: parent.width; height: 36
                     text: root.fieldAge > 0 ? String(root.fieldAge) : ""
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    color: "#303133"; font.pixelSize: 13
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     onTextChanged: root.fieldAge = parseInt(text) || 0
                 }
             }
@@ -184,13 +184,13 @@ Dialog {
             Column {
                 spacing: 4
                 Layout.fillWidth: true
-                Text { text: "有效期(天)"; font.pixelSize: 13; color: "#8B8FA3" }
+                Text { text: "有效期(天)"; font.pixelSize: 13; color: "#909399" }
                 TextField {
                     id: validDaysField
                     width: parent.width; height: 36
                     text: String(root.fieldValidDays)
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                    color: "#303133"; font.pixelSize: 13
+                    background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                     onTextChanged: root.fieldValidDays = parseInt(text) || 365
                 }
             }
@@ -200,13 +200,13 @@ Dialog {
         Column {
             spacing: 4
             Layout.fillWidth: true
-            Text { text: "地址"; font.pixelSize: 13; color: "#8B8FA3" }
+            Text { text: "地址"; font.pixelSize: 13; color: "#909399" }
             TextField {
                 id: addressField
                 width: parent.width; height: 36
                 text: root.fieldAddress
-                color: "#E8E8E8"; font.pixelSize: 13
-                background: Rectangle { color: "#141420"; radius: 6; border.color: "#252830"; border.width: 1 }
+                color: "#303133"; font.pixelSize: 13
+                background: Rectangle { color: "#141420"; radius: 6; border.color: "#E4E7ED"; border.width: 1 }
                 onTextChanged: root.fieldAddress = text
             }
         }
@@ -223,15 +223,15 @@ Dialog {
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
+                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.close()
             }
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#00D4AA"; radius: 6 }
-                contentItem: Text { text: "保存"; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#67C23A"; radius: 6 }
+                contentItem: Text { text: "保存"; font.pixelSize: 13; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     if (root.fieldName.trim() === "") {
                         validationLabel.text = "姓名不能为空"
@@ -258,7 +258,7 @@ Dialog {
 
         Text {
             id: validationLabel
-            font.pixelSize: 12; color: "#FF3D71"
+            font.pixelSize: 12; color: "#F56C6C"
         }
     }
 

@@ -2,6 +2,8 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file alias="DashboardView.qml">../src/views/DashboardView.qml</file>
+        <!-- [v7.6 1:1 对齐 Web /dashboard 截图] 数据统计 Dashboard (idx 24) -->
+        <file alias="DashboardEnhancedView.qml">../src/views/DashboardEnhancedView.qml</file>
         <file alias="VideoGridView.qml">../src/views/VideoGridView.qml</file>
         <file alias="AlarmView.qml">../src/views/AlarmView.qml</file>
         <file alias="AlgorithmView.qml">../src/views/AlgorithmView.qml</file>
@@ -25,6 +27,8 @@
         <file alias="ModelManagementView.qml">../src/views/ModelManagementView.qml</file>
         <file alias="FederationDashboard.qml">../src/views/FederationDashboard.qml</file>
         <file alias="AuditCenterView.qml">../src/views/AuditCenterView.qml</file>
+        <!-- [v7.6 1:1 对齐 Web /topology 截图] 网络拓扑 -->
+        <file alias="NetworkTopologyView.qml">../src/views/NetworkTopologyView.qml</file>
         <file alias="SceneManageView.qml">../src/views/SceneManageView.qml</file>
         <file alias="LinkageRuleView.qml">../src/views/LinkageRuleView.qml</file>
         <file alias="LinkageConditionNode.qml">../src/views/LinkageConditionNode.qml</file>
@@ -38,6 +42,12 @@
         <file alias="PermissionCheck.qml">../src/views/components/PermissionCheck.qml</file>
         <file alias="ReActTraceView.qml">../src/views/components/ReActTraceView.qml</file>
         <file alias="HeatmapOverlay.qml">../src/views/components/HeatmapOverlay.qml</file>
+        <file alias="Locate3DPanel.qml">../src/views/components/Locate3DPanel.qml</file>
+        <!-- [体育场3D] Qt Quick 3D 真 3D 场景组件与共享场景数据（与 Web 端 scene_config.json 1:1 同源） -->
+        <file alias="StadiumScene3D.qml">../src/views/components/StadiumScene3D.qml</file>
+        <file alias="StadiumSceneData.js">../src/qml/StadiumSceneData.js</file>
+                <!-- [P1-#2 v7.0+] 视频轮巡面板 (DashboardView 中列视图切换) -->
+                <file alias="VideoPatrolPanel.qml">../src/views/components/VideoPatrolPanel.qml</file>
         <file alias="CardPanel.qml">../src/views/components/CardPanel.qml</file>
         <!-- [P1-#1 v3.0 R1-2] 人脸库管理组件 -->
         <file alias="FaceRecordDialog.qml">../src/views/components/FaceRecordDialog.qml</file>

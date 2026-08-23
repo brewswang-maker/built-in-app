@@ -35,12 +35,12 @@ Item {
     Rectangle {
         id: toolbar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 52; color: "#141720"
+        height: 52; color: "#FFFFFF"
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
-            Text { text: "系统升级"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "系统升级"; font.pixelSize: 16; font.bold: true; color: "#303133" }
             Item { Layout.fillWidth: true }
             Button {
                 text: "检查更新"
@@ -52,8 +52,8 @@ Item {
             Button {
                 text: "本地升级"
                 font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6; width: 100; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: otaController.startUpgrade()
             }
             // [V4-E2] 批量配置按钮
@@ -61,8 +61,8 @@ Item {
                 text: "批量配置"
                 font.pixelSize: 12
                 highlighted: batchPanel.visible
-                background: Rectangle { color: batchPanel.visible ? "#3B82F6" : "#252830"; radius: 6; width: 100; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: batchPanel.visible ? "#3B82F6" : "#F5F7FA"; radius: 6; width: 100; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: batchPanel.visible = !batchPanel.visible
             }
         }
@@ -81,22 +81,22 @@ Item {
 
             RowLayout {
                 width: parent.width
-                Text { text: "升级中..."; font.pixelSize: 12; color: "#FFB800"; font.bold: true }
+                Text { text: "升级中..."; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
                 Item { Layout.fillWidth: true }
-                Text { text: Math.round(otaController.upgradeProgress) + "%"; font.pixelSize: 12; color: "#E8E8E8"; font.bold: true }
+                Text { text: Math.round(otaController.upgradeProgress) + "%"; font.pixelSize: 12; color: "#303133"; font.bold: true }
             }
 
             ProgressBar {
                 width: parent.width; height: 12
                 from: 0; to: 100
                 value: otaController.upgradeProgress
-                background: Rectangle { color: "#252830"; radius: 6 }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
                 contentItem: Item {
                     Rectangle {
                         width: parent.parent.visualPosition * parent.width
                         height: parent.height
                         radius: 6
-                        color: "#00D4AA"
+                        color: "#67C23A"
                     }
                 }
             }
@@ -110,9 +110,9 @@ Item {
         id: batchPanel
         anchors.top: parent.top; anchors.topMargin: toolbar.height
         anchors.left: parent.left; anchors.right: parent.right
-        height: 320; visible: false; color: "#0D0F12"; radius: 8
+        height: 320; visible: false; color: "#F5F7FA"; radius: 8
         anchors.margins: 8
-        border.color: "#3B82F6"; border.width: 1
+        border.color: "#E4E7ED"; border.width: 1
 
         Behavior on height { NumberAnimation { duration: 250 } }
 
@@ -121,7 +121,7 @@ Item {
 
             RowLayout {
                 width: parent.width; spacing: 8
-                Text { text: "批量设备升级"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "批量设备升级"; font.pixelSize: 14; font.bold: true; color: "#303133" }
                 Item { Layout.fillWidth: true }
                 Text {
                     text: "已选 " + batchDeviceList.selectedCount + " / " + deviceController.devices.length + " 台"
@@ -129,8 +129,8 @@ Item {
                 }
                 Button {
                     text: "全选"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 4; width: 50; height: 24 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: "#F5F7FA"; radius: 4; width: 50; height: 24 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
                         for (var i = 0; i < deviceController.devices.length; i++)
                             batchDeviceList.setSelect(i, true)
@@ -138,8 +138,8 @@ Item {
                 }
                 Button {
                     text: "全不选"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 4; width: 60; height: 24 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: "#F5F7FA"; radius: 4; width: 60; height: 24 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
                         for (var i = 0; i < deviceController.devices.length; i++)
                             batchDeviceList.setSelect(i, false)
@@ -148,8 +148,8 @@ Item {
                 Button {
                     text: "批量推送"; font.pixelSize: 12; enabled: batchDeviceList.selectedCount > 0
                     opacity: enabled ? 1.0 : 0.4
-                    background: Rectangle { color: "#00D4AA"; radius: 4; width: 70; height: 24 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: "#67C23A"; radius: 4; width: 70; height: 24 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
                         var selected = batchDeviceList.getSelectedIds()
                         otaController.batchUpgrade(selected)
@@ -189,7 +189,7 @@ Item {
                 model: deviceController.devices
                 delegate: Rectangle {
                     width: ListView.view.width; height: 40; radius: 6; color: "#141420"
-                    border.color: checkedBox.checked ? "#00D4AA" : "#252830"; border.width: 1
+                    border.color: checkedBox.checked ? "#67C23A" : "#F5F7FA"; border.width: 1
 
                     property string devId: (modelData.id || modelData.device_id || "")
 
@@ -206,17 +206,17 @@ Item {
 
                         Text {
                             text: modelData.name || modelData.device_name || ("Device_" + (index + 1))
-                            font.pixelSize: 12; color: "#E8E8E8"; Layout.fillWidth: true
+                            font.pixelSize: 12; color: "#303133"; Layout.fillWidth: true
                         }
                         Text {
                             text: modelData.status || "offline"
                             font.pixelSize: 12
-                            color: (modelData.status || "offline") === "online" ? "#00D4AA" : "#4A4D58"
+                            color: (modelData.status || "offline") === "online" ? "#67C23A" : "#4A4D58"
                             Layout.preferredWidth: 60
                         }
                         Text {
                             text: modelData.firmware_version || "-"
-                            font.pixelSize: 12; color: "#8B8FA3"; Layout.preferredWidth: 80
+                            font.pixelSize: 12; color: "#909399"; Layout.preferredWidth: 80
                         }
                     }
                 }
@@ -240,10 +240,10 @@ Item {
         anchors.bottomMargin: 20; height: 32; radius: 6; z: 100
         width: toastText.implicitWidth + 24
         color: kind === "ok" ? "#0A2A1A" : kind === "warn" ? "#2A2A0A" : "#1A1D23"
-        border.color: kind === "ok" ? "#00D4AA" : kind === "warn" ? "#FFB800" : "#3B82F6"; border.width: 1
+        border.color: kind === "ok" ? "#67C23A" : kind === "warn" ? "#E6A23C" : "#3B82F6"; border.width: 1
         Text {
             id: toastText
-            text: otaToast.text; font.pixelSize: 12; color: "#E8E8E8"
+            text: otaToast.text; font.pixelSize: 12; color: "#303133"
             anchors.centerIn: parent
         }
     }
@@ -259,42 +259,42 @@ Item {
         // ── 左侧: 当前版本信息 ──
         Rectangle {
             Layout.fillHeight: true; Layout.preferredWidth: 320
-            color: "#141720"; radius: 8
+            color: "#FFFFFF"; radius: 8
 
             Column {
                 anchors.fill: parent; anchors.margins: 16; spacing: 12
 
-                Text { text: "版本信息"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "版本信息"; font.pixelSize: 14; font.bold: true; color: "#303133" }
 
                 Grid {
                     columns: 2; spacing: 8; width: parent.width - 32
 
-                    Text { text: "系统版本:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: otaController.currentVersion || "-"; font.pixelSize: 12; color: "#E8E8E8" }
+                    Text { text: "系统版本:"; font.pixelSize: 12; color: "#909399" }
+                    Text { text: otaController.currentVersion || "-"; font.pixelSize: 12; color: "#303133" }
 
-                    Text { text: "最新版本:"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: otaController.latestVersion || "-"; font.pixelSize: 12; color: otaController.updateAvailable ? "#3B82F6" : "#E8E8E8" }
+                    Text { text: "最新版本:"; font.pixelSize: 12; color: "#909399" }
+                    Text { text: otaController.latestVersion || "-"; font.pixelSize: 12; color: otaController.updateAvailable ? "#3B82F6" : "#303133" }
                 }
 
-                Rectangle { height: 1; color: "#252830"; width: parent.width - 32 }
+                Rectangle { height: 1; color: "#F5F7FA"; width: parent.width - 32 }
 
                 // 可用更新
                 Text {
                     text: otaController.updateAvailable ? "🆕 可用更新" : "已是最新版本"
                     font.pixelSize: 14; font.bold: true
-                    color: otaController.updateAvailable ? "#E8E8E8" : "#00D4AA"
+                    color: otaController.updateAvailable ? "#303133" : "#67C23A"
                 }
 
                 Rectangle {
-                    width: parent.width - 32; height: 120; color: "#0D0F12"; radius: 8
+                    width: parent.width - 32; height: 120; color: "#F5F7FA"; radius: 8
                     visible: otaController.updateAvailable
-                    border.color: "#3B82F6"; border.width: 1
+                    border.color: "#E4E7ED"; border.width: 1
 
                     Column {
                         anchors.fill: parent; anchors.margins: 12; spacing: 6
 
                         Text { text: otaController.latestVersion || "v2.2.0"; font.pixelSize: 13; font.bold: true; color: "#3B82F6" }
-                        Text { text: "点击「下载并安装」开始升级"; font.pixelSize: 12; color: "#8B8FA3" }
+                        Text { text: "点击「下载并安装」开始升级"; font.pixelSize: 12; color: "#909399" }
                     }
                 }
 
@@ -303,8 +303,8 @@ Item {
                     Button {
                         text: "下载并安装"
                         enabled: !otaController.upgrading
-                        background: Rectangle { color: otaController.upgrading ? "#4A4D58" : "#00D4AA"; radius: 6; width: 140; height: 36 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: otaController.upgrading ? "#4A4D58" : "#67C23A"; radius: 6; width: 140; height: 36 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: otaController.startUpgrade()
                     }
                 }
@@ -314,12 +314,12 @@ Item {
         // ── 右侧: 升级历史 ──
         Rectangle {
             Layout.fillHeight: true; Layout.fillWidth: true
-            color: "#0D0F12"; radius: 8
+            color: "#F5F7FA"; radius: 8
 
             Column {
                 anchors.fill: parent; anchors.margins: 12; spacing: 8
 
-                Text { text: "升级历史"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "升级历史"; font.pixelSize: 14; font.bold: true; color: "#303133" }
 
                 ListView {
                     id: historyListView
@@ -327,25 +327,25 @@ Item {
                     model: otaController.history
 
                     delegate: Rectangle {
-                        width: ListView.view.width; height: 48; color: "#141720"; radius: 6
+                        width: ListView.view.width; height: 48; color: "#FFFFFF"; radius: 6
 
                         Row {
                             anchors.fill: parent; anchors.margins: 10; spacing: 12
 
-                            Text { text: modelData.version || "-"; font.pixelSize: 13; font.bold: true; color: "#E8E8E8"; width: 60 }
-                            Text { text: modelData.date || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 80 }
-                            Text { text: modelData.size || "-"; font.pixelSize: 12; color: "#8B8FA3"; width: 50 }
-                            Text { text: modelData.partition ? "分区:" + modelData.partition : ""; font.pixelSize: 12; color: "#8B8FA3"; width: 50 }
+                            Text { text: modelData.version || "-"; font.pixelSize: 13; font.bold: true; color: "#303133"; width: 60 }
+                            Text { text: modelData.date || "-"; font.pixelSize: 12; color: "#909399"; width: 80 }
+                            Text { text: modelData.size || "-"; font.pixelSize: 12; color: "#909399"; width: 50 }
+                            Text { text: modelData.partition ? "分区:" + modelData.partition : ""; font.pixelSize: 12; color: "#909399"; width: 50 }
 
                             Rectangle {
                                 width: 60; height: 20; radius: 4
                                 color: modelData.status === "当前" ? "#0A2A1A" :
-                                       modelData.status === "可回滚" ? "#2A2A0A" : "#141720"
+                                       modelData.status === "可回滚" ? "#2A2A0A" : "#FFFFFF"
                                 Text {
                                     text: modelData.status || "-"
                                     font.pixelSize: 12; font.bold: true
-                                    color: modelData.status === "当前" ? "#00D4AA" :
-                                           modelData.status === "可回滚" ? "#FFB800" : "#4A4D58"
+                                    color: modelData.status === "当前" ? "#67C23A" :
+                                           modelData.status === "可回滚" ? "#E6A23C" : "#4A4D58"
                                     anchors.centerIn: parent
                                 }
                             }
@@ -353,8 +353,8 @@ Item {
                             Button {
                                 text: "回滚"; font.pixelSize: 12
                                 visible: modelData.status === "可回滚"
-                                background: Rectangle { color: "#FFB800"; radius: 4; width: 40; height: 20 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                background: Rectangle { color: "#E6A23C"; radius: 4; width: 40; height: 20 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                                 onClicked: otaController.rollback(modelData.version)
                             }
                         }

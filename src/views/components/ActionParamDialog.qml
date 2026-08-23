@@ -162,20 +162,20 @@ Dialog {
 
     // ── 头部: 动作类型 + 字段数 ──
     header: Rectangle {
-        color: "#141720"
+        color: "#FFFFFF"
         implicitHeight: 56
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16
             AppIcon { name: "settings"; size: 22; iconColor: "#3B82F6"; Layout.preferredWidth: 28 }
             Text {
                 text: root.actionType || "(未指定)"
-                font.pixelSize: 14; font.bold: true; color: "#E8E8E8"
+                font.pixelSize: 14; font.bold: true; color: "#303133"
             }
             // [V4-L5] 分类标签
             Rectangle {
                 visible: root.actionType.length > 0
                 radius: 10; color: "#3B82F620"
-                border.color: "#3B82F6"; border.width: 1
+                border.color: "#E4E7ED"; border.width: 1
                 Layout.preferredHeight: 20
                 Layout.preferredWidth: catLabel.implicitWidth + 16
                 Text {
@@ -188,7 +188,7 @@ Dialog {
             Item { Layout.fillWidth: true }
             Text {
                 text: (root.schema && root.schema.fields) ? (root.schema.fields.length + " 个字段") : "无参数"
-                font.pixelSize: 12; color: "#8B8FA3"
+                font.pixelSize: 12; color: "#909399"
             }
         }
     }
@@ -198,7 +198,7 @@ Dialog {
         spacing: 6
         Label {
             text: "此动作无需配置参数"
-            color: "#8B8FA3"
+            color: "#909399"
             font.pixelSize: 13
             visible: !(root.schema && root.schema.fields && root.schema.fields.length > 0)
         }
@@ -229,7 +229,7 @@ Dialog {
                             spacing: 4
                             Text {
                                 text: fieldData ? (fieldData.name + (fieldData.required ? " *" : "")) : ""
-                                color: "#E8E8E8"; font.pixelSize: 12; font.bold: fieldData && fieldData.required
+                                color: "#303133"; font.pixelSize: 12; font.bold: fieldData && fieldData.required
                             }
                             Item { Layout.fillWidth: true }
                             Text {
@@ -270,11 +270,11 @@ Dialog {
                             id: floatInput
                             width: parent.width
                             visible: fieldData && fieldData.type === "float"
-                            color: "#E8E8E8"; font.pixelSize: 12
+                            color: "#303133"; font.pixelSize: 12
                             text: root.fieldValues[fieldName] !== undefined ? String(root.fieldValues[fieldName]) : (fieldData && fieldData.default !== undefined ? String(fieldData.default) : "")
                             background: Rectangle {
-                                color: "#252830"; radius: 4
-                                border.color: hasError ? "#FF3D71" : "transparent"
+                                color: "#F5F7FA"; radius: 4
+                                border.color: hasError ? "#F56C6C" : "transparent"
                                 border.width: hasError ? 1 : 0
                             }
                             placeholderText: "浮点数"
@@ -297,11 +297,11 @@ Dialog {
                             id: textInput
                             width: parent.width
                             visible: fieldData && (fieldData.type === "string" || fieldData.type === "list" || !fieldData.type)
-                            color: "#E8E8E8"; font.pixelSize: 12
+                            color: "#303133"; font.pixelSize: 12
                             text: root.fieldValues[fieldName] !== undefined ? String(root.fieldValues[fieldName]) : (fieldData && fieldData.default !== undefined ? String(fieldData.default) : "")
                             background: Rectangle {
-                                color: "#252830"; radius: 4
-                                border.color: hasError ? "#FF3D71" : "transparent"
+                                color: "#F5F7FA"; radius: 4
+                                border.color: hasError ? "#F56C6C" : "transparent"
                                 border.width: hasError ? 1 : 0
                             }
                             placeholderText: fieldData ? (fieldData.description || fieldData.name) : ""
@@ -332,7 +332,7 @@ Dialog {
                             height: 18
                             color: "#3B1A1A"; radius: 4
                             visible: hasError
-                            border.color: "#FF3D71"; border.width: 1
+                            border.color: "#E4E7ED"; border.width: 1
                             Text {
                                 anchors.fill: parent; anchors.leftMargin: 8
                                 text: "⚠ " + errorMsg
@@ -362,7 +362,7 @@ Dialog {
         anchors.left: parent.left; anchors.right: parent.right
         height: 72
         color: "#0D1117"
-        border.color: "#252830"; border.width: 1
+        border.color: "#E4E7ED"; border.width: 1
 
         Rectangle {
             anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
@@ -411,14 +411,14 @@ Dialog {
 
     // ── footer: 自定义按钮 (Cancel + Reset + OK) ──
     footer: DialogButtonBox {
-        background: Rectangle { color: "#0D0F12" }
+        background: Rectangle { color: "#F5F7FA" }
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 12
             Button {
                 text: "重置默认"
                 font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 4 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     if (schema && schema.fields) {
                         for (var i = 0; i < schema.fields.length; i++) {
@@ -432,15 +432,15 @@ Dialog {
             Button {
                 text: "取消"
                 font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#8B8FA3"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 4 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.reject()
             }
             Button {
                 text: "保存"
                 font.pixelSize: 12
-                background: Rectangle { color: "#00D4AA"; radius: 4 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#67C23A"; radius: 4 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     if (root.validateAll()) {
                         // 触发 accepted 信号 (Dialog 标准), 携带最终参数

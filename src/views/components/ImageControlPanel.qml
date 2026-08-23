@@ -14,7 +14,7 @@ Popup {
 
     background: Rectangle {
         color: "#141420"; radius: 8
-        border.color: "#252830"; border.width: 1
+        border.color: "#E4E7ED"; border.width: 1
     }
 
     // ─── 对外接口 ───
@@ -36,26 +36,26 @@ Popup {
             spacing: 6
             Text {
                 text: "画面调节"
-                font.pixelSize: 13; font.bold: true; color: "#E8E8E8"
+                font.pixelSize: 13; font.bold: true; color: "#303133"
             }
             Item { width: parent.width - 80; height: 1 }
             AppIcon {
-                name: "close"; size: 14; iconColor: "#8B8FA3"
+                name: "close"; size: 14; iconColor: "#909399"
                 MouseArea { anchors.fill: parent; onClicked: panel.close() }
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: "#252830" }
+        Rectangle { width: parent.width; height: 1; color: "#F5F7FA" }
 
         // 亮度
         Column {
             width: parent.width; spacing: 4
             Row {
                 width: parent.width
-                Text { text: "亮度"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 }
+                Text { text: "亮度"; font.pixelSize: 12; color: "#909399"; width: 60 }
                 Text {
                     text: Math.round(brightnessSlider.value * 100) + "%"
-                    font.pixelSize: 12; color: "#00D4AA"
+                    font.pixelSize: 12; color: "#67C23A"
                     anchors.right: parent.right
                 }
             }
@@ -75,10 +75,10 @@ Popup {
             width: parent.width; spacing: 4
             Row {
                 width: parent.width
-                Text { text: "对比度"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 }
+                Text { text: "对比度"; font.pixelSize: 12; color: "#909399"; width: 60 }
                 Text {
                     text: Math.round(contrastSlider.value * 100) + "%"
-                    font.pixelSize: 12; color: "#00D4AA"
+                    font.pixelSize: 12; color: "#67C23A"
                     anchors.right: parent.right
                 }
             }
@@ -98,10 +98,10 @@ Popup {
             width: parent.width; spacing: 4
             Row {
                 width: parent.width
-                Text { text: "饱和度"; font.pixelSize: 12; color: "#8B8FA3"; width: 60 }
+                Text { text: "饱和度"; font.pixelSize: 12; color: "#909399"; width: 60 }
                 Text {
                     text: Math.round(saturationSlider.value * 100) + "%"
-                    font.pixelSize: 12; color: "#00D4AA"
+                    font.pixelSize: 12; color: "#67C23A"
                     anchors.right: parent.right
                 }
             }
@@ -116,7 +116,7 @@ Popup {
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: "#252830" }
+        Rectangle { width: parent.width; height: 1; color: "#F5F7FA" }
 
         // 镜像翻转
         Row {
@@ -131,7 +131,7 @@ Popup {
                     panel.adjusted()
                 }
                 contentItem: Text {
-                    text: parent.text; font.pixelSize: 12; color: "#E8E8E8"
+                    text: parent.text; font.pixelSize: 12; color: "#303133"
                     leftPadding: parent.indicator.width + parent.spacing
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -146,7 +146,7 @@ Popup {
                     panel.adjusted()
                 }
                 contentItem: Text {
-                    text: parent.text; font.pixelSize: 12; color: "#E8E8E8"
+                    text: parent.text; font.pixelSize: 12; color: "#303133"
                     leftPadding: parent.indicator.width + parent.spacing
                     verticalAlignment: Text.AlignVCenter
                 }
@@ -158,9 +158,9 @@ Popup {
             text: "恢复默认"
             font.pixelSize: 12
             anchors.horizontalCenter: parent.horizontalCenter
-            background: Rectangle { color: "#252830"; radius: 6; width: 100; height: 30 }
+            background: Rectangle { color: "#F5F7FA"; radius: 6; width: 100; height: 30 }
             contentItem: Text {
-                text: parent.text; font.pixelSize: 12; color: "#8B8FA3"
+                text: parent.text; font.pixelSize: 12; color: "#909399"
                 horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
             }
             onClicked: {

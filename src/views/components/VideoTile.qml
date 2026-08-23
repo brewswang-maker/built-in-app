@@ -94,16 +94,17 @@ Item {
             // Connection established via MediaPlayer.videoOutput above
         }
 
-        Row {
+        // [v7.7 对齐 Web video-empty] 空格: 摄像机图标 + "拖拽通道到此处"
+        Column {
             spacing: 6
             anchors.centerIn: parent
             visible: root.streamUrl.length === 0
-            AppIcon { name: "camera"; size: 18; iconColor: "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
+            AppIcon { name: "camera"; size: 32; iconColor: "#8c8c8c"; anchors.horizontalCenter: parent.horizontalCenter }
             Text {
-                text: channelName || "未连接"
-                color: "#4A4D58"
-                font.pixelSize: 16
-                anchors.verticalCenter: parent.verticalCenter
+                text: "拖拽通道到此处"
+                color: "#8c8c8c"
+                font.pixelSize: 13
+                anchors.horizontalCenter: parent.horizontalCenter
             }
         }
     }
@@ -168,10 +169,11 @@ Item {
         anchors.fill: parent
         z: 10
 
-        // Top-left: channel name
+        // Top-left: channel name [v7.7] 仅拉流时显示, 使用真实通道名
         Text {
             id: channelLabel
-            text: "通道1"
+            visible: root.streamUrl.length > 0
+            text: root.channelName || "未命名通道"
             color: "#E8E8E8"
             font.pixelSize: 13
             font.family: "PingFang SC"
@@ -248,11 +250,11 @@ Item {
             }
         }
 
-        // Active slot highlight border
+        // Active slot highlight border [v7.7] 对齐 Web active 蓝色选中框
         Rectangle {
             anchors.fill: parent
             color: "transparent"
-            border.color: "#00D4AA"
+            border.color: "#409EFF"
             border.width: 2
             radius: 8
             visible: root.active

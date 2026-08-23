@@ -73,6 +73,13 @@ AlarmController::AlarmController(ApiClient* api, QObject* parent)
         if (m_router) {
             QObject::connect(m_router, &WsMessageRouter::alarmReceived,
                              this, &AlarmController::onUnifiedAlarmReceived);
+            // [P1-5 优化 2026-08-18] 断线重连后 REST 补拉告警列表
+            //   (alarm_latency_diagnosis_report.md P1-5): WS 断连窗口内的
+            //   alarm.new 推送会丢失, 重连成功后 refreshAlarms 全量拉最新 50 条兑底。
+            QObject::connect(m_router, &WsMessageRouter::reconnected, this, [this]() {
+                qInfo() << "[AlarmController] [P1-5] WS reconnected — refreshAlarms catch-up";
+                refreshAlarms(50);
+            });
             qInfo() << "[AlarmController] [P2-B2] Using unified WS channel (recommended), independent connectWebSocket() ignored";
             return;
         }
@@ -133,11 +140,25 @@ void AlarmController::refreshAlarms(int limit) {
     m_api->getList(QString("/api/v1/alarms?limit=%1").arg(limit),
         [this](QJsonArray arr) {
             m_alarms.clear();
-            for (const auto& item : arr)
-                m_alarms.append(item.toVariant().toMap());
+            for (const auto& item : arr) {
+                QVariantMap m = item.toVariant().toMap();
+                // [FIX v7.4] snake_case → camelCase 兼容 (对齐 Web SituationAlarmStream)
+                //   后端 /api/v1/alarms 返回字段是 snapshot_url/stream_url/channel_id/device_name
+                //   不转换会导致 DashboardView.qml _snapshot 读不到缩略图, 拼接 'continuous://' 等
+                if (m.contains("snapshot_url") && !m.contains("snapshotUrl"))
+                    m["snapshotUrl"] = m["snapshot_url"];
+                if (m.contains("channel_id") && !m.contains("channelId"))
+                    m["channelId"] = m["channel_id"];
+                if (m.contains("device_name") && !m.contains("deviceName"))
+                    m["deviceName"] = m["device_name"];
+                if (m.contains("alarm_type") && !m.contains("type"))
+                    m["type"] = m["alarm_type"];
+                m_alarms.append(m);
+            }
             m_hasUnread = false;
             for (const auto& a : m_alarms) {
-                if (a.toMap().value("status").toString() == "unhandled") {
+                QString st = a.toMap().value("status").toString();
+                if (st == "unhandled" || st == "pending") {
                     m_hasUnread = true;
                     break;
                 }

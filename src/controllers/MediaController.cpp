@@ -89,15 +89,22 @@ void MediaController::applyZlmStreamUrls(const QString& deviceId,
 
     // Pick the best URL for the platform.
     // macOS AVFoundation: HLS native, cannot play RTSP or HTTP-FLV.
+    //
+    // [FIX 2026-08-22] 优先级改 FLV → HLS → RTSP:
+    //   原 RTSP 优先导致 ffmpeg plugin 报 "Unable to open RTSP for listening"
+    //   (Qt6 ffmpeg 解析 rtsp://host:port/... 当成 listen socket, 非 connect client;
+    //    即使降级到 RTSP client, 在 Sophon CV186AH + ZLM 上也不稳定)。
+    //   实际验证: http://127.0.0.1:9080/rtp/...flv 返回 200 + FLV magic,
+    //   是 Qt6 ffmpeg plugin 最稳的视频源。
     QString bestUrl;
 #ifdef Q_OS_MACOS
     if (!hlsUrl.isEmpty())       bestUrl = hlsUrl;
     else if (!flvUrl.isEmpty())  bestUrl = flvUrl;
     else                          bestUrl = rtspUrl;
 #else
-    if (!rtspUrl.isEmpty())      bestUrl = rtspUrl;
-    else if (!flvUrl.isEmpty())  bestUrl = flvUrl;
-    else                          bestUrl = hlsUrl;
+    if (!flvUrl.isEmpty())       bestUrl = flvUrl;
+    else if (!hlsUrl.isEmpty())  bestUrl = hlsUrl;
+    else                          bestUrl = rtspUrl;
 #endif
 
     // P0-1: 当 bestUrl 为空且只有 webrtcUrl 可用时,尝试用 WebRTCStreamProvider 探测

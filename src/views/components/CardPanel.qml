@@ -16,7 +16,7 @@ Item {
     property int elevation: 1            // 0=flat, 1=card, 2=dialog
     property bool hoverable: true         // 是否启用 hover 微交互
     property color baseColor: "#141420"
-    property color borderColor: "#252830"
+    property color borderColor: "#F5F7FA"
     property color hoverColor: "#1A1D23"
     property real hoverScale: 1.0
 
@@ -75,7 +75,7 @@ Item {
         anchors.leftMargin: 1
         anchors.rightMargin: 1
         height: 1
-        color: Qt.rgba(1, 1, 1, 0.04)
+        color: Qt.rgba(0, 0, 0, 0.04)
         visible: panel.elevation > 0
     }
 

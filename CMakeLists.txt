@@ -40,6 +40,16 @@ else()
     message(STATUS "Qt6Multimedia NOT found — Multimedia support disabled")
 endif()
 
+# [体育场3D 2026] Qt Quick 3D 可选接入：找到则启用真 3D 场景（StadiumScene3D.qml），
+# 未找到则运行时降级为 Canvas 2.5D（Locate3DPanel），保持可编译
+find_package(Qt6 COMPONENTS Quick3D)
+if(Qt6Quick3D_FOUND)
+    add_compile_definitions(HAS_QT_QUICK3D)
+    message(STATUS "Qt6Quick3D found — Quick3D stadium scene enabled")
+else()
+    message(STATUS "Qt6Quick3D NOT found — fallback to Canvas 2.5D scene")
+endif()
+
 # Collect sources
 file(GLOB_RECURSE CONTROLLER_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/controllers/*.cpp)
 file(GLOB_RECURSE MODEL_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/models/*.cpp)
@@ -75,6 +85,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 if(Qt6Multimedia_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Multimedia)
+endif()
+
+if(Qt6Quick3D_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::Quick3D)
 endif()
 
 if(Qt6WebSockets_FOUND)

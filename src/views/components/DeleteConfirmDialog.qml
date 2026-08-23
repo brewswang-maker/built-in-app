@@ -23,7 +23,7 @@ Dialog {
     background: Rectangle {
         color: "#1A1D23"
         radius: 12
-        border.color: "#252830"
+        border.color: "#E4E7ED"
         border.width: 1
     }
 
@@ -35,12 +35,12 @@ Dialog {
         Text {
             Layout.fillWidth: true
             text: "确定删除「" + root.name + "」吗？"
-            font.pixelSize: 15; color: "#E8E8E8"; wrapMode: Text.Wrap
+            font.pixelSize: 15; color: "#303133"; wrapMode: Text.Wrap
         }
 
         Text {
             text: "此操作不可恢复。"
-            font.pixelSize: 12; color: "#FF3D71"
+            font.pixelSize: 12; color: "#F56C6C"
         }
 
         Row {
@@ -51,14 +51,14 @@ Dialog {
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
+                contentItem: Text { text: "取消"; font.pixelSize: 13; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: root.close()
             }
 
             Button {
                 implicitWidth: 80; height: 36
-                background: Rectangle { color: "#FF3D71"; radius: 6 }
+                background: Rectangle { color: "#F56C6C"; radius: 6 }
                 contentItem: Text { text: "删除"; font.pixelSize: 13; color: "#fff"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: {
                     onConfirmed(root.personId)

@@ -239,6 +239,15 @@ void WsMessageRouter::buildAndOpenSocket() {
 void WsMessageRouter::onWsConnected() {
     qInfo() << "[WsMessageRouter] connected";
     setState(WsConnectionState::Connected);
+
+    // [P1-5 优化 2026-08-18] 断线后重连成功 → 发 reconnected() 供 Controller
+    //   REST 补拉 (告警列表等), 弥补断连窗口内丢失的 WS 推送。
+    //   判定: m_reconnectAttempts > 0 表示经历过 drop (首次连接为 0)。
+    if (m_reconnectAttempts > 0) {
+        qInfo() << "[WsMessageRouter] reconnected after drop — emitting reconnected() "
+                   "for REST catch-up";
+        emit reconnected();
+    }
     m_reconnectAttempts = 0;
     emit reconnectChanged();
 

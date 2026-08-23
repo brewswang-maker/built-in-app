@@ -18,7 +18,7 @@ Item {
     // ═══ P2.3: 10个行业模板 (对标海康300+场景方案) ═══
     readonly property var sceneTemplates: [
         {
-            id: "construction", name: "智慧工地", icon: "shield", color: "#FFB800",
+            id: "construction", name: "智慧工地", icon: "shield", color: "#E6A23C",
             algorithms: ["安全帽检测", "反光衣检测", "人员闯入", "抽烟检测", "摔倒检测"],
             alarmRules: ["未戴安全帽 高", "未穿反光衣 中", "危险区域闯入 紧急"],
             linkageActions: ["现场语音提醒", "LED屏展示", "管理人员通知"],
@@ -67,7 +67,7 @@ Item {
             roiConfig: "入口+货架区+收银台+仓库"
         },
         {
-            id: "community", name: "智慧社区", icon: "user", color: "#00D4AA",
+            id: "community", name: "智慧社区", icon: "user", color: "#67C23A",
             algorithms: ["人脸识别", "车牌识别", "高空抛物", "电瓶车入梯", "异常徘徊"],
             alarmRules: ["高空抛物 紧急", "电瓶车入梯 高", "异常徘徊>15min 中"],
             linkageActions: ["物业推送", "电梯联动", "视频取证"],
@@ -109,14 +109,14 @@ Item {
     Rectangle {
         id: toolbar
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 52; color: "#141720"
+        height: 52; color: "#FFFFFF"
 
         RowLayout {
             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
 
-            Text { text: "场景管理"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+            Text { text: "场景管理"; font.pixelSize: 16; font.bold: true; color: "#303133" }
             Item { Layout.fillWidth: true }
-            Text { text: scenes.filter(function(s){return s.active}).length + " 个激活"; font.pixelSize: 12; color: "#00D4AA" }
+            Text { text: scenes.filter(function(s){return s.active}).length + " 个激活"; font.pixelSize: 12; color: "#67C23A" }
 
             Button {
                 text: "模板库"; font.pixelSize: 12
@@ -132,52 +132,79 @@ Item {
             }
             Button {
                 text: "导出"; font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: exportSceneDialog.open()
             }
             Button {
                 text: "刷新"; font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 60; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                background: Rectangle { color: "#F5F7FA"; radius: 6; width: 60; height: 32 }
+                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                 onClicked: configController.loadConfig()
+            }
+        }
+    }
+
+    // [FIX 2026-08-22] 诚实提示: 内置端不支持 3D 实时编辑/GLB 加载/Three.js 预览
+    Rectangle {
+        id: tipBar
+        anchors.top: toolbar.bottom; anchors.left: parent.left; anchors.right: parent.right
+        height: 36
+        color: "#FDF6EC"
+        border.color: "#FAECD8"
+
+        Row {
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            spacing: 8
+            AppIcon {
+                name: "info"; size: 14; iconColor: "#E6A23C"
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "提示：内置应用端仅提供场景方案列表与预设激活。3D 体育场建模与实时预览请使用 Web 管理端 (192.168.0.108:8088/scene-management)。"
+                font.pixelSize: 12; color: "#8A5A0A"
+                elide: Text.ElideRight
+                width: parent.width - 24
             }
         }
     }
 
     GridView {
         id: sceneGrid
-        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
+        anchors.top: tipBar.bottom; anchors.bottom: parent.bottom
         anchors.left: parent.left; anchors.right: parent.right
         anchors.margins: 12; cellWidth: 280; cellHeight: 200; clip: true
 
         model: scenes
 
         delegate: Rectangle {
-            width: 268; height: 188; color: "#141720"; radius: 12
-            border.color: modelData.active ? "#00D4AA" : "#252830"; border.width: modelData.active ? 2 : 1
+            width: 268; height: 188; color: "#FFFFFF"; radius: 12
+            border.color: modelData.active ? "#67C23A" : "#F5F7FA"; border.width: modelData.active ? 2 : 1
 
             Column {
                 anchors.fill: parent; anchors.margins: 14; spacing: 8
 
                 Row {
                     spacing: 8
-                    AppIcon { name: modelData.icon || "folder"; size: 22; iconColor: modelData.active ? "#00D4AA" : "#8B8FA3" }
+                    AppIcon { name: modelData.icon || "folder"; size: 22; iconColor: modelData.active ? "#67C23A" : "#909399" }
                     Column { spacing: 1
-                        Text { text: modelData.name || "场景"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
-                        Text { text: "预设: " + (modelData.preset || "自定义"); font.pixelSize: 12; color: "#8B8FA3" }
+                        Text { text: modelData.name || "场景"; font.pixelSize: 14; font.bold: true; color: "#303133" }
+                        Text { text: "预设: " + (modelData.preset || "自定义"); font.pixelSize: 12; color: "#909399" }
                     }
                     Item { width: 10 }
                     Rectangle {
                         width: 50; height: 18; radius: 4
                         color: modelData.active ? "#0A2A1A" : "#2A2A2A"
-                        Text { text: modelData.active ? "激活" : "停用"; font.pixelSize: 12; color: modelData.active ? "#00D4AA" : "#8B8FA3"; anchors.centerIn: parent }
+                        Text { text: modelData.active ? "激活" : "停用"; font.pixelSize: 12; color: modelData.active ? "#67C23A" : "#909399"; anchors.centerIn: parent }
                     }
                 }
 
                 Row { spacing: 12
-                    Text { text: (modelData.devices || 0) + " 设备"; font.pixelSize: 12; color: "#8B8FA3" }
-                    Text { text: (modelData.algorithms ? modelData.algorithms.length : 0) + " 算法"; font.pixelSize: 12; color: "#8B8FA3" }
+                    Text { text: (modelData.devices || 0) + " 设备"; font.pixelSize: 12; color: "#909399" }
+                    Text { text: (modelData.algorithms ? modelData.algorithms.length : 0) + " 算法"; font.pixelSize: 12; color: "#909399" }
                 }
 
                 // 算法标签
@@ -186,7 +213,7 @@ Item {
                     Repeater {
                         model: modelData.algorithms || []
                         delegate: Rectangle {
-                            height: 18; radius: 3; color: "#252830"
+                            height: 18; radius: 3; color: "#F5F7FA"
                             Text { text: modelData; font.pixelSize: 8; color: "#3B82F6"; anchors.centerIn: parent; leftPadding: 4; rightPadding: 4 }
                         }
                     }
@@ -196,19 +223,19 @@ Item {
                     spacing: 8
                     Button {
                         text: modelData.active ? "停用" : "激活"; font.pixelSize: 12
-                        background: Rectangle { color: modelData.active ? "#FF3D71" : "#00D4AA"; radius: 4; width: 60; height: 24 }
+                        background: Rectangle { color: modelData.active ? "#F56C6C" : "#67C23A"; radius: 4; width: 60; height: 24 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: configController.saveConfig("scene_" + modelData.id + "_active", !modelData.active)
                     }
                     Button {
                         text: "配置"; font.pixelSize: 12
-                        background: Rectangle { color: "#252830"; radius: 4; width: 60; height: 24 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: "#F5F7FA"; radius: 4; width: 60; height: 24 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                     Button {
                         text: "删除"; font.pixelSize: 12
-                        background: Rectangle { color: "#252830"; radius: 4; width: 30; height: 24 }
-                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FF3D71"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        background: Rectangle { color: "#F5F7FA"; radius: 4; width: 30; height: 24 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#F56C6C"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     }
                 }
             }
@@ -219,23 +246,23 @@ Item {
     Popup {
         id: templateGallery
         anchors.centerIn: parent; width: 760; height: 560
-        background: Rectangle { color: "#141420"; radius: 12; border.color: "#252830" }
+        background: Rectangle { color: "#141420"; radius: 12; border.color: "#E4E7ED" }
 
         Column {
             anchors.fill: parent; anchors.margins: 16; spacing: 10
 
             Row {
                 spacing: 8
-                Text { text: "行业场景模板库"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
+                Text { text: "行业场景模板库"; font.pixelSize: 16; font.bold: true; color: "#303133" }
                 Item { width: 380 }
-                Text { text: sceneTemplates.length + " 个行业方案"; font.pixelSize: 12; color: "#8B8FA3"
+                Text { text: sceneTemplates.length + " 个行业方案"; font.pixelSize: 12; color: "#909399"
                     anchors.verticalCenter: parent.verticalCenter }
                 Item { width: 10 }
-                AppIcon { name: "close"; size: 16; iconColor: "#8B8FA3"
+                AppIcon { name: "close"; size: 16; iconColor: "#909399"
                     MouseArea { anchors.fill: parent; onClicked: templateGallery.close() } }
             }
 
-            Rectangle { height: 1; width: parent.width; color: "#252830" }
+            Rectangle { height: 1; width: parent.width; color: "#F5F7FA" }
 
             ScrollView {
                 width: parent.width; height: parent.height - 60; clip: true
@@ -257,14 +284,14 @@ Item {
                                 spacing: 8
                                 Rectangle { width: 32; height: 32; radius: 6; color: modelData.color
                                     AppIcon { name: modelData.icon || "folder"; size: 18; iconColor: "#FFF"; anchors.centerIn: parent } }
-                                Text { text: modelData.name; font.pixelSize: 14; font.bold: true; color: "#E8E8E8"
+                                Text { text: modelData.name; font.pixelSize: 14; font.bold: true; color: "#303133"
                                     anchors.verticalCenter: parent.verticalCenter }
                             }
 
                             Text { text: "算法: " + modelData.algorithms.join(", "); font.pixelSize: 12; color: "#3B82F6"; wrapMode: Text.WordWrap; width: parent.width }
-                            Text { text: "告警: " + modelData.alarmRules.length + " 条规则"; font.pixelSize: 12; color: "#FFB800" }
-                            Text { text: "联动: " + modelData.linkageActions.join(", "); font.pixelSize: 12; color: "#00D4AA"; wrapMode: Text.WordWrap; width: parent.width }
-                            Text { text: "ROI: " + modelData.roiConfig; font.pixelSize: 12; color: "#8B8FA3"; elide: Text.ElideRight; width: parent.width }
+                            Text { text: "告警: " + modelData.alarmRules.length + " 条规则"; font.pixelSize: 12; color: "#E6A23C" }
+                            Text { text: "联动: " + modelData.linkageActions.join(", "); font.pixelSize: 12; color: "#67C23A"; wrapMode: Text.WordWrap; width: parent.width }
+                            Text { text: "ROI: " + modelData.roiConfig; font.pixelSize: 12; color: "#909399"; elide: Text.ElideRight; width: parent.width }
 
                             Button {
                                 text: "应用此模板"; font.pixelSize: 12
@@ -296,16 +323,16 @@ Item {
     Popup {
         id: exportSceneDialog
         anchors.centerIn: parent; width: 500; height: 420
-        background: Rectangle { color: "#141420"; radius: 12; border.color: "#252830" }
+        background: Rectangle { color: "#141420"; radius: 12; border.color: "#E4E7ED" }
 
         Column {
             anchors.fill: parent; anchors.margins: 16; spacing: 10
 
             Row {
                 spacing: 8
-                Text { text: "场景方案导出"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                Text { text: "场景方案导出"; font.pixelSize: 14; font.bold: true; color: "#303133" }
                 Item { width: 200 }
-                AppIcon { name: "close"; size: 14; iconColor: "#8B8FA3"
+                AppIcon { name: "close"; size: 14; iconColor: "#909399"
                     MouseArea { anchors.fill: parent; onClicked: exportSceneDialog.close() } }
             }
 
@@ -329,10 +356,10 @@ Item {
                     width: parent.width; height: 280
                     readOnly: true
                     text: exportJsonText
-                    color: "#00D4AA"
+                    color: "#67C23A"
                     font.family: "monospace"
                     font.pixelSize: 12
-                    background: Rectangle { color: "#0D0F12"; radius: 6; border.color: "#252830" }
+                    background: Rectangle { color: "#F5F7FA"; radius: 6; border.color: "#E4E7ED" }
                     wrapMode: TextArea.Wrap
                 }
             }
@@ -347,8 +374,8 @@ Item {
                 }
                 Button {
                     text: "关闭"; font.pixelSize: 12
-                    background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    background: Rectangle { color: "#F5F7FA"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: exportSceneDialog.close()
                 }
             }
@@ -359,41 +386,41 @@ Item {
     Popup {
         id: newScenePopup
         anchors.centerIn: parent; width: 380; height: 340
-        background: Rectangle { color: "#141420"; radius: 12; border.color: "#252830" }
+        background: Rectangle { color: "#141420"; radius: 12; border.color: "#E4E7ED" }
 
         Column {
             anchors.fill: parent; anchors.margins: 16; spacing: 10
-            Text { text: "新建场景"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+            Text { text: "新建场景"; font.pixelSize: 14; font.bold: true; color: "#303133" }
 
-            TextField { id: sceneNameField; width: 340; placeholderText: "场景名称"; placeholderTextColor: "#4A4D58"; color: "#E8E8E8"; font.pixelSize: 12; background: Rectangle { color: "#252830"; radius: 6 } }
+            TextField { id: sceneNameField; width: 340; placeholderText: "场景名称"; placeholderTextColor: "#C0C4CC"; color: "#303133"; font.pixelSize: 12; background: Rectangle { color: "#F5F7FA"; radius: 6 } }
 
-            Text { text: "选择图标:"; font.pixelSize: 12; color: "#8B8FA3" }
+            Text { text: "选择图标:"; font.pixelSize: 12; color: "#909399" }
             Row {
                 spacing: 8
                 Repeater {
                     model: ["厂区周界 (入侵+越界)", "仓储防火 (烟火+温度)", "施工安全 (PPE+安全帽)", "停车管理 (车牌+违停)", "人流统计 (计数+密度)", "门禁安防 (人脸+尾随)", "自定义"]
                     delegate: Button {
                         text: modelData; font.pixelSize: 18
-                        background: Rectangle { color: newSceneIcon === modelData ? "#3B82F6" : "#252830"; radius: 6; width: 36; height: 36 }
+                        background: Rectangle { color: newSceneIcon === modelData ? "#3B82F6" : "#F5F7FA"; radius: 6; width: 36; height: 36 }
                         onClicked: newSceneIcon = modelData
                     }
                 }
             }
 
-            Text { text: "选择预设:"; font.pixelSize: 12; color: "#8B8FA3" }
+            Text { text: "选择预设:"; font.pixelSize: 12; color: "#909399" }
             ComboBox {
                 id: presetCombo
                 width: 340; model: ["厂区周界 (入侵+越界)", "仓储防火 (烟火+温度)", "施工安全 (PPE+安全帽)", "停车管理 (车牌+违停)", "人流统计 (计数+密度)", "门禁安防 (人脸+尾随)", "自定义"]
-                background: Rectangle { color: "#252830"; radius: 6 }
+                background: Rectangle { color: "#F5F7FA"; radius: 6 }
             }
 
             Row {
                 spacing: 12
-                Button { text: "取消"; background: Rectangle { color: "#252830"; radius: 6; width: 80; height: 32 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                Button { text: "取消"; background: Rectangle { color: "#F5F7FA"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: newScenePopup.close() }
-                Button { text: "创建"; background: Rectangle { color: "#00D4AA"; radius: 6; width: 80; height: 32 }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                Button { text: "创建"; background: Rectangle { color: "#67C23A"; radius: 6; width: 80; height: 32 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#F5F7FA"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: {
                         configController.saveConfig("scene_new", { name: sceneNameField.text, icon: newSceneIcon, preset: presetCombo.currentText, active: false })
                         newScenePopup.close()

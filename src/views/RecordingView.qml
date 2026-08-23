@@ -1,650 +1,1046 @@
 // ========================================================================
-// RecordingView.qml — 录像回放 (时间轴 + 多路同步 + 本地存储管理)
-// Controller: mediaController
-// 零硬编码数据，所有交互通过Controller
+// RecordingView.qml — 录像回放 (1:1 对齐 Web 端 /recordings 截图)
+//   - 左卡: 设备通道 (选择设备/选择通道)
+//   - 右区: 录像源 tabs (设备录像/本地录像/智能检索/录像计划/存储预估)
+//           + 日期 + 查询/水印设置/片段下载
+//   - 24小时时间轴 + 录像片段表格 (空态 "暂无数据")
+//   - 数据源: box-sdk POST /api/v1/recordings/query 等
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import QtMultimedia
 
 Item {
-    id: recordingView
+    id: root
 
+    // ── 状态 ──
+    property var devices: []              // [{id, name}]
+    property var channels: []             // 当前设备的通道 [{channel_id, name}]
+    property string selectedDeviceId: ""
+    property string selectedChannelId: ""
     property string selectedDate: Qt.formatDate(new Date(), "yyyy-MM-dd")
-    property string selectedChannel: ""
-    property string selectedEventType: ""
-    // [FIX 2026-07-01] AI标签筛选透传到 RecordingController.query()
-    property string selectedAiTag: ""
-    property int selectedMinConfidence: 0
-    property var recordingSegments: []
-    property real playbackPosition: 0
+    property string recordingSource: "device"  // device|local|smart|schedule|storage
+    property var recordings: []
+    property bool loading: false
+    property string loadError: ""
+
+    // 播放
     property string playbackUrl: ""
-    property bool isPlaying: false
-    property var lockedRecordings: ({})
+    property string playbackCallId: ""
 
-    Component.onCompleted: {
-        mediaController.refreshStreams()
-        recordingController.refreshRecordings()  // [FIX 2026-07-01] 初始化加载录像记录
+    // 本地录像
+    property var localRecordings: []
+    property bool localLoading: false
+
+    // 智能检索
+    property var smartResults: []
+    property bool smartLoading: false
+
+    // 录像计划
+    property var schedules: []
+    property bool scheduleLoading: false
+
+    Component.onCompleted: loadDevices()
+
+    // ── REST ──
+    function xhrRequest(method, url, body, cb) {
+        var xhr = new XMLHttpRequest()
+        xhr.open(method, url)
+        xhr.setRequestHeader("Content-Type", "application/json")
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                var obj = null
+                try { obj = JSON.parse(xhr.responseText) } catch (e) {}
+                cb(xhr.status, obj)
+            }
+        }
+        xhr.send(body ? JSON.stringify(body) : null)
     }
 
-    Connections {
-        target: mediaController
-        function onStreamStarted(sessionId, url) {
-            playbackUrl = url || ""
-            isPlaying = true
-            playerOverlay.text = "正在播放..."
-        }
-        function onStreamStopped(sessionId) {
-            playbackUrl = ""
-            isPlaying = false
-            playerOverlay.text = "点击播放录像"
-        }
-        function onChannelsUpdated() {
-            // streams 列表更新后，重建通道选择器
-            var streamList = mediaController.channels || []
-            var channelNames = ["全部通道"]
-            for (var i = 0; i < streamList.length; i++) {
-                channelNames.push(streamList[i].name || streamList[i].channelName || ("通道" + (i + 1)))
-            }
-            channelSelect.model = channelNames
-
-            // 更新录像段
-            recordingSegments = []
-            for (var j = 0; j < streamList.length; j++) {
-                var segs = streamList[j].segments || streamList[j].recordings || []
-                for (var k = 0; k < segs.length; k++) {
-                    recordingSegments.push(segs[k])
+    function loadDevices() {
+        xhrRequest("GET", "http://localhost:8080/api/v1/devices?limit=200", null,
+            function (status, resp) {
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    var d = resp.data || {}
+                    var list = d.devices || d.items || (Array.isArray(d) ? d : [])
+                    var out = []
+                    for (var i = 0; i < list.length; i++) {
+                        out.push({ id: list[i].device_id || list[i].id || "", name: list[i].name || list[i].device_name || list[i].device_id || "" })
+                    }
+                    devices = out
+                } else {
+                    devices = []
                 }
-            }
-            timelineCanvas.requestPaint()
-        }
+            })
     }
 
-    // ── 顶部工具栏 ──
-    Rectangle {
-        id: toolbar
-        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
-        height: 52; color: "#141720"
-
-        RowLayout {
-            anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 12
-
-            AppIcon { name: "record"; size: 22; iconColor: "#E8E8E8"; Layout.preferredWidth: 24; Layout.preferredHeight: 24 }
-            Text { text: "录像回放"; font.pixelSize: 16; font.bold: true; color: "#E8E8E8" }
-
-            // 通道筛选
-            ComboBox {
-                id: channelSelect
-                width: 180
-                model: ["全部通道"]
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text {
-                    text: channelSelect.displayText
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    verticalAlignment: Text.AlignVCenter; leftPadding: 10
-                }
-                onCurrentTextChanged: {
-                    selectedChannel = currentIndex === 0 ? "" : currentText
-                }
-            }
-
-            // 事件类型筛选
-            ComboBox {
-                id: eventTypeSelect
-                width: 140
-                model: ["全部类型", "连续录像", "移动侦测", "告警录像"]
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text {
-                    text: eventTypeSelect.displayText
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    verticalAlignment: Text.AlignVCenter; leftPadding: 10
-                }
-                onCurrentTextChanged: {
-                    var typeMap = ["", "continuous", "motion", "alarm"]
-                    selectedEventType = currentIndex === 0 ? "" : (typeMap[currentIndex] || "")
-                }
-            }
-
-            // P3.5: AI标签筛选 (对标海康录像AI检索)
-            ComboBox {
-                id: aiTagSelect
-                width: 160
-                model: ["全部AI标签", "人员检测", "车辆检测", "安全帽", "火焰/烟雾", "人脸识别", "人群密度", "摔倒检测"]
-                background: Rectangle { color: "#252830"; radius: 6 }
-                contentItem: Text {
-                    text: aiTagSelect.displayText
-                    color: "#E8E8E8"; font.pixelSize: 13
-                    verticalAlignment: Text.AlignVCenter; leftPadding: 10
-                }
-                // [FIX 2026-07-01] AI标签透传到 selectedAiTag
-                onCurrentTextChanged: {
-                    var tagMap = {
-                        "全部AI标签": "",
-                        "人员检测": "person",
-                        "车辆检测": "vehicle",
-                        "安全帽": "helmet",
-                        "火焰/烟雾": "fire_smoke",
-                        "人脸识别": "face",
-                        "人群密度": "crowd",
-                        "摔倒检测": "fall"
-                    }
-                    selectedAiTag = tagMap[currentText] || ""
-                }
-            }
-
-            // P3.5: 最低置信度
-            Row {
-                spacing: 2
-                SpinBox {
-                    id: minConfidenceSpin
-                    width: 80
-                    from: 0; to: 100; value: 0; stepSize: 10
-                    background: Rectangle { color: "#252830"; radius: 6 }
-                    contentItem: Text {
-                        text: minConfidenceSpin.value + "%"
-                        color: "#E8E8E8"; font.pixelSize: 12
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                }
-            }
-
-            Item { Layout.fillWidth: true }
-
-            // [V4-X2 2026-07-08] 搜索按钮 — 有 AI 标签 / 置信度 走 smart-search 智能检索
-            //   ai_tag / min_confidence 组合 → POST /api/v1/recordings/smart-search
-            //   其他筛选 → POST /api/v1/recordings/query (传统录像查询)
-            Button {
-                text: "搜索"
-                font.pixelSize: 13; font.bold: true
-                background: Rectangle { color: "#00D4AA"; radius: 6; width: 72; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: {
-                    var filter = {
-                        "channel": selectedChannel,
-                        "event_type": selectedEventType,
-                        "ai_tag": selectedAiTag,
-                        "min_confidence": selectedMinConfidence / 100.0,
-                        "date": selectedDate
-                    }
-                    // 智能检索分支: 只要指定了 AI 标签或设置了最低置信度,
-                    //   调 smart-search 端点查 alarm_events 表 (含 AI 标签)
-                    if (selectedAiTag || selectedMinConfidence > 0) {
-                        recordingController.querySmart(filter)
-                    } else {
-                        recordingController.query(filter)
-                    }
-                }
-            }
-
-            Button {
-                text: selectedDate
-                font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: calendarPopup.open()
-            }
-            Button {
-                text: "前一天"
-                font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 72; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: {
-                    var d = Date.fromLocaleDateString(Qt.locale(), selectedDate, "yyyy-MM-dd")
-                    d.setDate(d.getDate() - 1)
-                    selectedDate = Qt.formatDate(d, "yyyy-MM-dd")
-                    mediaController.refreshStreams()
-                }
-            }
-            Button {
-                text: "后一天"
-                font.pixelSize: 12
-                background: Rectangle { color: "#252830"; radius: 6; width: 72; height: 32 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: {
-                    var d = Date.fromLocaleDateString(Qt.locale(), selectedDate, "yyyy-MM-dd")
-                    d.setDate(d.getDate() + 1)
-                    selectedDate = Qt.formatDate(d, "yyyy-MM-dd")
-                    mediaController.refreshStreams()
-                }
-            }
-        }
-    }
-
-    Popup {
-        id: calendarPopup
-        y: toolbar.height
-        width: 300; height: 50
-        Column {
-            spacing: 4
-            TextField {
-                id: dateField
-                width: 280; height: 36
-                placeholderText: "yyyy-MM-dd"
-                text: Qt.formatDate(new Date(), "yyyy-MM-dd")
-                color: "#E8E8E8"; font.pixelSize: 13
-                background: Rectangle { color: "#252830"; radius: 6 }
-            }
-            Button {
-                text: "确定"; width: 280; height: 32
-                background: Rectangle { color: "#00D4AA"; radius: 6 }
-                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                onClicked: {
-                    calendarPopup.close()
-                    mediaController.refreshStreams()
-                }
-            }
-        }
-    }
-
-    // ── 主内容区 ──
-    ColumnLayout {
-        anchors.top: toolbar.bottom; anchors.bottom: parent.bottom
-        anchors.left: parent.left; anchors.right: parent.right
-        anchors.margins: 8; spacing: 8
-
-        // 视频回放区域
-        Rectangle {
-            Layout.fillWidth: true; Layout.fillHeight: true
-            color: "#0A0C10"; radius: 8
-
-            Column {
-                anchors.fill: parent; spacing: 0
-
-                // 视频画面区
-                Rectangle {
-                    width: parent.width; height: parent.height - 120
-                    color: "#000000"
-
-                    Text {
-                        id: playerOverlay
-                        anchors.centerIn: parent
-                        text: "点击播放录像"
-                        font.pixelSize: 16; color: "#4A4D58"
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onDoubleClicked: {
-                            if (selectedChannel) {
-                                var streams = mediaController.channels || []
-                                for (var i = 0; i < streams.length; i++) {
-                                    if (streams[i].name === selectedChannel || streams[i].channelName === selectedChannel) {
-                                        mediaController.startStream(streams[i].id || streams[i].channelId || "", "playback")
-                                        break
-                                    }
-                                }
-                            } else if (mediaController.channels.length > 0) {
-                                var s = mediaController.channels[0]
-                                mediaController.startStream(s.id || s.channelId || "", "playback")
-                            }
+    function loadChannels(deviceId) {
+        if (deviceId === "") { channels = []; return }
+        xhrRequest("GET", "http://localhost:8080/api/v1/channels?limit=200", null,
+            function (status, resp) {
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    var d = resp.data || {}
+                    var list = d.channels || d.items || []
+                    var out = []
+                    for (var i = 0; i < list.length; i++) {
+                        if (String(list[i].device_id || "") === deviceId) {
+                            out.push({ channel_id: String(list[i].channel_id || ""), name: list[i].name || list[i].channel_id || "" })
                         }
                     }
+                    channels = out
+                } else {
+                    channels = []
+                }
+            })
+    }
 
-                    // 通道信息叠加
-                    Rectangle {
-                        anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 8
-                        width: 160; height: 24; color: "#99000000"; radius: 4
-                        Text { text: (selectedChannel || "全部通道"); font.pixelSize: 12; color: "#E8E8E8"; anchors.centerIn: parent }
+    function fetchRecordings() {
+        if (selectedDeviceId === "" || selectedChannelId === "" || selectedDate === "") {
+            showToast("请选择设备、通道和日期")
+            return
+        }
+        loading = true
+        loadError = ""
+        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/query", {
+            device_id: selectedDeviceId,
+            channel_id: selectedChannelId,
+            start_time: selectedDate + " 00:00:00",
+            end_time: selectedDate + " 23:59:59"
+        }, function (status, resp) {
+            loading = false
+            if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                var d = resp.data || {}
+                recordings = d.recordings || []
+                timelineCanvas.requestPaint()
+            } else {
+                recordings = []
+                loadError = "查询失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status))
+                timelineCanvas.requestPaint()
+            }
+        })
+    }
+
+    function fetchLocalRecordings() {
+        localLoading = true
+        xhrRequest("GET", "http://localhost:8080/api/v1/recordings?limit=100", null,
+            function (status, resp) {
+                localLoading = false
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    var d = resp.data || {}
+                    localRecordings = d.recordings || d.items || (Array.isArray(d) ? d : [])
+                } else {
+                    localRecordings = []
+                }
+            })
+    }
+
+    function fetchSchedules() {
+        scheduleLoading = true
+        xhrRequest("GET", "http://localhost:8080/api/v1/recording-schedules", null,
+            function (status, resp) {
+                scheduleLoading = false
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    var d = resp.data || {}
+                    schedules = d.schedules || d.items || (Array.isArray(d) ? d : [])
+                } else {
+                    schedules = []
+                }
+            })
+    }
+
+    function doSmartSearch() {
+        if (selectedDeviceId === "" || selectedChannelId === "") {
+            showToast("请先选择设备和通道")
+            return
+        }
+        smartLoading = true
+        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/smart-search", {
+            device_id: selectedDeviceId,
+            channel_id: selectedChannelId,
+            start_time: selectedDate + "T00:00:00",
+            end_time: selectedDate + "T23:59:59",
+            min_confidence: 0
+        }, function (status, resp) {
+            smartLoading = false
+            if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                var d = resp.data || {}
+                smartResults = d.results || d.recordings || (Array.isArray(d) ? d : [])
+            } else {
+                smartResults = []
+                showToast("智能检索失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status)))
+            }
+        })
+    }
+
+    function playSegment(seg) {
+        var recId = seg.id || ""
+        // ZLM 源录像有直接 url 时可走播放; 否则走 GB28181 回放
+        if (seg.source === "zlm" && seg.url && seg.url !== "") {
+            playbackUrl = seg.url
+            playbackCallId = ""
+            playbackDialog.visible = true
+            return
+        }
+        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/" + encodeURIComponent(recId) + "/play", {
+            id: recId,
+            device_id: seg.device_id || selectedDeviceId,
+            channel_id: seg.channel_id || selectedChannelId,
+            start_time: seg.start_time || "",
+            end_time: seg.end_time || ""
+        }, function (status, resp) {
+            if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                var d = resp.data || {}
+                playbackCallId = d.call_id || ""
+                var urls = d.urls || {}
+                var url = urls.rtsp || urls.flv || urls.hls || ""
+                if (url !== "") {
+                    playbackUrl = url
+                    playbackDialog.visible = true
+                } else {
+                    showToast("已发起回放请求, 但未获得播放地址")
+                }
+            } else {
+                showToast("播放失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status)))
+            }
+        })
+    }
+
+    function stopPlayback() {
+        if (playbackCallId !== "") {
+            xhrRequest("POST", "http://localhost:8080/api/v1/recordings/" + encodeURIComponent(playbackCallId) + "/stop",
+                { id: playbackCallId }, function () {})
+        }
+        playbackUrl = ""
+        playbackCallId = ""
+        playbackDialog.visible = false
+    }
+
+    function downloadSegment(seg) {
+        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/download", {
+            device_id: seg.device_id || selectedDeviceId,
+            channel_id: seg.channel_id || selectedChannelId,
+            start_time: seg.start_time || "",
+            end_time: seg.end_time || ""
+        }, function (status, resp) {
+            if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                showToast("片段下载任务已提交")
+            } else {
+                showToast("下载失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status)))
+            }
+        })
+    }
+
+    // ── 格式化 ──
+    function timeOnly(iso) {
+        if (!iso) return "-"
+        var s = String(iso)
+        var tIdx = s.indexOf("T")
+        if (tIdx >= 0) return s.substring(tIdx + 1, tIdx + 9)
+        var spIdx = s.indexOf(" ")
+        if (spIdx >= 0) return s.substring(spIdx + 1, spIdx + 9)
+        return s
+    }
+
+    function formatDuration(seg) {
+        var startMs = parseTime(seg.start_time)
+        var endMs = parseTime(seg.end_time)
+        if (startMs > 0 && endMs > startMs) {
+            var sec = Math.round((endMs - startMs) / 1000)
+            return formatSec(sec)
+        }
+        return "-"
+    }
+
+    function formatSec(sec) {
+        var h = Math.floor(sec / 3600)
+        var m = Math.floor((sec % 3600) / 60)
+        var s = Math.floor(sec % 60)
+        function pad(n) { return n < 10 ? "0" + n : "" + n }
+        return h > 0 ? (pad(h) + ":" + pad(m) + ":" + pad(s)) : (pad(m) + ":" + pad(s))
+    }
+
+    function parseTime(t) {
+        if (!t) return 0
+        var s = String(t).replace("T", " ")
+        var dt = new Date(s)
+        var ms = dt.getTime()
+        return isNaN(ms) ? 0 : ms
+    }
+
+    function formatSize(bytes) {
+        if (bytes === undefined || bytes === null || bytes <= 0) return "-"
+        if (bytes < 1024) return bytes + " B"
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + " GB"
+    }
+
+    function showToast(msg) {
+        toastMsg.text = msg
+        toastBox.visible = true
+        toastTimer.restart()
+    }
+
+    function deviceLabels() {
+        var out = []
+        for (var i = 0; i < devices.length; i++) out.push(devices[i].name)
+        return out
+    }
+    function channelLabels() {
+        var out = []
+        for (var i = 0; i < channels.length; i++) out.push(channels[i].name)
+        return out
+    }
+
+    // ═══ 页面骨架 ═══
+    Rectangle { anchors.fill: parent; color: "#F5F7FA" }
+
+    RowLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 16
+
+        // ── 左卡: 设备通道 ──
+        Rectangle {
+            Layout.preferredWidth: 260
+            Layout.fillHeight: true
+            color: "#FFFFFF"
+            radius: 4
+            border.color: "#EBEEF5"
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 12
+
+                Text { text: "设备通道"; font.pixelSize: 15; font.bold: true; color: "#303133" }
+                Rectangle { width: parent.width; height: 1; color: "#EBEEF5" }
+
+                // 选择设备
+                RecSelect {
+                    id: deviceSelect
+                    selectWidth: 228
+                    placeholder: "选择设备"
+                    optionModel: root.deviceLabels()
+                    onOptionSelected: function(label, idx) {
+                        var devs = root.devices
+                        if (idx >= 0 && idx < devs.length) {
+                            root.selectedDeviceId = devs[idx].id
+                            root.selectedChannelId = ""
+                            root.loadChannels(devs[idx].id)
+                        } else {
+                            root.selectedDeviceId = ""
+                            root.channels = []
+                        }
+                        root.recordings = []
                     }
+                }
 
-                    // 时间戳叠加
-                    Rectangle {
-                        anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8
-                        width: 140; height: 24; color: "#99000000"; radius: 4
-                        Text { text: selectedDate + " " + playbackTimeText.text; font.pixelSize: 12; color: "#FFB800"; anchors.centerIn: parent }
+                // 选择通道
+                RecSelect {
+                    id: channelSelect
+                    selectWidth: 228
+                    placeholder: "选择通道"
+                    optionModel: root.channelLabels()
+                    onOptionSelected: function(label, idx) {
+                        var chs = root.channels
+                        if (idx >= 0 && idx < chs.length)
+                            root.selectedChannelId = chs[idx].channel_id
+                        else
+                            root.selectedChannelId = ""
+                        root.recordings = []
                     }
+                }
+            }
+        }
 
-                    // 多路同步缩略图
+        // ── 右侧 ──
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 16
+
+            // 录像源切换 + 日期 + 按钮
+            Rectangle {
+                Layout.fillWidth: true
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
+                height: 64
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 16
+                    anchors.rightMargin: 16
+                    spacing: 12
+
+                    // radio-button 组
                     Row {
-                        anchors.bottom: parent.bottom; anchors.right: parent.right; anchors.margins: 8
-                        spacing: 4
-
+                        spacing: 0
                         Repeater {
-                            model: Math.min(mediaController.channels.length, 4)
+                            model: [["device", "设备录像"], ["local", "本地录像"], ["smart", "智能检索"], ["schedule", "录像计划"], ["storage", "存储预估"]]
                             delegate: Rectangle {
-                                width: 80; height: 45; color: "#141720"; radius: 4
-                                border.color: index === 0 ? "#00D4AA" : "#252830"; border.width: index === 0 ? 2 : 1
+                                width: srcTabText.implicitWidth + 24
+                                height: 30
+                                color: root.recordingSource === modelData[0] ? "#409EFF" : "#FFFFFF"
+                                border.color: root.recordingSource === modelData[0] ? "#409EFF" : "#DCDFE6"
                                 Text {
-                                    text: {
-                                        var streamList = mediaController.channels
-                                        return streamList[index] ? (streamList[index].name || ("CH" + (index+1))) : ("CH" + (index+1))
-                                    }
-                                    font.pixelSize: 12; color: "#8B8FA3"; anchors.centerIn: parent
+                                    id: srcTabText
+                                    anchors.centerIn: parent
+                                    text: modelData[1]
+                                    font.pixelSize: 12
+                                    color: root.recordingSource === modelData[0] ? "#FFFFFF" : "#606266"
                                 }
                                 MouseArea {
                                     anchors.fill: parent
-                                    onClicked: {
-                                        var streamList = mediaController.channels
-                                        if (streamList[index]) {
-                                            mediaController.startStream(streamList[index].id || streamList[index].channelId || "", "playback")
-                                        }
-                                    }
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.recordingSource = modelData[0]
+                                }
+                            }
+                        }
+                    }
+
+                    Text { text: "日期:"; font.pixelSize: 13; color: "#606266" }
+                    Rectangle {
+                        width: 130; height: 30; radius: 4
+                        border.color: dateInput.activeFocus ? "#409EFF" : "#DCDFE6"
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            spacing: 6
+                            TextInput {
+                                id: dateInput
+                                Layout.fillWidth: true
+                                text: root.selectedDate
+                                font.pixelSize: 13
+                                color: "#303133"
+                                inputMask: "0000-00-00"
+                                onEditingFinished: root.selectedDate = text
+                            }
+                            AppIcon { name: "calendar"; size: 14; iconColor: "#C0C4CC" }
+                        }
+                    }
+
+                    // 设备录像按钮组
+                    RecBtn { visible: root.recordingSource === "device"; label: "查询设备录像"; filled: true; onTap: root.fetchRecordings() }
+                    RecBtn { visible: root.recordingSource === "device"; label: "水印设置"; onTap: root.showToast("当前版本暂不支持水印设置") }
+                    RecBtn { visible: root.recordingSource === "device"; label: "片段下载"; onTap: root.showToast("请先在片段列表中选择要下载的录像") }
+                    // 本地录像
+                    RecBtn { visible: root.recordingSource === "local"; label: "查询本地录像"; filled: true; onTap: root.fetchLocalRecordings() }
+                    // 智能检索
+                    RecBtn { visible: root.recordingSource === "smart"; label: "开始检索"; filled: true; onTap: root.doSmartSearch() }
+                    // 录像计划
+                    RecBtn { visible: root.recordingSource === "schedule"; label: "加载计划"; filled: true; onTap: root.fetchSchedules() }
+                    // 存储预估
+                    RecBtn { visible: root.recordingSource === "storage"; label: "计算预估"; filled: true; onTap: root.showToast("当前版本暂不支持存储预估") }
+
+                    Item { Layout.fillWidth: true }
+                }
+            }
+
+            // ── 设备录像: 时间轴 + 片段表 ──
+            Rectangle {
+                Layout.fillWidth: true
+                visible: root.recordingSource === "device"
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
+                height: 96
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 8
+                    Text { text: "24小时时间轴"; font.pixelSize: 14; font.bold: true; color: "#303133" }
+                    Canvas {
+                        id: timelineCanvas
+                        width: parent.width
+                        height: 40
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.reset()
+                            ctx.fillStyle = "#F5F7FA"
+                            ctx.fillRect(0, 0, width, height)
+                            // 刻度 (每 2 小时)
+                            ctx.strokeStyle = "#E4E7ED"
+                            ctx.lineWidth = 1
+                            for (var h = 0; h <= 24; h += 2) {
+                                var x = Math.round(h / 24 * width) + 0.5
+                                ctx.beginPath()
+                                ctx.moveTo(x, 0)
+                                ctx.lineTo(x, height)
+                                ctx.stroke()
+                            }
+                            // 录像段 (蓝色)
+                            var dayStart = root.parseTime(root.selectedDate + " 00:00:00")
+                            var dayEnd = dayStart + 24 * 3600000
+                            if (dayStart > 0) {
+                                ctx.fillStyle = "#409EFF"
+                                for (var i = 0; i < root.recordings.length; i++) {
+                                    var seg = root.recordings[i]
+                                    var s = root.parseTime(seg.start_time)
+                                    var e = root.parseTime(seg.end_time)
+                                    if (s <= 0) continue
+                                    if (e <= s) e = s + 30000
+                                    var x1 = Math.max(0, (s - dayStart) / (dayEnd - dayStart)) * width
+                                    var x2 = Math.min(1, (e - dayStart) / (dayEnd - dayStart)) * width
+                                    ctx.fillRect(x1, 8, Math.max(2, x2 - x1), height - 16)
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                // 时间轴区域
-                Rectangle {
-                    width: parent.width; height: 80; color: "#141720"
+            // 录像片段表
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.recordingSource === "device"
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
 
-                    Column {
-                        anchors.fill: parent; anchors.margins: 8; spacing: 4
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
 
-                        // 播放控制栏
-                        Row {
-                            spacing: 8
-                            Button {
-                                text: "|<"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
-                                contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: playbackPosition = Math.max(0, playbackPosition - 1)
-                            }
-                            Button {
-                                text: "<<"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
-                                contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: playbackPosition = Math.max(0, playbackPosition - 0.1)
-                            }
-                            Button {
-                                text: isPlaying ? "||" : ">"; font.pixelSize: 14
-                                background: Rectangle { color: "#00D4AA"; radius: 4; width: 40; height: 28 }
-                                contentItem: Text { text: parent.text; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    if (isPlaying) {
-                                        mediaController.stopStream(selectedChannel || "")
-                                    } else if (selectedChannel) {
-                                        var streamList = mediaController.channels
-                                        for (var i = 0; i < streamList.length; i++) {
-                                            if (streamList[i].name === selectedChannel || streamList[i].channelName === selectedChannel) {
-                                                mediaController.startStream(streamList[i].id || streamList[i].channelId || "", "playback")
-                                                break
-                                            }
-                                        }
-                                    } else if (mediaController.channels.length > 0) {
-                                        var s = mediaController.channels[0]
-                                        mediaController.startStream(s.id || s.channelId || "", "playback")
-                                    }
-                                }
-                            }
-                            Button {
-                                text: ">>"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
-                                contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: playbackPosition = Math.min(24, playbackPosition + 0.1)
-                            }
-                            Button {
-                                text: ">|"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 32; height: 28 }
-                                contentItem: Text { text: parent.text; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: playbackPosition = Math.min(24, playbackPosition + 1)
-                            }
-
-                            Text { text: "|"; font.pixelSize: 14; color: "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-
-                            Text { text: "速度:"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-                            ComboBox {
-                                id: speedCombo; width: 60
-                                model: ["0.5x","1x","2x","4x","8x","16x"]; currentIndex: 1
-                                background: Rectangle { color: "#252830"; radius: 4 }
-                            }
-
-                            Text { text: "|"; font.pixelSize: 14; color: "#4A4D58"; anchors.verticalCenter: parent.verticalCenter }
-
-                            Text { id: playbackTimeText; text: "00:00:00"; font.pixelSize: 12; color: "#FFB800"; font.bold: true; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: "/ 23:59:59"; font.pixelSize: 12; color: "#8B8FA3"; anchors.verticalCenter: parent.verticalCenter }
-
-                            Item { width: 20 }
-                            Button {
-                                text: "截图"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 48; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    if (selectedChannel) {
-                                        var streamList = mediaController.channels
-                                        for (var i = 0; i < streamList.length; i++) {
-                                            if (streamList[i].name === selectedChannel || streamList[i].channelName === selectedChannel) {
-                                                mediaController.snapshot(streamList[i].id || streamList[i].channelId || "")
-                                                break
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Button {
-                                text: "下载"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 48; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    // 下载当前选中的录像段
-                                    if (recordingSegments.length > 0) {
-                                        var seg = recordingSegments[0]
-                                        var recId = seg.id || seg.recording_id || seg.recordingId || ""
-                                        if (recId) {
-                                            recordingController.download(recId)
-                                        }
-                                    }
-                                }
-                            }
-                            Button {
-                                text: lockedRecordings[selectedChannel] ? "解锁" : "锁定"; font.pixelSize: 12
-                                background: Rectangle { color: lockedRecordings[selectedChannel] ? "#FFB800" : "#252830"; radius: 4; width: 52; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: lockedRecordings[selectedChannel] ? "#0D0F12" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    if (selectedChannel) {
-                                        lockedRecordings[selectedChannel] = !lockedRecordings[selectedChannel]
-                                        lockedRecordingsChanged()
-                                    }
-                                }
-                            }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 48
+                        color: "#FFFFFF"
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 16
+                            text: "录像片段 (" + root.recordings.length + ")"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "#303133"
                         }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+                    }
 
-                        // 时间轴Canvas
-                        Canvas {
-                            id: timelineCanvas
-                            width: parent.width; height: 32
+                    // 表头
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        color: "#FFFFFF"
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            spacing: 0
+                            Text { text: "开始时间"; width: 120; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "结束时间"; width: 120; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "时长"; width: 120; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "大小"; width: 120; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "操作"; width: 160; font.pixelSize: 13; color: "#909399" }
+                        }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+                    }
 
-                            onPaint: {
-                                var ctx = getContext("2d")
-                                ctx.clearRect(0, 0, width, height)
+                    // 加载态
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: root.loading
+                        BusyIndicator { running: root.loading; anchors.centerIn: parent }
+                    }
 
-                                // 背景刻度
-                                ctx.fillStyle = "#1A1D23"
-                                ctx.fillRect(0, 0, width, height)
+                    // 表体
+                    ListView {
+                        id: segTable
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: !root.loading
+                        clip: true
+                        model: root.recordings
 
-                                // 小时刻度
-                                ctx.fillStyle = "#4A4D58"
-                                ctx.font = "8px sans-serif"
-                                for (var h = 0; h <= 24; h++) {
-                                    var x = (h / 24) * width
-                                    ctx.fillRect(x, 0, 1, height)
-                                    if (h % 2 === 0) {
-                                        ctx.fillText(h + ":00", x + 2, height - 2)
-                                    }
-                                }
+                        delegate: Rectangle {
+                            width: segTable.width
+                            height: 44
+                            color: (index % 2 === 1) ? "#FAFAFA" : "#FFFFFF"
 
-                                // 录像段 — 从mediaController数据渲染
-                                var segs = recordingSegments
-                                for (var s = 0; s < segs.length; s++) {
-                                    var seg = segs[s]
-                                    var startH = seg.startTime || seg.startHour || 0
-                                    var endH = seg.endTime || seg.endHour || 0
-                                    var sx = (startH / 24) * width
-                                    var sw = ((endH - startH) / 24) * width
-                                    ctx.fillStyle = seg.type === "alarm" ? "#FF3D71" :
-                                                    seg.type === "motion" ? "#FFB800" : "#00D4AA"
-                                    ctx.globalAlpha = seg.type === "continuous" ? 0.6 : 0.9
-                                    ctx.fillRect(sx, 6, sw, 14)
-                                }
-                                ctx.globalAlpha = 1
-
-                                // 当前播放位置
-                                var playX = (playbackPosition / 24) * width
-                                if (playX > 0) {
-                                    ctx.strokeStyle = "#FF3D71"
-                                    ctx.lineWidth = 2
-                                    ctx.beginPath()
-                                    ctx.moveTo(playX, 0)
-                                    ctx.lineTo(playX, height)
-                                    ctx.stroke()
-
-                                    ctx.fillStyle = "#FF3D71"
-                                    ctx.beginPath()
-                                    ctx.moveTo(playX - 4, 0)
-                                    ctx.lineTo(playX + 4, 0)
-                                    ctx.lineTo(playX, 5)
-                                    ctx.closePath()
-                                    ctx.fill()
-                                }
-                            }
-
-                            MouseArea {
+                            RowLayout {
                                 anchors.fill: parent
-                            onClicked: {
-                                var pos = (mouseX / width) * 24
-                                playbackPosition = pos
-                                var hours = Math.floor(pos)
-                                var mins = Math.floor((pos - hours) * 60)
-                                var secs = Math.floor(((pos - hours) * 60 - mins) * 60)
-                                playbackTimeText.text = (hours < 10 ? "0" : "") + hours + ":" +
-                                                        (mins < 10 ? "0" : "") + mins + ":" +
-                                                        (secs < 10 ? "0" : "") + secs
-                                timelineCanvas.requestPaint()
-                            }
+                                anchors.leftMargin: 16
+                                spacing: 0
+                                Text { text: root.timeOnly(modelData.start_time); width: 120; font.pixelSize: 13; color: "#606266" }
+                                Text { text: root.timeOnly(modelData.end_time); width: 120; font.pixelSize: 13; color: "#606266" }
+                                Text { text: root.formatDuration(modelData); width: 120; font.pixelSize: 13; color: "#606266" }
+                                Text { text: root.formatSize(modelData.file_size); width: 120; font.pixelSize: 13; color: "#606266" }
+                                Row {
+                                    width: 160; spacing: 8
+                                    RecBtn { label: "播放"; filled: true; small: true; onTap: root.playSegment(modelData) }
+                                    RecBtn { label: "下载"; small: true; onTap: root.downloadSegment(modelData) }
+                                }
                             }
                         }
 
-                        // 图例
-                        Row {
-                            spacing: 12
-                            Text { text: "连续录像"; font.pixelSize: 12; color: "#00D4AA" }
-                            Text { text: "移动侦测"; font.pixelSize: 12; color: "#FFB800" }
-                            Text { text: "告警录像"; font.pixelSize: 12; color: "#FF3D71" }
+                        // 空态
+                        Text {
+                            visible: segTable.count === 0 && root.loadError === ""
+                            anchors.centerIn: parent
+                            text: "暂无数据"
+                            font.pixelSize: 13
+                            color: "#909399"
+                        }
+                        Text {
+                            visible: root.loadError !== ""
+                            anchors.centerIn: parent
+                            text: root.loadError
+                            font.pixelSize: 13
+                            color: "#F56C6C"
                         }
                     }
                 }
             }
-        }
 
-        // ── 录像列表 ──
-        Rectangle {
-            Layout.fillWidth: true; Layout.preferredHeight: 200
-            color: "#141720"; radius: 8
+            // ── 本地录像表 ──
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.recordingSource === "local"
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
 
-            Column {
-                anchors.fill: parent; anchors.margins: 12; spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
 
-                Text { text: "录像列表"; font.pixelSize: 14; font.bold: true; color: "#E8E8E8" }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 48
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 16
+                            text: "本地录像 (" + root.localRecordings.length + ")"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "#303133"
+                        }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+                    }
 
-                ListView {
-                    width: parent.width; height: parent.height - 30
-                    clip: true; spacing: 4
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 40
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            spacing: 0
+                            Text { text: "通道"; width: 140; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "开始时间"; width: 170; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "大小"; width: 110; font.pixelSize: 13; color: "#909399" }
+                            Text { text: "来源"; width: 90; font.pixelSize: 13; color: "#909399" }
+                        }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+                    }
 
-                    model: recordingSegments
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: root.localLoading
+                        BusyIndicator { running: root.localLoading; anchors.centerIn: parent }
+                    }
 
-                    delegate: Rectangle {
-                        width: ListView.view.width; height: 48
-                        color: "#0D0F12"; radius: 4
+                    ListView {
+                        id: localTable
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: !root.localLoading
+                        clip: true
+                        model: root.localRecordings
 
-                        Row {
-                            anchors.fill: parent; anchors.margins: 8; spacing: 12
-
-                            // 状态指示灯
-                            Rectangle {
-                                width: 10; height: 10; radius: 5
-                                color: modelData.type === "alarm" ? "#FF3D71" :
-                                      modelData.type === "motion" ? "#FFB800" : "#00D4AA"
-                                anchors.verticalCenter: parent.verticalCenter
+                        delegate: Rectangle {
+                            width: localTable.width
+                            height: 44
+                            color: (index % 2 === 1) ? "#FAFAFA" : "#FFFFFF"
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                spacing: 0
+                                Text { text: String(modelData.channel_id || "-"); width: 140; elide: Text.ElideMiddle; font.pixelSize: 13; color: "#606266" }
+                                Text { text: String(modelData.start_time || "-").replace("T", " ").substring(0, 19); width: 170; font.pixelSize: 13; color: "#606266" }
+                                Text { text: root.formatSize(modelData.file_size || modelData.file_size_bytes); width: 110; font.pixelSize: 13; color: "#606266" }
+                                Text { text: modelData.source || "-"; width: 90; font.pixelSize: 13; color: "#606266" }
                             }
+                        }
 
-                            // 通道名
-                            Text {
-                                text: modelData.channelName || modelData.channel || "—"
-                                font.pixelSize: 12; font.bold: true; color: "#E8E8E8"
-                                width: 120
-                                anchors.verticalCenter: parent.verticalCenter
+                        Text {
+                            visible: localTable.count === 0
+                            anchors.centerIn: parent
+                            text: "暂无数据"
+                            font.pixelSize: 13
+                            color: "#909399"
+                        }
+                    }
+                }
+            }
+
+            // ── 智能检索结果 ──
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.recordingSource === "smart"
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 48
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 16
+                            text: "智能检索结果 (" + root.smartResults.length + ")"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "#303133"
+                        }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: root.smartLoading
+                        BusyIndicator { running: root.smartLoading; anchors.centerIn: parent }
+                    }
+                    ListView {
+                        id: smartTable
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: !root.smartLoading
+                        clip: true
+                        model: root.smartResults
+                        delegate: Rectangle {
+                            width: smartTable.width
+                            height: 44
+                            color: (index % 2 === 1) ? "#FAFAFA" : "#FFFFFF"
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                spacing: 16
+                                Text { text: String(modelData.start_time || modelData.timestamp || "-").replace("T", " ").substring(0, 19); width: 170; font.pixelSize: 13; color: "#606266" }
+                                Text { text: modelData.alarm_type || modelData.target_type || "-"; width: 140; font.pixelSize: 13; color: "#606266" }
+                                Text { text: modelData.confidence !== undefined ? (Math.round(modelData.confidence * 100) + "%") : "-"; width: 80; font.pixelSize: 13; color: "#606266" }
+                                RecBtn { label: "播放"; filled: true; small: true; onTap: root.playSegment(modelData) }
                             }
+                        }
+                        Text {
+                            visible: smartTable.count === 0
+                            anchors.centerIn: parent
+                            text: "暂无数据 (选择设备/通道后点击“开始检索”)"
+                            font.pixelSize: 13
+                            color: "#909399"
+                        }
+                    }
+                }
+            }
 
-                            // 时间段
-                            Text {
-                                text: (modelData.startTime !== undefined ? modelData.startTime : "—") + " - " +
-                                      (modelData.endTime !== undefined ? modelData.endTime : "—")
-                                font.pixelSize: 12; color: "#8B8FA3"
-                                width: 160
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
+            // ── 录像计划 ──
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.recordingSource === "schedule"
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
 
-                            // 事件类型
-                            Text {
-                                text: modelData.type === "alarm" ? "告警录像" :
-                                      modelData.type === "motion" ? "移动侦测" : "连续录像"
-                                font.pixelSize: 12; color: "#FFB800"
-                                width: 80
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            // 大小
-                            Text {
-                                text: modelData.size ? modelData.size : "—"
-                                font.pixelSize: 12; color: "#8B8FA3"
-                                width: 80
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-
-                            Item { width: 20 }
-
-                            // 播放按钮
-                            Button {
-                                text: ">"; font.pixelSize: 12
-                                background: Rectangle { color: "#00D4AA"; radius: 4; width: 28; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#0D0F12"; font.bold: true; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    if (modelData.channelId || modelData.channel_id) {
-                                        mediaController.startStream(modelData.channelId || modelData.channel_id, "playback")
-                                    }
-                                }
-                            }
-
-                            // 锁定按钮
-                            Button {
-                                text: locked ? "L" : ""; font.pixelSize: 12
-                                background: Rectangle { color: lockedRecordings[modelData.id] ? "#FFB800" : "#252830"; radius: 4; width: 28; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: lockedRecordings[modelData.id] ? "#0D0F12" : "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    if (modelData.id) {
-                                        lockedRecordings[modelData.id] = !lockedRecordings[modelData.id]
-                                        lockedRecordingsChanged()
-                                    }
-                                }
-                            }
-
-                            // 下载按钮
-                            Button {
-                                text: "DL"; font.pixelSize: 12
-                                background: Rectangle { color: "#252830"; radius: 4; width: 28; height: 24 }
-                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#E8E8E8"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                                onClicked: {
-                                    // 调用录像下载API
-                                    var recId = modelData.id || modelData.recording_id || modelData.recordingId || ""
-                                    if (recId) {
-                                        recordingController.download(recId)
-                                    }
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 0
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 48
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 16
+                            text: "录像计划 (" + root.schedules.length + ")"
+                            font.pixelSize: 14
+                            font.bold: true
+                            color: "#303133"
+                        }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.left: parent.left; anchors.right: parent.right; height: 1; color: "#EBEEF5" }
+                    }
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: root.scheduleLoading
+                        BusyIndicator { running: root.scheduleLoading; anchors.centerIn: parent }
+                    }
+                    ListView {
+                        id: scheduleTable
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: !root.scheduleLoading
+                        clip: true
+                        model: root.schedules
+                        delegate: Rectangle {
+                            width: scheduleTable.width
+                            height: 44
+                            color: (index % 2 === 1) ? "#FAFAFA" : "#FFFFFF"
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                spacing: 16
+                                Text { text: modelData.schedule_name || modelData.id || "-"; width: 200; elide: Text.ElideRight; font.pixelSize: 13; color: "#303133" }
+                                Text { text: String(modelData.channel_id || "-"); width: 200; elide: Text.ElideMiddle; font.pixelSize: 13; color: "#606266" }
+                                Rectangle {
+                                    width: schTag.implicitWidth + 16; height: 22; radius: 3
+                                    color: modelData.enabled ? "#F0F9EB" : "#F4F4F5"
+                                    border.color: modelData.enabled ? "#E1F3D8" : "#E9E9EB"
+                                    Text { id: schTag; anchors.centerIn: parent; text: modelData.enabled ? "启用" : "停用"; font.pixelSize: 12; color: modelData.enabled ? "#67C23A" : "#909399" }
                                 }
                             }
                         }
+                        Text {
+                            visible: scheduleTable.count === 0
+                            anchors.centerIn: parent
+                            text: "暂无数据 (点击“加载计划”查询)"
+                            font.pixelSize: 13
+                            color: "#909399"
+                        }
                     }
+                }
+            }
 
-                    // 空状态
+            // ── 存储预估 (当前版本无后端能力, 如实呈现) ──
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.recordingSource === "storage"
+                color: "#FFFFFF"
+                radius: 4
+                border.color: "#EBEEF5"
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    AppIcon { name: "record"; size: 40; iconColor: "#C0C4CC"; anchors.horizontalCenter: parent.horizontalCenter }
                     Text {
-                        anchors.centerIn: parent
-                        text: "暂无录像数据"
-                        font.pixelSize: 14; color: "#4A4D58"
-                        visible: recordingSegments.length === 0
+                        text: "存储预估能力当前版本暂不可用"
+                        font.pixelSize: 13
+                        color: "#909399"
+                        anchors.horizontalCenter: parent.horizontalCenter
                     }
                 }
             }
         }
+    }
+
+    // ═══ 内联组件 ═══
+    component RecBtn: Rectangle {
+        property string label: ""
+        property bool filled: false
+        property bool small: false
+        signal tap()
+        width: recBtnText.implicitWidth + (small ? 16 : 24)
+        height: small ? 24 : 32
+        radius: 4
+        color: filled ? (recBtnMa.containsMouse ? "#66B1FF" : "#409EFF")
+             : (recBtnMa.containsMouse ? "#F5F7FA" : "#FFFFFF")
+        border.color: filled ? "#409EFF" : "#DCDFE6"
+        Text {
+            id: recBtnText
+            anchors.centerIn: parent
+            text: label
+            font.pixelSize: small ? 12 : 13
+            color: filled ? "#FFFFFF" : "#606266"
+        }
+        MouseArea {
+            id: recBtnMa
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: tap()
+        }
+    }
+
+    component RecSelect: Item {
+        id: selRoot
+        property int selectWidth: 200
+        property string placeholder: ""
+        property var optionModel: []
+        property string currentLabel: ""
+        signal optionSelected(string label, int index)
+        width: selectWidth
+        height: 32
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 4
+            color: "#FFFFFF"
+            border.color: selMa.containsMouse ? "#C0C4CC" : "#DCDFE6"
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 8
+                spacing: 4
+                Text {
+                    Layout.fillWidth: true
+                    text: selRoot.currentLabel !== "" ? selRoot.currentLabel : selRoot.placeholder
+                    font.pixelSize: 13
+                    color: selRoot.currentLabel !== "" ? "#303133" : "#C0C4CC"
+                    elide: Text.ElideRight
+                }
+                AppIcon { name: "chevronDown"; size: 12; iconColor: "#C0C4CC" }
+            }
+            MouseArea {
+                id: selMa
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: selPopup.visible ? selPopup.close() : selPopup.open()
+            }
+        }
+
+        Popup {
+            id: selPopup
+            y: selRoot.height + 4
+            width: Math.max(selRoot.width, 200)
+            padding: 5
+            background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#E4E7ED" }
+            Flickable {
+                width: parent.width
+                height: Math.min(selCol.implicitHeight, 240)
+                contentWidth: width
+                contentHeight: selCol.implicitHeight
+                clip: true
+                Column {
+                    id: selCol
+                    width: parent.width
+                    Repeater {
+                        model: selRoot.optionModel
+                        delegate: Rectangle {
+                            width: selPopup.width - 10
+                            height: 30
+                            radius: 3
+                            color: selItemMa.containsMouse ? "#F5F7FA" : "transparent"
+                            Text {
+                                anchors.fill: parent
+                                anchors.leftMargin: 8
+                                verticalAlignment: Text.AlignVCenter
+                                text: modelData
+                                font.pixelSize: 13
+                                elide: Text.ElideMiddle
+                                color: (modelData === selRoot.currentLabel) ? "#409EFF" : "#606266"
+                            }
+                            MouseArea {
+                                id: selItemMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    selRoot.currentLabel = modelData
+                                    selRoot.optionSelected(modelData, index)
+                                    selPopup.close()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ═══ 回放弹窗 ═══
+    Rectangle {
+        id: playbackDialog
+        visible: false
+        anchors.fill: parent
+        color: "#CC000000"
+        z: 100
+
+        Rectangle {
+            width: Math.min(parent.width - 80, 960)
+            height: Math.min(parent.height - 80, 600)
+            anchors.centerIn: parent
+            color: "#000000"
+            radius: 4
+
+            MediaPlayer {
+                id: playbackPlayer
+                source: root.playbackUrl
+                autoPlay: true
+                videoOutput: playbackVideo
+                onErrorOccurred: function (error, errorString) {
+                    console.warn("[RecordingView] playback error:", error, errorString)
+                }
+            }
+            VideoOutput {
+                id: playbackVideo
+                anchors.fill: parent
+                anchors.bottomMargin: 44
+            }
+
+            // 底部控制条
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 44
+                color: "#1A1A1A"
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    spacing: 12
+                    Text {
+                        text: root.playbackUrl
+                        Layout.fillWidth: true
+                        elide: Text.ElideMiddle
+                        font.pixelSize: 12
+                        color: "#C0C4CC"
+                    }
+                    RecBtn {
+                        label: playbackPlayer.playbackState === MediaPlayer.PlayingState ? "暂停" : "播放"
+                        small: true
+                        onTap: {
+                            if (playbackPlayer.playbackState === MediaPlayer.PlayingState)
+                                playbackPlayer.pause()
+                            else
+                                playbackPlayer.play()
+                        }
+                    }
+                    RecBtn { label: "关闭"; small: true; onTap: root.stopPlayback() }
+                }
+            }
+        }
+    }
+
+    // ═══ Toast ═══
+    Rectangle {
+        id: toastBox
+        visible: false
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 28
+        width: toastMsg.implicitWidth + 32
+        height: 36
+        radius: 4
+        color: "#FFFFFF"
+        border.color: "#EBEEF5"
+        z: 200
+        Text {
+            id: toastMsg
+            anchors.centerIn: parent
+            font.pixelSize: 13
+            color: "#606266"
+        }
+    }
+    Timer {
+        id: toastTimer
+        interval: 2500
+        onTriggered: toastBox.visible = false
     }
 }

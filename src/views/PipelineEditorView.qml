@@ -833,38 +833,54 @@ Item {
                                 Row {
                                     anchors.verticalCenter: parent.verticalCenter
                                     spacing: 12
-                                    Text {
-                                        text: "编辑"; font.pixelSize: 13; color: "#409EFF"
-                                        MouseArea {
-                                            anchors.fill: parent; anchors.margins: -4
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.openEditor(modelData)
+                                    // [P2-#17 v7.6+] pipeline.edit 权限检查
+                                    PermissionCheck {
+                                        perm: "pipeline.edit"; mode: "disable"
+                                        Text {
+                                            text: "编辑"; font.pixelSize: 13; color: "#409EFF"
+                                            MouseArea {
+                                                anchors.fill: parent; anchors.margins: -4
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.openEditor(modelData)
+                                            }
                                         }
                                     }
-                                    Text {
-                                        visible: root.isDeployable(modelData.deploy_state)
-                                        text: "部署"; font.pixelSize: 13; color: "#67C23A"
-                                        MouseArea {
-                                            anchors.fill: parent; anchors.margins: -4
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.deployRow(modelData)
+                                    // [P2-#17 v7.6+] pipeline.deploy 权限检查
+                                    PermissionCheck {
+                                        perm: "pipeline.deploy"; mode: "disable"
+                                        Text {
+                                            visible: root.isDeployable(modelData.deploy_state)
+                                            text: "部署"; font.pixelSize: 13; color: "#67C23A"
+                                            MouseArea {
+                                                anchors.fill: parent; anchors.margins: -4
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.deployRow(modelData)
+                                            }
                                         }
                                     }
-                                    Text {
-                                        visible: root.isStoppable(modelData.deploy_state)
-                                        text: "停止"; font.pixelSize: 13; color: "#E6A23C"
-                                        MouseArea {
-                                            anchors.fill: parent; anchors.margins: -4
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.stopRow(modelData)
+                                    // [P2-#17 v7.6+] pipeline.stop 权限检查
+                                    PermissionCheck {
+                                        perm: "pipeline.deploy"; mode: "disable"
+                                        Text {
+                                            visible: root.isStoppable(modelData.deploy_state)
+                                            text: "停止"; font.pixelSize: 13; color: "#E6A23C"
+                                            MouseArea {
+                                                anchors.fill: parent; anchors.margins: -4
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.stopRow(modelData)
+                                            }
                                         }
                                     }
-                                    Text {
-                                        text: "删除"; font.pixelSize: 13; color: "#F56C6C"
-                                        MouseArea {
-                                            anchors.fill: parent; anchors.margins: -4
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: { root.deleteTarget = modelData; deleteDialog.open() }
+                                    // [P2-#17 v7.6+] pipeline.delete 权限检查
+                                    PermissionCheck {
+                                        perm: "pipeline.delete"; mode: "disable"
+                                        Text {
+                                            text: "删除"; font.pixelSize: 13; color: "#F56C6C"
+                                            MouseArea {
+                                                anchors.fill: parent; anchors.margins: -4
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: { root.deleteTarget = modelData; deleteDialog.open() }
+                                            }
                                         }
                                     }
                                 }

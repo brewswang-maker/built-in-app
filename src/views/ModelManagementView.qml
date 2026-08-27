@@ -200,13 +200,18 @@ Item {
                         }
                     }
                     Item { Layout.fillWidth: true }
-                    Rectangle {
-                        width: uploadBtnText.implicitWidth + 28
-                        height: 32
-                        radius: 4
-                        color: uploadMa.containsMouse ? "#66B1FF" : "#409EFF"
-                        Text { id: uploadBtnText; anchors.centerIn: parent; text: "上传模型"; font.pixelSize: 13; color: "#FFFFFF" }
-                        MouseArea { id: uploadMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.showUploadDialog = true }
+                    // [P2-#17 v7.6+] 模型上传按钮: RBAC 模型上传权限检查
+                    PermissionCheck {
+                        perm: "model.upload"; mode: "disable"
+                        Layout.preferredHeight: 32
+                        Rectangle {
+                            width: uploadBtnText.implicitWidth + 28
+                            height: 32
+                            radius: 4
+                            color: uploadMa.containsMouse ? "#66B1FF" : "#409EFF"
+                            Text { id: uploadBtnText; anchors.centerIn: parent; text: "上传模型"; font.pixelSize: 13; color: "#FFFFFF" }
+                            MouseArea { id: uploadMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.showUploadDialog = true }
+                        }
                     }
                 }
 
@@ -374,27 +379,38 @@ Item {
                             Row {
                                 width: 240; spacing: 8
                                 // 激活 (status !== active) / 卸载 (status === active)
-                                ModelBtn {
-                                    visible: (modelData.status || "") !== "active"
-                                    label: "激活"
-                                    btnColor: "#67C23A"
-                                    onTap: root.activateModel(modelData)
+                                // [P2-#17 v7.6+] model.activate 权限检查
+                                PermissionCheck {
+                                    perm: "model.activate"; mode: "disable"
+                                    ModelBtn {
+                                        visible: (modelData.status || "") !== "active"
+                                        label: "激活"
+                                        btnColor: "#67C23A"
+                                        onTap: root.activateModel(modelData)
+                                    }
                                 }
-                                ModelBtn {
-                                    visible: (modelData.status || "") === "active"
-                                    label: "卸载"
-                                    btnColor: "#E6A23C"
-                                    onTap: root.deactivateModel(modelData)
+                                PermissionCheck {
+                                    perm: "model.activate"; mode: "disable"
+                                    ModelBtn {
+                                        visible: (modelData.status || "") === "active"
+                                        label: "卸载"
+                                        btnColor: "#E6A23C"
+                                        onTap: root.deactivateModel(modelData)
+                                    }
                                 }
                                 ModelBtn {
                                     label: "详情"
                                     plain: true
                                     onTap: { root.detailModel = modelData; detailDrawer.visible = true }
                                 }
-                                ModelBtn {
-                                    label: "删除"
-                                    btnColor: "#F56C6C"
-                                    onTap: { root.deleteTarget = modelData; deleteDialog.visible = true }
+                                // [P2-#17 v7.6+] model.delete 权限检查
+                                PermissionCheck {
+                                    perm: "model.delete"; mode: "disable"
+                                    ModelBtn {
+                                        label: "删除"
+                                        btnColor: "#F56C6C"
+                                        onTap: { root.deleteTarget = modelData; deleteDialog.visible = true }
+                                    }
                                 }
                             }
                         }

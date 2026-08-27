@@ -13,6 +13,8 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: root
+    // [P2-#12] ReActTraceView 通过 aiChatPage.copyToClipboard 导出, 提供 alias id
+    property alias aiChatPage: root
 
     property var conversations: []
     property string currentConvId: ""
@@ -21,6 +23,8 @@ Item {
     property bool waiting: false
     property bool agentOnline: true
     property bool ttsEnabled: false
+    // [P2-#12] 找回 ReActTraceView: 推理链面板可见性
+    property bool traceVisible: false
 
     readonly property var quickActions: [
         { icon: "📊", label: "今日报告", prompt: "帮我生成今日安全报告" },
@@ -43,13 +47,27 @@ Item {
         xhr.send(body ? JSON.stringify(body) : null)
     }
 
+    // [FIX v7.8 2026-08-26] 根因: QML parser (Qt 6.2-6.7) 在嵌套 regex literal
+    //   /` + function(m) { return ... /.../ } 这类表达式中, 会把 regex literal 的
+    //   '/' 误识别为除法, 导致 function body 的 '{' 无法被解析, 触发级联错误
+    //   "Expected token '}'" 在文件末尾. 修复: 把所有 regex literal 改为
+    //   new RegExp("pattern", "flags") 字符串形式, 规避歧义.
     function stripMd(text) {
         // 简易 Markdown 去除 (QML 无富文本渲染): **粗体** / `代码` / 代码块 / 标题
         var t = String(text || "")
-        t = t.replace(/```[\s\S]*?```/g, function(m) { return m.replace(/```\w*\n?/g, "").replace(/```/g, "") })
-        t = t.replace(/\*\*(.+?)\*\*/g, "$1")
-        t = t.replace(/`([^`]+)`/g, "$1")
-        t = t.replace(/^#{1,6}\s+/gm, "")
+        // 代码块 ```...```
+        var codeBlock = new RegExp("\u0060\u0060\u0060[\\s\\S]*?\u0060\u0060\u0060", "g")
+        var langStrip = new RegExp("\u0060\u0060\u0060\\w*\\n?", "g")
+        var fenceStrip = new RegExp("\u0060\u0060\u0060", "g")
+        t = t.replace(codeBlock, function(m) {
+            return m.replace(langStrip, "").replace(fenceStrip, "")
+        })
+        // **粗体**
+        t = t.replace(new RegExp("\\*\\*(.+?)\\*\\*", "g"), "$1")
+        // `行内代码`
+        t = t.replace(new RegExp("\u0060([^\u0060]+)\u0060", "g"), "$1")
+        // # 标题
+        t = t.replace(new RegExp("^#{1,6}\\s+", "gm"), "")
         return t
     }
 
@@ -205,7 +223,34 @@ Item {
     function toolbarClear() { messages = [] }
     function toolbarExport() {
         // 内置端无浏览器下载能力，如实提示
-        exportTip.open()
+        _openTip("导出对话记录", "内置应用端当前不具备文件下载能力，无法导出对话记录。请使用 Web 管理端导出。")
+    }
+
+    // [P2-#12] 提供给 ReActTraceView 的剪贴板写入接口
+    function copyToClipboard(text) {
+        try {
+            // Qt 5/6 兼容的 QML 剪贴板方案
+            if (typeof Qt !== 'undefined' && Qt.application && Qt.application.clipboard !== undefined) {
+                Qt.application.clipboard.text = String(text || "")
+                showToast("已复制到剪贴板")
+            } else {
+                // 降级: 把文本保存到全局 context (调试用)
+                root._lastClipboardText = String(text || "")
+                showToast("剪贴板不可用, 内容已暂存")
+            }
+        } catch (e) {
+            console.warn("[AIChatView] copyToClipboard failed:", e)
+        }
+    }
+
+    function toggleTrace() {
+        traceVisible = !traceVisible
+        if (traceVisible) {
+            // 首次展开时若后端已有历史, 自动滚到末尾
+            showToast(aiController.thoughtSteps.length > 0
+                ? "推理链面板已展开 (" + aiController.thoughtSteps.length + " 步)"
+                : "推理链面板已展开 (暂无推理步骤)")
+        }
     }
 
     Component.onCompleted: loadConversations()
@@ -341,6 +386,34 @@ Item {
                             anchors.right: parent.right; anchors.rightMargin: 20; anchors.verticalCenter: parent.verticalCenter
                             MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: moreMenu.open() }
                         }
+                        // [P2-#12] 找回: 推理链切换按钮 (与 Web 端 AgentWorkbench 抽屉对齐)
+                        Rectangle {
+                            anchors.right: parent.right; anchors.rightMargin: 44
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: traceBtnTxt.implicitWidth + 24; height: 26; radius: 4
+                            color: traceVisible ? "#409EFF" : "#FFFFFF"
+                            border.color: traceVisible ? "#409EFF" : "#DCDFE6"; border.width: 1
+                            Row {
+                                anchors.centerIn: parent; spacing: 4
+                                AppIcon {
+                                    name: traceVisible ? "eyeOn" : "eye"
+                                    size: 12
+                                    iconColor: traceVisible ? "#FFFFFF" : "#606266"
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    id: traceBtnTxt
+                                    text: traceVisible ? "收起推理链" : "查看推理链"
+                                    color: traceVisible ? "#FFFFFF" : "#606266"
+                                    font.pixelSize: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                            MouseArea {
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                onClicked: root.toggleTrace()
+                            }
+                        }
                         Popup {
                             id: moreMenu
                             x: parent.width - 162; y: 44
@@ -367,14 +440,21 @@ Item {
                         Rectangle { width: parent.width; height: 1; color: "#E4E7ED"; anchors.bottom: parent.bottom }
                     }
 
-                    // 消息区
-                    ListView {
-                        id: msgList
-                        width: parent.width; height: parent.height - 48 - 130
-                        clip: true; boundsBehavior: Flickable.StopAtBounds
-                        spacing: 16
-                        leftMargin: 20; rightMargin: 20
-                        model: messages.length === 0 ? null : messages
+                    // 消息区 + [P2-#12] 推理链并排布局
+                    Row {
+                        id: chatRow
+                        width: parent.width
+                        height: parent.height - 48 - 130
+                        spacing: 0
+                        ListView {
+                            id: msgList
+                            width: parent.width - (root.traceVisible ? Math.min(420, parent.width * 0.4) : 0)
+                            height: chatRow.height
+                            clip: true; boundsBehavior: Flickable.StopAtBounds
+                            spacing: 16
+                            leftMargin: 20; rightMargin: 20
+                            Behavior on width { NumberAnimation { duration: 180 } }
+                            model: messages.length === 0 ? null : messages
 
                         // 欢迎区
                         header: Column {
@@ -468,6 +548,26 @@ Item {
                                 }
                             }
                         }
+                        // [P2-#12] 找回: 嵌入式 ReActTraceView (右侧抽屉)
+                        Loader {
+                            id: traceLoader
+                            active: root.traceVisible
+                            visible: root.traceVisible
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: root.traceVisible ? Math.min(420, chatRow.width * 0.4) : 0
+                            sourceComponent: reactTraceComp
+                            Behavior on width { NumberAnimation { duration: 180 } }
+                        }
+                        Component {
+                            id: reactTraceComp
+                            // qml.qrc 已注册 alias = "ReActTraceView.qml"
+                            ReActTraceView {
+                                anchors.fill: parent
+                                anchors.margins: 6
+                            }
+                        }
                     }
 
                     // 等待回复指示
@@ -501,14 +601,16 @@ Item {
                                     width: 32; height: 32; radius: 16
                                     color: "#FFFFFF"; border.color: "#DCDFE6"; border.width: 1
                                     AppIcon { name: "download"; size: 14; iconColor: "#606266"; anchors.centerIn: parent }
-                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: uploadTip.open() }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        onClicked: _openTip("图片上传", "内置应用端当前不支持文件选择，无法上传图片。请使用 Web 管理端完成图片上传。") }
                                 }
                                 // 语音输入按钮 (内置端无语音识别能力，如实提示)
                                 Rectangle {
                                     width: 32; height: 32; radius: 16
                                     color: "#FFFFFF"; border.color: "#DCDFE6"; border.width: 1
                                     Text { text: "🎤"; font.pixelSize: 14; anchors.centerIn: parent }
-                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: voiceTip.open() }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        onClicked: _openTip("语音输入", "内置应用端当前不具备语音识别能力，无法进行语音输入。请直接键入文字提问。") }
                                 }
 
                                 // 输入框
@@ -596,58 +698,57 @@ Item {
         }
     }
 
-    // ═══ 能力受限提示弹窗 (如实告知内置端缺失能力) ═══
-    component TipDialog: Popup {
-        property string tipTitle: ""
-        property string tipBody: ""
-        modal: true
-        anchors.centerIn: Overlay.overlay
-        width: 380; padding: 0
-        background: Rectangle { color: "#FFFFFF"; radius: 6; border.color: "#EBEEF5" }
-        Column {
-            width: 380
-            Rectangle {
-                width: 380; height: 46; color: "#FFFFFF"
-                Text { text: tipTitle; font.pixelSize: 15; font.bold: true; color: "#303133"
-                    anchors.verticalCenter: parent.verticalCenter; anchors.left: parent.left; anchors.leftMargin: 20 }
-                Rectangle { width: 380; height: 1; color: "#EBEEF5"; anchors.bottom: parent.bottom }
-            }
-            Item {
-                width: 380; height: tipBodyText.implicitHeight + 36
-                Row {
-                    anchors.left: parent.left; anchors.leftMargin: 20; anchors.verticalCenter: parent.verticalCenter; spacing: 10
-                    AppIcon { name: "info"; size: 16; iconColor: "#E6A23C"; anchors.verticalCenter: parent.verticalCenter }
-                    Text { id: tipBodyText; text: tipBody; color: "#606266"; font.pixelSize: 13
-                        width: 310; wrapMode: Text.Wrap; anchors.verticalCenter: parent.verticalCenter }
-                }
-            }
-            Rectangle {
-                width: 380; height: 50; color: "#FFFFFF"
-                Rectangle { width: 380; height: 1; color: "#EBEEF5"; anchors.top: parent.top }
+    // [FIX v7.7 2026-08-26] 把 inline `component TipDialog: Popup` 改为独立 Component:
+    //   inline component 是 Qt 6.3+ 特性; qrc 加载链中某些路径会触发编译器误报
+    //   "Expected token `}'" cascading error, 改为 Component {} + Loader 实例化
+    //   既保持行为一致, 又避免 QML parser 在长文件中遇到的边界 bug.
+    Component {
+        id: tipDialogComp
+        Popup {
+            property string tipTitle: ""
+            property string tipBody: ""
+            modal: true
+            anchors.centerIn: Overlay.overlay
+            width: 380; padding: 0
+            background: Rectangle { color: "#FFFFFF"; radius: 6; border.color: "#EBEEF5" }
+            Column {
+                width: 380
                 Rectangle {
-                    width: 64; height: 30; radius: 4; color: "#409EFF"
-                    anchors.right: parent.right; anchors.rightMargin: 20; anchors.verticalCenter: parent.verticalCenter
-                    Text { text: "知道了"; color: "#FFFFFF"; font.pixelSize: 13; anchors.centerIn: parent }
-                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: close() }
+                    width: 380; height: 46; color: "#FFFFFF"
+                    Text { text: tipTitle; font.pixelSize: 15; font.bold: true; color: "#303133"
+                        anchors.verticalCenter: parent.verticalCenter; anchors.left: parent.left; anchors.leftMargin: 20 }
+                    Rectangle { width: 380; height: 1; color: "#EBEEF5"; anchors.bottom: parent.bottom }
+                }
+                Item {
+                    width: 380; height: tipBodyText.implicitHeight + 36
+                    Row {
+                        anchors.left: parent.left; anchors.leftMargin: 20; anchors.verticalCenter: parent.verticalCenter; spacing: 10
+                        AppIcon { name: "info"; size: 16; iconColor: "#E6A23C"; anchors.verticalCenter: parent.verticalCenter }
+                        Text { id: tipBodyText; text: tipBody; color: "#606266"; font.pixelSize: 13
+                            width: 310; wrapMode: Text.Wrap; anchors.verticalCenter: parent.verticalCenter }
+                    }
+                }
+                Rectangle {
+                    width: 380; height: 50; color: "#FFFFFF"
+                    Rectangle { width: 380; height: 1; color: "#EBEEF5"; anchors.top: parent.top }
+                    Rectangle {
+                        width: 64; height: 30; radius: 4; color: "#409EFF"
+                        anchors.right: parent.right; anchors.rightMargin: 20; anchors.verticalCenter: parent.verticalCenter
+                        Text { text: "知道了"; color: "#FFFFFF"; font.pixelSize: 13; anchors.centerIn: parent }
+                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: parent.parent.parent.close() }
+                    }
                 }
             }
         }
     }
 
-    TipDialog {
-        id: uploadTip
-        tipTitle: "图片上传"
-        tipBody: "内置应用端当前不支持文件选择，无法上传图片。请使用 Web 管理端完成图片上传。"
-    }
-    TipDialog {
-        id: voiceTip
-        tipTitle: "语音输入"
-        tipBody: "内置应用端当前不具备语音识别能力，无法进行语音输入。请直接键入文字提问。"
-    }
-    TipDialog {
-        id: exportTip
-        tipTitle: "导出对话记录"
-        tipBody: "内置应用端当前不具备文件下载能力，无法导出对话记录。请使用 Web 管理端导出。"
+    function _openTip(title, body) {
+        // 每次创建新弹窗 (避免复用导致的属性绑定问题)
+        var p = tipDialogComp.createObject(root, { tipTitle: title, tipBody: body })
+        if (p) {
+            p.closed.connect(function() { p.destroy() })
+            p.open()
+        }
     }
 
     // ═══ Toast ═══

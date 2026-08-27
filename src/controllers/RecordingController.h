@@ -58,6 +58,9 @@ public:
     Q_INVOKABLE void stopRecord(const QString& channelId);
     Q_INVOKABLE void download(const QString& recordingId);
     Q_INVOKABLE void batchDownload(const QVariantList& recordingIds);
+    // [P2-#13 v7.6+] MP4 下载: 通过 GET /api/v1/recordings/:id/download 拿 url, 再用 ApiClient.downloadToFile 落盘
+    //  localPath 为本地绝对路径, 空则使用 QStandardPaths::DownloadLocation/<recordingId>.mp4
+    Q_INVOKABLE void exportClip(const QString& recordingId, const QString& localPath = QString());
     Q_INVOKABLE void addTag(const QString& recordingId, const QString& tag);
     Q_INVOKABLE void deleteRecording(const QString& recordingId);
 
@@ -70,6 +73,10 @@ signals:
     void downloadReady(const QString& url);
     void targetTypesUpdated();
     void errorOccurred(int code, const QString& message);
+    // [P2-#13 v7.6+] MP4 导出进度 / 完成 / 失败
+    void exportClipProgress(const QString& recordingId, qint64 received, qint64 total);
+    void exportClipFinished(const QString& recordingId, const QString& localPath, qint64 bytes);
+    void exportClipFailed(const QString& recordingId, int code, const QString& reason);
 
 private:
     void setLoading(bool v);

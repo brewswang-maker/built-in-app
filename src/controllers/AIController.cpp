@@ -9,10 +9,15 @@
 AIController::AIController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {
     // 订阅 Hermes Agent 异步消息推送 (规范 b4ced019 type=agent_message)
+    // [FIX v7.6 2026-08-26] 同步补齐 9 类路由中缺失的 config_update / error 两类
     m_wsRouter = WsMessageRouter::instance();
     if (m_wsRouter) {
         QObject::connect(m_wsRouter, &WsMessageRouter::agentMessageReceived,
                          this, &AIController::onAgentMessageReceived);
+        QObject::connect(m_wsRouter, &WsMessageRouter::configUpdateReceived,
+                         this, &AIController::onConfigUpdateReceived);
+        QObject::connect(m_wsRouter, &WsMessageRouter::errorReceived,
+                         this, &AIController::onErrorReceived);
     }
 }
 
@@ -406,4 +411,36 @@ void AIController::generateReport(const QVariantMap& params) {
     m_api->post("/api/v1/ai/report/generate", QJsonObject::fromVariantMap(params),
         [](QJsonObject) {},
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+// [FIX v7.6 2026-08-26] 配置热更新 (WsMessageRouter:config_update)
+// payload 形态: { namespace, key, version, action: "updated"|"deleted" }
+// 命名约定参考 后端 wsAdapter.pushConfigUpdate:
+//   payload = { kind:"ai_model"|"alarm_rule"|"device_cfg"|..., id, version, action }
+void AIController::onConfigUpdateReceived(const QJsonObject& payload) {
+    QString kind = payload.value("kind").toString();
+    if (kind.isEmpty()) kind = payload.value("namespace").toString();
+    QString action = payload.value("action").toString();
+    qInfo() << "[AIController] config_update kind=" << kind << "action=" << action;
+
+    // AI 配置热更新 → 刷新可用模型/工具列表
+    if (kind == "ai_model" || kind == "ai_models" || kind == "ai_tool" || kind == "ai_tools") {
+        refreshModels();
+        if (kind.startsWith("ai_tool")) refreshTools();
+        return;
+    }
+    // 通用提示: 通过 errorOccurred 通道上报,但 code=0 表示不是错误
+    emit sessionsUpdated();
+}
+
+// [FIX v7.6 2026-08-26] 错误中心入口 (WsMessageRouter:error)
+// payload 形态: { code, message, source: "ai"|"stream"|"device"|..., ts }
+// 集中上报 Controller 错误日志,以便 UI 端顶部错误条统一提示
+void AIController::onErrorReceived(const QJsonObject& payload) {
+    int code = payload.value("code").toInt(500);
+    QString message = payload.value("message").toString();
+    QString source = payload.value("source").toString();
+    if (message.isEmpty()) message = QString("server.error code=%1 source=%2").arg(code).arg(source);
+    qWarning() << "[AIController] error_received:" << source << "code=" << code << message;
+    emit errorOccurred(code, message);
 }

@@ -2,6 +2,9 @@
 #include "utils/ApiClient.h"
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QStandardPaths>
+#include <QDir>
+#include <QUrl>
 
 RecordingController::RecordingController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {}
@@ -209,4 +212,45 @@ void RecordingController::deleteRecording(const QString& recordingId) {
     m_api->del(QString("/api/v1/recordings/%1").arg(recordingId),
         [this]() { refreshRecordings(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+// [P2-#13 v7.6+] MP4 导出:
+//   步骤 1: GET /api/v1/recordings/:id/download → {url}
+//   步骤 2: 用 ApiClient.downloadToFile 把 url 内容流式落盘到 localPath
+//   与 Web 端 ExportClipButton 行为对齐 (下载进度 + 完成提示)
+void RecordingController::exportClip(const QString& recordingId, const QString& localPath) {
+    // 计算默认本地路径
+    QString path = localPath;
+    if (path.isEmpty()) {
+        QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+        if (dlDir.isEmpty()) dlDir = QDir::homePath() + "/Downloads";
+        QDir().mkpath(dlDir);
+        path = dlDir + "/" + recordingId + ".mp4";
+    }
+
+    auto self = this;
+    m_api->get(QString("/api/v1/recordings/%1/download").arg(recordingId),
+        [self, recordingId, path](QJsonObject obj) {
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QString url = data.value("url").toString();
+            if (url.isEmpty()) url = data.value("download_url").toString();
+            if (url.isEmpty()) {
+                emit self->exportClipFailed(recordingId, 404, "后端未返回下载 URL");
+                return;
+            }
+            // 第二步: 流式下载到本地
+            self->m_api->downloadToFile(url, path,
+                [self, recordingId](qint64 received, qint64 total) {
+                    emit self->exportClipProgress(recordingId, received, total);
+                },
+                [self, recordingId, path](qint64 bytes, const QString& finalPath) {
+                    emit self->exportClipFinished(recordingId, finalPath.isEmpty() ? path : finalPath, bytes);
+                },
+                [self, recordingId](qint64 /*bytes*/, int httpCode, const QString& reason) {
+                    emit self->exportClipFailed(recordingId, httpCode, reason);
+                });
+        },
+        [self, recordingId](int code, QString msg) {
+            emit self->exportClipFailed(recordingId, code, msg);
+        });
 }

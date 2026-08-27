@@ -115,6 +115,10 @@ private slots:
     void onSseFinished();
     // WS 路由订阅 (规范 b4ced019: agent_message — Hermes 异步推送)
     void onAgentMessageReceived(const QJsonObject& payload);
+    // [FIX v7.6 2026-08-26] 配置热更新通知 → 触发全量刷新(WsMessageRouter 9 类路由补齐)
+    void onConfigUpdateReceived(const QJsonObject& payload);
+    // [FIX v7.6 2026-08-26] 服务端推送错误 → 错误中心(AI 模型加载失败等)
+    void onErrorReceived(const QJsonObject& payload);
 
 private:
     void resetStreamBuffers();

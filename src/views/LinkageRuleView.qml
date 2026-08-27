@@ -1133,6 +1133,11 @@ Item {
     }
 
     // ═══ 动作参数配置弹窗 (P1-#1 v3.0 R1 补齐) ═══
+    // [P0-#1 v7.6+] SYS_× 12 类动作参数化已统一支持:
+    //   - 后端 box-sdk/data/action_schemas.json 提供 12 类 schema (SYS_MQTT_PUBLISH / SYS_MODBUS_WRITE / SYS_ONVIF_TRIGGER / SYS_RELAY_SWITCH / SYS_HTTP_CALLBACK / SYS_CLOUD_FORWARD / SYS_START_INFERENCE / SYS_STOP_INFERENCE / SYS_START_STREAM / SYS_STOP_STREAM / SYS_DEPLOY_PIPELINE / SYS_UNDEPLOY_PIPELINE)
+    //   - 前端 loadActionSchemas() GET /api/v1/linkage/action-schemas 加载
+    //   - ActionParamDialog 按 schema.fields 动态渲染 5 种类型输入 (string/int/float/bool/enum/list)
+    //   - 模板占位符 ${alarm_type}/${channel_id}/${device_name}/${timestamp}/${confidence}/${bbox} 预览
     ActionParamDialog {
         id: actionParamDialog
         actionType: linkagePage.editingActionType

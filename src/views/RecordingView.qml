@@ -231,6 +231,37 @@ Item {
         })
     }
 
+    // [P2-#13 v7.6+] MP4 本地导出: 调用 RecordingController.exportClip
+    //   - recordingId: 后端录像唯一 ID (seg.recording_id || seg.id || "<channel>_<start>_<end>")
+    //   - 进度通过 Connections 绑定到 toast 显示
+    function exportMp4(seg) {
+        var rid = seg.recording_id || seg.id || (seg.channel_id + "_" + (seg.start_time || "") + "_" + (seg.end_time || ""))
+        if (!rid || rid === "undefined_undefined_undefined") {
+            showToast("无法识别录像 ID")
+            return
+        }
+        showToast("开始导出 MP4...")
+        recordingController.exportClip(rid, "")
+    }
+
+    Connections {
+        target: recordingController
+        function onExportClipProgress(recordingId, received, total) {
+            if (total > 0) {
+                var pct = Math.round(received * 100 / total)
+                showToast("MP4 导出中 " + pct + "% (" + (received / 1024 / 1024).toFixed(2) + "MB)")
+            } else {
+                showToast("MP4 导出中 " + (received / 1024 / 1024).toFixed(2) + "MB")
+            }
+        }
+        function onExportClipFinished(recordingId, localPath, bytes) {
+            showToast("MP4 已保存: " + localPath + " (" + (bytes / 1024 / 1024).toFixed(2) + "MB)")
+        }
+        function onExportClipFailed(recordingId, code, reason) {
+            showToast("MP4 导出失败 [" + code + "]: " + reason)
+        }
+    }
+
     // ── 格式化 ──
     function timeOnly(iso) {
         if (!iso) return "-"
@@ -572,9 +603,11 @@ Item {
                                 Text { text: root.formatDuration(modelData); width: 120; font.pixelSize: 13; color: "#606266" }
                                 Text { text: root.formatSize(modelData.file_size); width: 120; font.pixelSize: 13; color: "#606266" }
                                 Row {
-                                    width: 160; spacing: 8
+                                    width: 220; spacing: 8
                                     RecBtn { label: "播放"; filled: true; small: true; onTap: root.playSegment(modelData) }
                                     RecBtn { label: "下载"; small: true; onTap: root.downloadSegment(modelData) }
+                                    // [P2-#13 v7.6+] MP4 实际下载 (落盘到 ~/Downloads/<id>.mp4)
+                                    RecBtn { label: "MP4"; small: true; onTap: root.exportMp4(modelData) }
                                 }
                             }
                         }

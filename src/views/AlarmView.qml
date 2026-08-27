@@ -310,19 +310,23 @@ Item {
                     contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#606266"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                     onClicked: alarmController.refreshAlarms(200)
                 }
-                Button {
-                    text: "导出"
-                    Layout.preferredWidth: 64; Layout.preferredHeight: 32
-                    background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
-                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#606266"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
-                    onClicked: {
-                        exportDialog.format = alarmController.supportedExportFormats()[0]
-                        exportDialog.filter = {
-                            "level":  alarmPage.levelFilter,
-                            "type":   alarmPage.typeFilter,
-                            "status": alarmPage.statusFilter
+                // [P2-#17 v7.6+] alarm.export 权限检查
+                PermissionCheck {
+                    perm: "alarm.export"; mode: "disable"
+                    Button {
+                        text: "导出"
+                        Layout.preferredWidth: 64; Layout.preferredHeight: 32
+                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#606266"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            exportDialog.format = alarmController.supportedExportFormats()[0]
+                            exportDialog.filter = {
+                                "level":  alarmPage.levelFilter,
+                                "type":   alarmPage.typeFilter,
+                                "status": alarmPage.statusFilter
+                            }
+                            exportDialog.open()
                         }
-                        exportDialog.open()
                     }
                 }
             }

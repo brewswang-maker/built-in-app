@@ -32,6 +32,20 @@ Item {
     property var pageRows: []
     property int filteredTotal: 0
 
+    // ── 排序状态 (Web: sortBy/sortOrder 透传后端) ──
+    property string sortBy: "createdAt"
+    property string sortOrder: "desc"
+
+    // [P1-#9 v7.6+] 服务端筛选防抖 (300ms)
+    Timer {
+        id: serverFilterTimer
+        interval: 300; repeat: false
+        onTriggered: deviceController.refreshDevices(currentPage, pageSize,
+                                                      searchText, statusFilter,
+                                                      typeFilter, "",
+                                                      sortBy, sortOrder)
+    }
+
     // ── 选中/弹窗状态 ──
     property var selectedDevices: []
     property var currentDetail: null
@@ -73,6 +87,8 @@ Item {
         console.log("[DevicesView] onCompleted -> refreshAll()")
         deviceController.refreshAll()
         loadSipConfig()
+        // [P1-#9 v7.6+] 初始走服务端, 带默认排序
+        refreshPage()
     }
 
     Connections {
@@ -149,6 +165,10 @@ Item {
         return out
     }
     function refreshPage() {
+        // [P1-#9 v7.6+] 走服务端: 后端 GET /api/v1/devices 带 8 参数 (page/pageSize/search/status/type/sortBy/sortOrder)
+        // 启动防抖 Timer, 300ms 后才发送, 避免连续键入只请求一次
+        serverFilterTimer.restart()
+        // 同步本地 pageRows (基于上次设备列表) 以避免表格闪烁
         var all = filteredDevices()
         filteredTotal = all.length
         var totalPages = Math.max(1, Math.ceil(all.length / pageSize))
@@ -159,6 +179,9 @@ Item {
     onStatusFilterChanged: { currentPage = 1; refreshPage() }
     onTypeFilterChanged: { currentPage = 1; refreshPage() }
     onProjectFilterChanged: { currentPage = 1; refreshPage() }
+    onSortByChanged: { currentPage = 1; refreshPage() }
+    onSortOrderChanged: { currentPage = 1; refreshPage() }
+    onPageSizeChanged: { currentPage = 1; refreshPage() }
 
     // ── 标签映射 (对齐 Web statusLabel/statusTagType/syncLabel/syncTagType) ──
     function statusLabel(s) {

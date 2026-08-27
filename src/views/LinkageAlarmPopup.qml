@@ -77,7 +77,31 @@ Window {
     signal falseAlarm()
     signal silenced()
 
+    function _isHighLevel(a) {
+        // [FIX v7.6 2026-08-26] 优先级防覆盖: 与 Web useAlarmPopup.HIGH_PRIORITY 对齐
+        //   critical/high 不被中/低优先级告警覆盖 (避免高优先级告警被后续低优先级 "被顶掉")
+        if (!a) return false
+        var lv = alarmLevel(a)
+        return lv === "critical" || lv === "high"
+    }
+
     function showAlarm(alarm, actions) {
+        // [FIX v7.6 2026-08-26] 优先级防覆盖: 当前弹窗级别 >= high 时, 新告警仅入队列不覆盖
+        if (linkagePopup.visible && currentAlarm && _isHighLevel(currentAlarm)
+            && !_isHighLevel(alarm)) {
+            qInfo && console.log("[LinkageAlarmPopup] skip overwrite: current="
+                + alarmLevel(currentAlarm) + ", new=" + alarmLevel(alarm))
+            // 仍推入队列供用户后续查看
+            if (alarm && alarm.id) {
+                var exists2 = -1
+                for (var k = 0; k < alarmQueue.length; k++) {
+                    if (alarmQueue[k].id === alarm.id) { exists2 = k; break }
+                }
+                if (exists2 < 0) alarmQueue.push(alarm)
+            }
+            return
+        }
+
         currentAlarm = alarm
         alarmId = alarm.alarm_id || alarm.id || ""
         if (actions) linkageActions = actions
@@ -96,7 +120,8 @@ Window {
         countdownText.text = autoCloseSec + "s"
         headerBar.requestPaint()
         borderAnim.start()
-        autoCloseTimer.start()
+        // [FIX v7.6 2026-08-26] restart() 重置倒计时 — 首次 showAlarm 才启, dismiss 才会 stop
+        autoCloseTimer.restart()
         linkagePopup.show()
 
         // 初始化视频流

@@ -13,7 +13,11 @@ Window {
     id: linkagePopup
     width: 760; height: 480
     color: "transparent"
-    flags: Qt.Popup | Qt.FramelessWindowHint
+    // [UX 2026-08-31] 原 Qt.Popup 特性: 点击窗口外任意区域/按 ESC 都会自动关闭,
+    //   值守人员查看告警时误点外部即丢内容。改为普通无边框置顶窗口:
+    //   只能通过右上角 ✕ / 确认 / 误报 / 静音按钮或 60s 倒计时主动关闭,
+    //   与 Web 端 AlarmPopup 关闭策略对齐
+    flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
 
     property string alarmId: ""
     property var currentAlarm: null

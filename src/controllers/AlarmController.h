@@ -4,6 +4,7 @@
 #include <QTimer>
 #include <QSettings>
 #include <QDateTime>
+#include <QHash>
 #ifdef HAS_QT_WEBSOCKETS
 #include <QWebSocket>
 #endif
@@ -152,6 +153,9 @@ private:
 
     // 弹窗防抖: key = "channelId:alarmType" → last popup timestamp
     QMap<QString, qint64> m_lastPopupMs;
+    // [SSOT R11 2026-09-12] 双帧去重: alarm_id → last popup timestamp
+    //  (linkage_alarm 与 alarm.new 同告警双帧防双弹; 空 id 不参与)
+    QHash<QString, qint64> m_recentPopupAlarms;
 
     // 内部处理告警(两个路径共用)
     void ingestAlarm(const QJsonObject& alarmJson);

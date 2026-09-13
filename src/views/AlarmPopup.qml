@@ -53,7 +53,10 @@ Popup {
 
     function showAlarm(alarm) {
         currentAlarm = alarm
-        autoCloseSeconds = 15
+        // [SSOT R10 2026-09-12] verdict.auto_close_s 注入优先 (>0), 否则默认 15s —
+        //   对齐 web 端 verdict.auto_close_s 语义 (普通弹窗同受单判定源控制)
+        autoCloseSeconds = (alarm && Number(alarm.auto_close_s) > 0)
+                           ? Number(alarm.auto_close_s) : 15
         autoCloseProgress = 1.0
         alarmPopup.open()
         autoCloseTimer.restart()

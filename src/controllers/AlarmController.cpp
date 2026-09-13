@@ -2,6 +2,7 @@
 #include "models/AlarmListModel.h"
 #include "utils/ApiClient.h"
 #include "utils/WsMessageRouter.h"
+#include "utils/AlarmVerdictConsumer.h"  // [SSOT R10 2026-09-12] 单判定源消费 (弹窗三态)
 #include <QJsonDocument>
 #include <QStandardPaths>
 #include <QFile>
@@ -237,13 +238,70 @@ void AlarmController::onWsTextMessage(const QString& message) {
     // 弹窗防抖: 同设备同类型在 N 秒内不重复弹窗
     qint64 now = QDateTime::currentDateTime().toMSecsSinceEpoch();
     QString popupKey = chId + ":" + alarmType;
-    int debounceMs = popupDebounceMs();
+    const int debounceMs = popupDebounceMs();
+    // [SSOT R11 2026-09-12] 双帧去重图惰性清理 (窗口 = 防抖参数)
+    AlarmVerdictConsumer::prunePopped(m_recentPopupAlarms, now, debounceMs);
+
+    // [SSOT R10 2026-09-12] 单判定源消费 (§5.1 + §8.1 操作门第 2 点内置端对等):
+    //   与 web 端 useGlobalAlarm 三态降级链同语义 — verdict 存在时以后端
+    //   matchAndVerdict 为准 (matched=弹窗总闸 / debounced=后端防抖窗口);
+    //   缺失 (旧后端 / verdict_push_enabled=false 回退态) 回落现状本地防抖链,
+    //   零回归。红线不变: 告警已全部进列表 (上方 pending 队列), 判定只影响弹窗。
+    const AlarmVerdictConsumer::Decision decision = AlarmVerdictConsumer::decide(alarm);
+    if (decision == AlarmVerdictConsumer::Decision::Suppress) {
+        qInfo() << "[AlarmController] [SSOT R10] popup suppressed by backend verdict"
+                << "(unmatched) type:" << alarmType << "ch:" << chId;
+        emit suppressedAlarm(alarm);
+        return;
+    }
+    if (decision == AlarmVerdictConsumer::Decision::SuppressDebounced) {
+        // matched 两态都更新本地防抖图 (与后端防抖图共识: 回退时兜底链窗口对齐)
+        m_lastPopupMs[popupKey] = now;
+        qInfo() << "[AlarmController] [SSOT R10] popup debounced by backend verdict"
+                << "key:" << popupKey;
+        emit suppressedAlarm(alarm);
+        return;
+    }
+    if (decision == AlarmVerdictConsumer::Decision::Show) {
+        // [SSOT R11] 双帧去重: linkage_alarm (dispatch 顺序在先, 走兜底链) 已弹同
+        //   alarm_id 时, Show 不再看本地防抖 → 无此闸会同告警双弹 (列表已刷新,
+        //   仅弹窗去重)。
+        const QString frameAlarmId = alarm.value(QStringLiteral("alarm_id")).toString();
+        if (AlarmVerdictConsumer::isRecentlyPopped(m_recentPopupAlarms, frameAlarmId,
+                                                   now, debounceMs)) {
+            qInfo() << "[AlarmController] [SSOT R11] popup deduped (same alarm_id already"
+                    << "popped) alarm_id:" << frameAlarmId;
+            emit suppressedAlarm(alarm);
+            return;
+        }
+        m_lastPopupMs[popupKey] = now;
+        // 帧富化: has_linkage / linkage_actions / auto_close_s — 单权威切换
+        //   (R9) 后 WEB_POPUP 降档, 联动形态信息改从 verdict 注入, main.qml
+        //   分流 (severity>=3 || has_linkage) 与 LinkageAlarmPopup 保持现状体验。
+        AlarmVerdictConsumer::enrichFromVerdict(alarm);
+        AlarmVerdictConsumer::recordPopped(m_recentPopupAlarms, frameAlarmId, now);
+        emit newAlarm(alarm);
+        return;
+    }
+
+    // Fallback: 无 verdict (旧后端 / 回退态) — 现状链逐字保留
     qint64 lastPopup = m_lastPopupMs.value(popupKey, 0);
 
     if (debounceMs > 0 && (now - lastPopup) < debounceMs) {
         emit suppressedAlarm(alarm);
     } else {
+        // [SSOT R11] 双帧去重 (反向顺序补位: alarm.new Show 先弹 → linkage_alarm
+        //   后到; 防抖图未拦住时此闸兜底)
+        const QString frameAlarmId = alarm.value(QStringLiteral("alarm_id")).toString();
+        if (AlarmVerdictConsumer::isRecentlyPopped(m_recentPopupAlarms, frameAlarmId,
+                                                   now, debounceMs)) {
+            qInfo() << "[AlarmController] [SSOT R11] popup deduped (same alarm_id already"
+                    << "popped) alarm_id:" << frameAlarmId;
+            emit suppressedAlarm(alarm);
+            return;
+        }
         m_lastPopupMs[popupKey] = now;
+        AlarmVerdictConsumer::recordPopped(m_recentPopupAlarms, frameAlarmId, now);
         emit newAlarm(alarm);
     }
 }

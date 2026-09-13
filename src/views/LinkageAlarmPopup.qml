@@ -89,6 +89,12 @@ Window {
         return lv === "critical" || lv === "high"
     }
 
+    // [SSOT R10 2026-09-12] 自动关闭秒: verdict.auto_close_s 注入优先 (>0),
+    //   否则组件默认 autoCloseSec (60s) — 对齐 web 端 verdict.auto_close_s 语义
+    function _effectiveCloseSec(a) {
+        return (a && Number(a.auto_close_s) > 0) ? Number(a.auto_close_s) : autoCloseSec
+    }
+
     function showAlarm(alarm, actions) {
         // [FIX v7.6 2026-08-26] 优先级防覆盖: 当前弹窗级别 >= high 时, 新告警仅入队列不覆盖
         if (linkagePopup.visible && currentAlarm && _isHighLevel(currentAlarm)
@@ -120,8 +126,8 @@ Window {
                 if (alarmQueue[j].id === alarm.id) { queueIdx = j; break }
             }
         }
-        autoCloseTimer.countdown = autoCloseSec
-        countdownText.text = autoCloseSec + "s"
+        autoCloseTimer.countdown = _effectiveCloseSec(alarm)
+        countdownText.text = autoCloseTimer.countdown + "s"
         headerBar.requestPaint()
         borderAnim.start()
         // [FIX v7.6 2026-08-26] restart() 重置倒计时 — 首次 showAlarm 才启, dismiss 才会 stop
@@ -206,8 +212,8 @@ Window {
             linkageController.getRuleStats()
         }
         // 重新计时
-        autoCloseTimer.countdown = autoCloseSec
-        countdownText.text = autoCloseSec + "s"
+        autoCloseTimer.countdown = _effectiveCloseSec(currentAlarm)
+        countdownText.text = autoCloseTimer.countdown + "s"
         borderAnim.restart()
         autoCloseTimer.restart()
         headerBar.requestPaint()

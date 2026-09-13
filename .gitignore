@@ -1,0 +1,24 @@
+# Build output
+build/
+
+# Qt / CMake 构建产物
+build-*/
+CMakeFiles/
+CMakeCache.txt
+*.o
+*.a
+*.so
+
+# Python 缓存 (cmake 辅助脚本)
+__pycache__/
+*.pyc
+
+# 备份/日志
+*.bak
+*.log
+
+# 环境/IDE
+.env*
+.DS_Store
+.idea/
+.vscode/

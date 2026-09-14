@@ -40,11 +40,17 @@ Window {
     function alarmLevel(a) {
         var lv = a && (a.level || a.severity)
         if (lv === undefined || lv === null) return "medium"
+        // [FIX level-ssot 2026-09-14] SSOT 5 档契约 (1=info 2=low 3=medium
+        //   4=high 5=critical, 与 BoxService kSeverityLabels / REST
+        //   realtime-alarms / Web resolveAlarmLevel 同契约): 原映射
+        //   lv>=3→medium, else→low 把 severity 1 (info) 错位成 low,
+        //   且 2 也映射 low 丢失 info 档 → 补 1→info、2→low 两档。
         if (typeof lv === "number") {
             if (lv >= 5) return "critical"
             if (lv >= 4) return "high"
             if (lv >= 3) return "medium"
-            return "low"
+            if (lv >= 2) return "low"
+            return "info"
         }
         lv = String(lv).toLowerCase()
         if (lv === "critical") return "critical"
@@ -558,9 +564,14 @@ Window {
                                 Text { text: currentAlarm ? (currentAlarm.alarm_type || currentAlarm.type || "-") : "-"; font.pixelSize: 12; color: "#303133" }
                                 Text { text: "级别:"; font.pixelSize: 12; color: "#4A4D58" }
                                 Text {
-                                    text: currentAlarm ? (levelLabels[currentAlarm.level || currentAlarm.severity] || "—") : "-"
+                                    // [FIX level-ssot 2026-09-14] 原直查 levelLabels[level||severity]
+                                    //   仅旧 3 档键 (critical/warning/info) → medium/high/low
+                                    //   直出英文原文 (用户实锚 "warning" 混合展示)。改为
+                                    //   经 levelLabel() 归一: alarmLevel() 双形态归一
+                                    //   (数字 severity / 字符串 level) → 5 档中文表。
+                                    text: currentAlarm ? levelLabel(currentAlarm) : "-"
                                     font.pixelSize: 12
-                                    color: currentAlarm && (currentAlarm.level === "critical" || currentAlarm.severity >= 4) ? "#F56C6C" : "#E6A23C"
+                                    color: currentAlarm && alarmLevel(currentAlarm) === "critical" ? "#F56C6C" : "#E6A23C"
                                 }
                                 Text { text: "通道:"; font.pixelSize: 12; color: "#4A4D58" }
                                 Text { text: currentAlarm ? ("CH" + (currentAlarm.channel_id || "-")) : "-"; font.pixelSize: 12; color: "#303133" }
@@ -572,7 +583,9 @@ Window {
                                 Text { text: currentAlarm ? (currentAlarm.target_label || "-") : "-"; font.pixelSize: 12; color: "#303133" }
                             }
 
-                            readonly property var levelLabels: ({ "critical": "严重", "warning": "警告", "info": "信息" })
+                            // [FIX level-ssot 2026-09-14] 3 档残表 → 5 档 (warning 为旧压缩表
+                            //   残留键, 保留兼容映射到「中」; 新契约键 info/low/medium/high/critical)
+                            readonly property var levelLabels: ({ "critical": "严重", "high": "高", "medium": "中", "low": "低", "info": "信息", "warning": "中" })
 
                             // 处理备注 (与 Web 截图对齐)
                             Text { text: "处理备注"; font.pixelSize: 12; color: "#606266"; font.bold: true }

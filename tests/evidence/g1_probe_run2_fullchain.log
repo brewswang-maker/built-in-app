@@ -1,0 +1,91 @@
+[probe] url=webrtc://127.0.0.1:9080/index/api/webrtc?app=rtp&stream=h264probe out=/home/linaro/g1_final.png duration=55s qml=1 chain=1
+[probe][chain] init chain=webrtc->flv->ws-flv->hls->rtsp active=webrtc
+[WebRtcRendererItem] start WebRTC: "127.0.0.1" 9080 "rtp" "h264probe"
+[WebRtcRendererItem] client state -> 1
+[probe] qml mode: window=0x5588094dd0 item=0x55880ee550
+[probe] setStreamUrl ...
+[WebRtcRendererItem] client state -> 2
+2026-09-20 11:51:12.934 WARN  [661298] [rtc::impl::IceTransport::LogCallback@391] juice: agent.c:2415: ICE-TCP is disabled, ignoring TCP candidate
+[WebRtcClient] onTrack fired: mid= "video" remote payloadTypes: "102"
+[WebRtcRendererItem] client state -> 3
+[probe] t=0s Dc=0 P=0 C=0 D=0
+[WebRtcClient] access-unit # 1 size= 85345
+[WebRtcRendererItem] client state -> 4
+[swscaler @ 0x7f6c0b7190] No accelerated colorspace conversion found from yuv420p to rgb24.
+[WebRtcRendererItem] first frame decoded (sink P: 1 )
+[probe] FIRST_FRAME t=1248ms
+[probe] t=1s Dc=8 P=8 C=8 D=0
+[probe] t=2s Dc=20 P=20 C=19 D=0
+[probe] t=4s Dc=33 P=33 C=32 D=0
+[probe] t=4s Dc=46 P=45 C=45 D=0
+[probe] t=5s Dc=57 P=56 C=56 D=0
+[probe] t=6s Dc=71 P=70 C=70 D=0
+[probe] t=7s Dc=81 P=80 C=80 D=0
+[probe] t=8s Dc=94 P=93 C=92 D=0
+[probe] t=9s Dc=105 P=105 C=105 D=0
+[probe] t=10s Dc=118 P=117 C=116 D=0
+[probe] t=11s Dc=128 P=127 C=127 D=0
+[probe] t=12s Dc=143 P=142 C=142 D=0
+[probe] t=14s Dc=154 P=153 C=152 D=0
+[probe] t=14s Dc=167 P=166 C=166 D=0
+[probe] t=15s Dc=177 P=176 C=176 D=0
+[probe] t=16s Dc=188 P=187 C=186 D=0
+[probe] t=17s Dc=201 P=200 C=199 D=0
+[probe] t=18s Dc=213 P=212 C=211 D=0
+[WebRtcClient] access-unit # 250 size= 0
+[probe] t=19s Dc=217 P=217 C=216 D=0
+[probe] t=20s Dc=217 P=217 C=216 D=0
+[probe] requestKeyframe -> sent
+[probe] t=21s Dc=217 P=217 C=216 D=0
+[probe] t=22s Dc=217 P=217 C=216 D=0
+[probe] STALL 3s (produced=217)
+[probe][chain] 断流 -> advance(webrtc)
+[probe][chain] protocolFailed dev=probe-device failed=webrtc next=flv
+[probe][chain] activeProtocol dev=probe-device -> flv
+[probe] t=23s Dc=217 P=217 C=216 D=0
+[probe] t=24s Dc=217 P=217 C=216 D=0
+[probe] requestKeyframe -> sent
+[probe] t=25s Dc=217 P=217 C=216 D=0
+[probe] STALL 6s (produced=217)
+[probe] t=26s Dc=217 P=217 C=216 D=0
+[probe] t=27s Dc=217 P=217 C=216 D=0
+[probe] t=28s Dc=217 P=217 C=216 D=0
+[probe] STALL 9s (produced=217)
+[probe] requestKeyframe -> sent
+[probe] t=29s Dc=217 P=217 C=216 D=0
+[probe] t=30s Dc=217 P=217 C=216 D=0
+[probe] t=31s Dc=217 P=217 C=216 D=0
+[probe] STALL 12s (produced=217)
+[probe] t=32s Dc=217 P=217 C=216 D=0
+[probe] requestKeyframe -> sent
+[probe] t=33s Dc=217 P=217 C=216 D=0
+[h264 @ 0x55881138c0] illegal short term buffer state detected
+[h264 @ 0x55881138c0] Missing reference picture, default is 72
+[probe] t=34s Dc=220 P=219 C=218 D=0
+[probe] RECOVERED after 14s stall (produced 217 -> 219)
+[probe][chain] activeProtocol dev=probe-device -> webrtc
+[probe][chain] reset -> active=webrtc
+[probe] t=35s Dc=233 P=232 C=231 D=0
+[probe] t=36s Dc=242 P=241 C=240 D=0
+[probe] t=37s Dc=255 P=254 C=252 D=0
+[probe] t=38s Dc=270 P=269 C=268 D=0
+[probe] t=39s Dc=278 P=277 C=276 D=0
+[probe] t=40s Dc=290 P=289 C=288 D=0
+[probe] t=41s Dc=302 P=301 C=300 D=0
+[probe] t=42s Dc=315 P=314 C=313 D=0
+[probe] t=43s Dc=326 P=325 C=324 D=0
+[probe] t=44s Dc=340 P=339 C=338 D=0
+[probe] t=45s Dc=350 P=349 C=348 D=0
+[probe] t=46s Dc=363 P=362 C=361 D=0
+[probe] t=47s Dc=375 P=375 C=373 D=0
+[probe] t=48s Dc=388 P=387 C=386 D=0
+[WebRtcClient] access-unit # 500 size= 4531
+[probe] t=49s Dc=397 P=396 C=395 D=0
+[probe] t=50s Dc=411 P=410 C=409 D=0
+[probe] t=52s Dc=420 P=419 C=417 D=0
+[probe] t=52s Dc=433 P=432 C=430 D=0
+[probe] t=54s Dc=445 P=444 C=443 D=0
+[probe][chain] final active=webrtc
+[probe] screenshot saved: /home/linaro/g1_final.png (1280x720)
+PROBE_RESULT {"url":"webrtc://127.0.0.1:9080/index/api/webrtc?app=rtp&stream=h264probe","decoded":467,"produced":466,"consumed":450,"dropped":147,"ran_ms":55886,"png":"/home/linaro/g1_final.png","rc":0}
+[WebRtcRendererItem] client state -> 0

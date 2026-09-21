@@ -44,6 +44,9 @@ private:
     bool m_upgrading = false;
     QVariantList m_history;
     int m_pollCount = 0;
+    // [M2-4 2026-09-21] 升级前 bootId 基线 (完成判定锚点: 变化=设备已重启=升级生效)
+    QString m_preUpgradeBootId;
 
+    void doUpgrade();
     void pollProgress();
 };

@@ -26,9 +26,18 @@ Item {
         function onProgressChanged() {
             // upgradeProgress updated via otaController.upgradeProgress
         }
-        function onUpgradeCompleted() {
+        function onUpgradeCompleted(success) {
             otaController.checkUpdate()
             otaController.refreshHistory()
+            // [M2-4 2026-09-21] 完成判定以 bootId 变化为准 (成功=设备已重启=升级生效)
+            if (success) {
+                otaView.showToast("升级完成: 设备已重启 (bootId 已变化), 新版本已生效", "ok")
+            } else {
+                otaView.showToast("升级未确认生效: 未检测到设备重启 (bootId 未变化)", "warn")
+            }
+        }
+        function onErrorOccurred(code, message) {
+            otaView.showToast("升级异常: " + message, "warn")
         }
     }
 

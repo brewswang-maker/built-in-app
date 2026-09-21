@@ -1,0 +1,38 @@
+[m3] ==== M3 AXIS 时序真机多事件触发 2026-09-20 12:22:43 ====
+[m3] -- wait service ready --
+[m3] service ready (attempt 1)
+[m3] -- baseline --
+[m3] total_triggers(before)=5
+[m3] -- create temporal rule (climbing / A->B / gap 8000ms) --
+{"code":0,"data":{"id":"m3-axis-e2e-20260920","message":"规则已创建"},"message":"success","timestamp":1789878163505}
+[m3] == U1 正向: e1(m3_zone_a) -> e2(m3_zone_b) 应完成链并触发 ==
+[U1-e1] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[U1-e2] triggered=True rules_matched=1 m3_matched=True reason=全部条件匹配
+[m3] -- drain 15s (flush U1 dispatch backlog) --
+[m3] == U2 反向: e3(m3_zone_b) 不启动链 -> e4(m3_zone_a) 启动但不完成 ==
+[U2-e3] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[U2-e4] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[m3] == U3 超窗: 先 15s 排空 e3/e4 dispatch, 再 18s 双路径超窗 -> e5(m3_zone_b) ==
+[U3-e5] RESPONSE-INVALID (empty/non-JSON)
+[m3] -- counters --
+[m3] total_triggers(after)= delta=N/A (counter query failed)
+[m3] -- action-log (rule_id=m3-axis-e2e-20260920) --
+
+[m3] -- journal [AXIS-SEQ] (since 2026-09-20 12:22:43) --
+Sep 20 12:22:43 sophon smartgateway[784031]: [2026-09-20 12:22:43.474] [info] [HttpServer] DELETE /api/v1/linkage/rules/m3-axis-e2e-20260920
+Sep 20 12:22:43 sophon smartgateway[784031]: [2026-09-20 12:22:43.501] [info] [LinkageEngine] [IDX-RB] dirty set by addRule id=m3-axis-e2e-20260920
+Sep 20 12:22:43 sophon smartgateway[784031]: [2026-09-20 12:22:43.501] [info] [LinkageEngine] Rule added: m3-axis-e2e-20260920 (M3-AXIS时序真机触发(临时))
+Sep 20 12:22:43 sophon smartgateway[784031]: [2026-09-20 12:22:43.530] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' entered step 1/2 region='m3_zone_a'
+Sep 20 12:22:43 sophon smartgateway[784031]: [2026-09-20 12:22:43.804] [info] [LinkageEngine] Rule 'm3-axis-e2e-20260920' SKIP spatial cond: rule.loc='' rule.reg='' rule.roi_size=0 rule.bound_n=0 rule.area='' rule.pc_keys=0 event.loc='' event.reg='m3_zone_a' event.ch='gb_34020000001320002001' event.bbox_empty=1
+Sep 20 12:22:43 sophon smartgateway[784031]: [2026-09-20 12:22:43.804] [info] [LinkageEngine] [NO-FIRE] event=climbing ch=gb_34020000001320002001 sev=2 conf=0.900000 candidates=2 [le-video_perimeter_wall_v1-VP-wall-climb,m3-axis-e2e-20260920] cooldown_skips=0 skip:[spatial=1 disabled=1] trace=trace_1789878163529_5
+Sep 20 12:22:45 sophon smartgateway[784031]: [2026-09-20 12:22:45.659] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' sequence complete (2 steps, last gap 2129ms) — PASS
+Sep 20 12:22:45 sophon smartgateway[784031]: [2026-09-20 12:22:45.668] [info] [LinkageEngine] [FIRED] rule=M3-AXIS时序真机触发(临时)(id=m3-axis-e2e-20260920) event=climbing ch=0 exec=1 skip=0 8ms log_id=1789878165661209
+Sep 20 12:23:02 sophon smartgateway[784031]: [2026-09-20 12:23:01.733] [info] [LinkageEngine] Rule 'm3-axis-e2e-20260920' SKIP spatial cond: rule.loc='' rule.reg='' rule.roi_size=0 rule.bound_n=0 rule.area='' rule.pc_keys=0 event.loc='' event.reg='m3_zone_b' event.ch='gb_34020000001320002001' event.bbox_empty=1
+Sep 20 12:23:02 sophon smartgateway[784031]: [2026-09-20 12:23:01.733] [info] [LinkageEngine] [NO-FIRE] event=climbing ch=gb_34020000001320002001 sev=2 conf=0.900000 candidates=2 [le-video_perimeter_wall_v1-VP-wall-climb,m3-axis-e2e-20260920] cooldown_skips=0 skip:[spatial=1 disabled=1] trace=trace_1789878181151_7
+Sep 20 12:23:02 sophon smartgateway[784031]: [2026-09-20 12:23:02.314] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' entered step 1/2 region='m3_zone_a'
+Sep 20 12:23:03 sophon smartgateway[784031]: [2026-09-20 12:23:03.395] [info] [LinkageEngine] Rule 'm3-axis-e2e-20260920' SKIP spatial cond: rule.loc='' rule.reg='' rule.roi_size=0 rule.bound_n=0 rule.area='' rule.pc_keys=0 event.loc='' event.reg='m3_zone_a' event.ch='gb_34020000001320002001' event.bbox_empty=1
+Sep 20 12:23:30 sophon smartgateway[808380]: [2026-09-20 12:23:30.418] [info] [LinkageEngine] [IDX-RB] dirty set by addRule id=m3-axis-e2e-20260920
+Sep 20 12:23:30 sophon smartgateway[808380]: [2026-09-20 12:23:30.418] [info] [LinkageEngine] Rule added: m3-axis-e2e-20260920 (M3-AXIS时序真机触发(临时))
+[m3] ==== M3 done 2026-09-20 12:23:36 ====
+[m3] -- cleanup: delete rule --
+

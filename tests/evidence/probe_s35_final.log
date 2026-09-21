@@ -1,0 +1,52 @@
+[probe] url=webrtc://127.0.0.1:9080/index/api/webrtc?app=rtp&stream=h264probe out=/home/linaro/webrtc_s35_final.png duration=22s qml=1 chain=1
+[probe][chain] init chain=webrtc->flv->ws-flv->hls->rtsp active=webrtc
+[WebRtcRendererItem] start WebRTC: "127.0.0.1" 9080 "rtp" "h264probe"
+[WebRtcRendererItem] client state -> 1
+[probe] qml mode: window=0x55944595b0 item=0x55944ddb10
+[probe] setStreamUrl ...
+[WebRtcRendererItem] client state -> 2
+2026-09-20 11:43:25.831 WARN  [624304] [rtc::impl::IceTransport::LogCallback@391] juice: agent.c:2415: ICE-TCP is disabled, ignoring TCP candidate
+[WebRtcClient] onTrack fired: mid= "video" remote payloadTypes: "102"
+[WebRtcRendererItem] client state -> 3
+[probe] t=1s Dc=0 P=0 C=0 D=0
+[WebRtcRendererItem] client state -> 4
+[WebRtcClient] access-unit # 1 size= 85345
+[swscaler @ 0x7f880ddcc0] No accelerated colorspace conversion found from yuv420p to rgb24.
+[WebRtcRendererItem] first frame decoded (sink P: 1 )
+[probe] FIRST_FRAME t=1191ms
+[probe] t=2s Dc=13 P=12 C=12 D=0
+[probe] t=3s Dc=21 P=20 C=20 D=0
+[h264 @ 0x559453c3d0] negative number of zero coeffs at 74 24
+[h264 @ 0x559453c3d0] error while decoding MB 74 24
+[h264 @ 0x559453c3d0] concealing 1655 DC, 1655 AC, 1655 MV errors in P frame
+[probe] t=4s Dc=33 P=32 C=31 D=0
+[probe] t=5s Dc=46 P=45 C=44 D=0
+[probe] t=6s Dc=58 P=57 C=57 D=0
+[probe] t=7s Dc=68 P=68 C=67 D=0
+[probe] t=8s Dc=83 P=82 C=81 D=0
+[probe] t=9s Dc=94 P=93 C=93 D=0
+[probe] t=10s Dc=107 P=107 C=106 D=0
+[probe] t=11s Dc=116 P=116 C=115 D=0
+[probe] t=12s Dc=130 P=129 C=129 D=0
+[probe] t=13s Dc=142 P=141 C=141 D=0
+[probe] t=14s Dc=154 P=153 C=153 D=0
+[probe] t=15s Dc=165 P=164 C=164 D=0
+[probe] t=16s Dc=178 P=177 C=177 D=0
+[probe] t=17s Dc=187 P=186 C=186 D=0
+[probe] t=18s Dc=200 P=199 C=199 D=0
+[probe] t=19s Dc=212 P=211 C=211 D=0
+[probe] t=20s Dc=224 P=224 C=223 D=0
+[probe] t=21s Dc=235 P=234 C=234 D=0
+[WebRtcClient] access-unit # 250 size= 4214
+[probe][chain] final active=webrtc
+[probe] screenshot saved: /home/linaro/webrtc_s35_final.png (1280x720)
+PROBE_RESULT {"url":"webrtc://127.0.0.1:9080/index/api/webrtc?app=rtp&stream=h264probe","decoded":265,"produced":264,"consumed":248,"dropped":105,"ran_ms":23571,"png":"/home/linaro/webrtc_s35_final.png","rc":0}
+[WebRtcRendererItem] client state -> 0
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback
+2026-09-20 11:43:49.378 WARN  [624359] [rtc::impl::Transport::recv@79] dropping incoming message, no receive callback

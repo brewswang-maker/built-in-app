@@ -1,0 +1,100 @@
+[probe] url=webrtc://127.0.0.1:9080/index/api/webrtc?app=rtp&stream=h264probe out=/home/linaro/g1_final.png duration=55s qml=1 chain=1
+[probe][chain] init chain=webrtc->flv->ws-flv->hls->rtsp active=webrtc
+[WebRtcRendererItem] start WebRTC: "127.0.0.1" 9080 "rtp" "h264probe"
+[WebRtcRendererItem] client state -> 1
+[probe] qml mode: window=0x5573fd0280 item=0x557402df50
+[probe] setStreamUrl ...
+[WebRtcRendererItem] client state -> 2
+2026-09-20 11:49:36.008 WARN  [653461] [rtc::impl::IceTransport::LogCallback@391] juice: agent.c:2415: ICE-TCP is disabled, ignoring TCP candidate
+[WebRtcClient] onTrack fired: mid= "video" remote payloadTypes: "102"
+[WebRtcRendererItem] client state -> 3
+[probe] t=0s Dc=0 P=0 C=0 D=0
+[WebRtcRendererItem] client state -> 4
+[WebRtcClient] access-unit # 1 size= 85345
+[swscaler @ 0x7f600a7dd0] No accelerated colorspace conversion found from yuv420p to rgb24.
+[WebRtcRendererItem] first frame decoded (sink P: 1 )
+[probe] FIRST_FRAME t=1494ms
+[probe] t=1s Dc=5 P=4 C=4 D=0
+[probe] t=2s Dc=15 P=14 C=14 D=0
+[probe] t=3s Dc=29 P=28 C=28 D=0
+[probe] t=4s Dc=36 P=36 C=35 D=0
+[probe] t=5s Dc=50 P=49 C=49 D=0
+[probe] t=6s Dc=60 P=60 C=60 D=0
+[probe] t=7s Dc=74 P=73 C=73 D=0
+[probe] t=8s Dc=86 P=85 C=85 D=0
+[probe] t=9s Dc=96 P=95 C=95 D=0
+[probe] t=10s Dc=107 P=106 C=106 D=0
+[probe] t=11s Dc=120 P=119 C=119 D=0
+[probe] t=12s Dc=128 P=127 C=127 D=0
+[probe] t=13s Dc=142 P=141 C=141 D=0
+[probe] t=14s Dc=153 P=152 C=152 D=0
+[probe] t=15s Dc=164 P=164 C=164 D=0
+[probe] t=16s Dc=175 P=174 C=174 D=0
+[probe] t=17s Dc=188 P=188 C=187 D=0
+[probe] t=18s Dc=198 P=197 C=197 D=0
+[probe] t=19s Dc=210 P=210 C=209 D=0
+[probe] t=20s Dc=220 P=220 C=220 D=0
+[probe] t=21s Dc=220 P=220 C=220 D=0
+[probe] requestKeyframe -> sent
+[probe] t=22s Dc=220 P=220 C=220 D=0
+[probe] t=23s Dc=220 P=220 C=220 D=0
+[probe] STALL 3s (produced=220)
+[probe][chain] 断流 -> advance(webrtc)
+[probe][chain] protocolFailed dev=probe-device failed=webrtc next=flv
+[probe][chain] activeProtocol dev=probe-device -> flv
+[probe] t=25s Dc=220 P=220 C=220 D=0
+[probe] requestKeyframe -> sent
+[probe] t=25s Dc=220 P=220 C=220 D=0
+[probe] t=26s Dc=220 P=220 C=220 D=0
+[probe] STALL 6s (produced=220)
+[probe] t=27s Dc=220 P=220 C=220 D=0
+[probe] t=28s Dc=220 P=220 C=220 D=0
+[probe] t=29s Dc=220 P=220 C=220 D=0
+[probe] STALL 9s (produced=220)
+[probe] requestKeyframe -> sent
+[probe] t=30s Dc=220 P=220 C=220 D=0
+[probe] t=31s Dc=220 P=220 C=220 D=0
+[probe] t=32s Dc=220 P=220 C=220 D=0
+[probe] STALL 12s (produced=220)
+[probe] t=33s Dc=220 P=220 C=220 D=0
+[probe] requestKeyframe -> sent
+[probe] t=34s Dc=220 P=220 C=220 D=0
+[probe] t=35s Dc=220 P=220 C=220 D=0
+[probe] STALL 15s (produced=220)
+2026-09-20 11:50:11.911 WARN  [653517] [rtc::impl::IceTransport::LogCallback@391] juice: agent.c:1126: Lost connectivity
+[WebRtcRendererItem] client state -> 5
+[WebRtcRendererItem] client error: "PeerConnection 失败(ICE/DTLS 协商不成功)"
+[probe] streamFailed: PeerConnection 失败(ICE/DTLS 协商不成功)
+[probe] t=36s Dc=220 P=220 C=220 D=0
+[probe] t=37s Dc=220 P=220 C=220 D=0
+[probe] requestKeyframe -> unavailable
+[probe] t=38s Dc=220 P=220 C=220 D=0
+[probe] STALL 18s (produced=220)
+[probe] t=39s Dc=220 P=220 C=220 D=0
+[probe] t=40s Dc=220 P=220 C=220 D=0
+[probe] t=41s Dc=220 P=220 C=220 D=0
+[probe] STALL 21s (produced=220)
+[probe] requestKeyframe -> unavailable
+[probe] t=42s Dc=220 P=220 C=220 D=0
+[probe] t=43s Dc=220 P=220 C=220 D=0
+[probe] t=44s Dc=220 P=220 C=220 D=0
+[probe] STALL 24s (produced=220)
+[probe] t=45s Dc=220 P=220 C=220 D=0
+[probe] requestKeyframe -> unavailable
+[probe] t=46s Dc=220 P=220 C=220 D=0
+[probe] t=47s Dc=220 P=220 C=220 D=0
+[probe] STALL 27s (produced=220)
+[probe] t=48s Dc=220 P=220 C=220 D=0
+[probe] t=49s Dc=220 P=220 C=220 D=0
+[probe] requestKeyframe -> unavailable
+[probe] t=50s Dc=220 P=220 C=220 D=0
+[probe] STALL 30s (produced=220)
+[probe] t=51s Dc=220 P=220 C=220 D=0
+[probe] t=52s Dc=220 P=220 C=220 D=0
+[probe] t=53s Dc=220 P=220 C=220 D=0
+[probe] STALL 33s (produced=220)
+[probe] requestKeyframe -> unavailable
+[probe][chain] final active=flv
+[probe] screenshot saved: /home/linaro/g1_final.png (1280x720)
+PROBE_RESULT {"url":"webrtc://127.0.0.1:9080/index/api/webrtc?app=rtp&stream=h264probe","decoded":220,"produced":220,"consumed":220,"dropped":0,"ran_ms":55767,"png":"/home/linaro/g1_final.png","rc":0}
+[WebRtcRendererItem] client state -> 0

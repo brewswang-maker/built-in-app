@@ -1,0 +1,25 @@
+==== M2 tooltip verify 2026-09-20 12:12:06 ====
+--- [1] qmllint error gate ---
+qmllint src/views/components/ActionParamDialog.qml : 0 errors
+qmllint src/views/LinkageRuleView.qml : 0 errors
+gate1(qmllint 0 error) = PASS
+--- [2] qmltestrunner: hover => tooltip visible (xcb + software) ---
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.2.4, Qt 6.2.4 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 11.3.0), ubuntu 22.04
+PASS   : qmltestrunner::ActionParamTooltip::initTestCase()
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:371:5: QML Rectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:232:71: Unable to assign [undefined] to bool
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:285:29: Unable to assign QString to int
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:232:71: Unable to assign [undefined] to bool
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:371:5: QML Rectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:285:29: Unable to assign QString to int
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:371:5: QML Rectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() QQmlEngine::setContextForObject(): Object already has a QQmlContext
+QWARN  : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip() file:///home/brewswang/workshop/SmartGateWay/clients/built-in-app/src/views/components/ActionParamDialog.qml:371:5: QML Rectangle: Detected anchors on an item that is managed by a layout. This is undefined behavior; use Layout.alignment instead.
+PASS   : qmltestrunner::ActionParamTooltip::test_hover_shows_semantic_tooltip()
+PASS   : qmltestrunner::ActionParamTooltip::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 793ms
+********* Finished testing of qmltestrunner *********
+gate2(qmltestrunner) rc=0
+[m2] screenshot: /home/brewswang/workshop/SmartGateWay/clients/built-in-app/tests/evidence/m2_tooltip_hover.png
+==== M2 done 2026-09-20 12:12:07 rc=0 ====

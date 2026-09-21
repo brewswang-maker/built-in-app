@@ -1,0 +1,10 @@
+[m1] ==== M1 MP dry-run 2026-09-20 12:01:14 ====
+[m1] -- create rule (MP_SUBSCRIBE_MSG/MP_SHOW_IMAGE/MP_SHOW_LIVE) --
+{"code":0,"data":{"id":"m1-mp-dryrun-test-20260920","message":"规则已创建"},"message":"success","timestamp":1789876874567}
+[m1] -- dry-run HIT (alarm_type=intrusion) --
+{"code":0,"data":{"matched":true,"rule_details":[{"cooldown_active":false,"match_reason":"全部条件匹配","matched":true,"matched_pids":[],"rule_id":"m1-mp-dryrun-test-20260920","rule_name":"M1-MP动作dry-run预检(临时)","source_matched":true,"spatial_matched":true,"time_matched":true}],"simulated_actions":["小程序订阅消息","小程序事件图片","小程序实时视频"]},"message":"success","timestamp":1789876874591}
+[m1] -- dry-run MISS (alarm_type=abandoned) --
+{"code":0,"data":{"matched":false,"rule_details":[{"cooldown_active":false,"match_reason":"事件类型 'abandoned' 不在规则监听类型中","matched":false,"matched_pids":[],"rule_id":"m1-mp-dryrun-test-20260920","rule_name":"M1-MP动作dry-run预检(临时)","source_matched":false,"spatial_matched":true,"time_matched":true}],"simulated_actions":[]},"message":"success","timestamp":1789876874615}
+[m1] -- delete rule (cleanup) --
+{"code":0,"data":{"id":"m1-mp-dryrun-test-20260920","message":"规则已删除"},"message":"success","timestamp":1789876874645}
+[m1] ==== M1 done 2026-09-20 12:01:14 ====

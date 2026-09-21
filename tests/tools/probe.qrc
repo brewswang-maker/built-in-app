@@ -1,0 +1,8 @@
+<!-- [S3-4/S3-5 2026-09-20] 探针专用 qrc: 将真实 WebRtcView.qml 与 probe.qml 置于同根,
+     QML 同目录类型解析生效(与 app/qml.qrc 的 alias 布局一致) -->
+<RCC>
+    <qresource prefix="/">
+        <file alias="probe.qml">probe.qml</file>
+        <file alias="WebRtcView.qml">../../src/qml/WebRtcView.qml</file>
+    </qresource>
+</RCC>

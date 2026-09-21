@@ -25,3 +25,9 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# ─── 依赖/缓存 (不入版本库 2026-09-22) ───
+#   3rdparty/libdatachannel = 依赖源码 (init 脚本获取);
+#   .qml_deps = 交叉编译依赖包缓存 (debs/root)
+3rdparty/
+.qml_deps/

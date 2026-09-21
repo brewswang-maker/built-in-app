@@ -1,0 +1,283 @@
+{
+  "mode": "zlm-direct",
+  "concurrency": 8,
+  "num_streams": 4,
+  "protocols": [
+    "hls",
+    "flv"
+  ],
+  "elapsed_s": 0.09559548900142545,
+  "percentiles": {
+    "count_total": 24,
+    "count_ok": 24,
+    "count_fallback": 0,
+    "count_error": 0,
+    "api_ms": {
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0
+    },
+    "handshake_ms": {
+      "p50": 17.79566300319857,
+      "p95": 56.84366929490351,
+      "p99": 62.79029298006208,
+      "min": 6.382600004144479,
+      "max": 64.30706800165353,
+      "mean": 23.978209749657253
+    },
+    "total_ms": {
+      "p50": 17.79566300319857,
+      "p95": 56.84366929490351,
+      "p99": 62.79029298006208,
+      "min": 6.382600004144479,
+      "max": 64.30706800165353,
+      "mean": 23.978209749657253
+    },
+    "fallback_rate": 0.0
+  },
+  "samples": [
+    {
+      "protocol": "hls",
+      "stream_id": "gb_34020000001320002001",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 28.670583000348415,
+      "total_latency_ms": 28.670583000348415,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "gb_34020000001320002001",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 35.153180004272144,
+      "total_latency_ms": 35.153180004272144,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "gb_34020000001320002001",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 33.50143200077582,
+      "total_latency_ms": 33.50143200077582,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "gb_34020000001320002001",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 38.27444299531635,
+      "total_latency_ms": 38.27444299531635,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "gb_34020000001320002002",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 17.684766004094854,
+      "total_latency_ms": 17.684766004094854,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "gb_34020000001320002002",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 17.501212998467963,
+      "total_latency_ms": 17.501212998467963,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "gb_34020000001320002002",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 6.676390999928117,
+      "total_latency_ms": 6.676390999928117,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "gb_34020000001320002001",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 31.303219999244902,
+      "total_latency_ms": 31.303219999244902,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "gb_34020000001320002001",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 51.92089599586325,
+      "total_latency_ms": 51.92089599586325,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "h264probe",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 10.71162500011269,
+      "total_latency_ms": 10.71162500011269,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "h264probe",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 14.099758998781908,
+      "total_latency_ms": 14.099758998781908,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "gb_34020000001320002002",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 17.906560002302285,
+      "total_latency_ms": 17.906560002302285,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "gb_34020000001320002002",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 57.71239399473416,
+      "total_latency_ms": 57.71239399473416,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "gb_34020000001320002002",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 64.30706800165353,
+      "total_latency_ms": 64.30706800165353,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "h264probe",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 18.05639499798417,
+      "total_latency_ms": 18.05639499798417,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "h264probe",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 27.20274899911601,
+      "total_latency_ms": 27.20274899911601,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "h264probe",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 13.460939000651706,
+      "total_latency_ms": 13.460939000651706,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "h264probe2",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 13.340582998353057,
+      "total_latency_ms": 13.340582998353057,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "h264probe",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 20.91198600101052,
+      "total_latency_ms": 20.91198600101052,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "h264probe2",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 13.15878799505299,
+      "total_latency_ms": 13.15878799505299,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "hls",
+      "stream_id": "h264probe2",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 13.27290399785852,
+      "total_latency_ms": 13.27290399785852,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "h264probe2",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 6.382600004144479,
+      "total_latency_ms": 6.382600004144479,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "h264probe2",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 11.913706999621354,
+      "total_latency_ms": 11.913706999621354,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    },
+    {
+      "protocol": "flv",
+      "stream_id": "h264probe2",
+      "api_latency_ms": 0.0,
+      "handshake_latency_ms": 12.352853002084885,
+      "total_latency_ms": 12.352853002084885,
+      "fallback_triggered": false,
+      "status_code": 200,
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+[m3] ==== M3 AXIS 时序真机多事件触发 2026-09-20 12:18:34 ====
+[m3] -- wait service ready --
+[m3] service ready (attempt 1)
+[m3] -- baseline --
+[m3] total_triggers(before)=0
+[m3] -- create temporal rule (climbing / A->B / gap 8000ms) --
+{"code":0,"data":{"id":"m3-axis-e2e-20260920","message":"规则已创建"},"message":"success","timestamp":1789877914623}
+[m3] == U1 正向: e1(m3_zone_a) -> e2(m3_zone_b) 应完成链并触发 ==
+[U1-e1] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[U1-e2] triggered=True rules_matched=1 m3_matched=True reason=全部条件匹配
+[m3] == U2 反向: e3(m3_zone_b) 不启动链 -> e4(m3_zone_a) 启动但不完成 ==
+[U2-e3] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[U2-e4] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[m3] == U3 超窗: sleep 12s (>8000ms) -> e5(m3_zone_b) 应 expired/reset ==
+[U3-e5] triggered=True rules_matched=1 m3_matched=True reason=全部条件匹配
+[m3] -- counters --
+[m3] total_triggers(after)=5 delta=5  (期望=1, 仅 U1 完成链)
+[m3] -- action-log (rule_id=m3-axis-e2e-20260920) --
+{"code":0,"data":{"items":[{"action_name":"WEB_POPUP","action_type":200,"channel_id":0,"completed_at":1789877922,"created_at":1789877922,"error_code":0,"error_message":"","execution_ms":8,"id":131840,"max_retries":0,"response_data":{},"retry_count":0,"rule_id":"m3-axis-e2e-20260920","started_at":1789877922,"status":"success","trigger_log_id":1789877922914448}],"page":1,"page_size":10,"total":1},"message":"success","timestamp":1789877931141}
+[m3] -- journal [AXIS-SEQ] (since 2026-09-20 12:18:34) --
+Sep 20 12:18:34 sophon smartgateway[784031]: [2026-09-20 12:18:34.590] [info] [HttpServer] DELETE /api/v1/linkage/rules/m3-axis-e2e-20260920
+Sep 20 12:18:34 sophon smartgateway[784031]: [2026-09-20 12:18:34.618] [info] [LinkageEngine] [IDX-RB] dirty set by addRule id=m3-axis-e2e-20260920
+Sep 20 12:18:34 sophon smartgateway[784031]: [2026-09-20 12:18:34.618] [info] [LinkageEngine] Rule added: m3-axis-e2e-20260920 (M3-AXIS时序真机触发(临时))
+Sep 20 12:18:34 sophon smartgateway[784031]: [2026-09-20 12:18:34.649] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' entered step 1/2 region='m3_zone_a'
+Sep 20 12:18:34 sophon smartgateway[784031]: [2026-09-20 12:18:34.657] [info] [LinkageEngine] Rule 'm3-axis-e2e-20260920' SKIP spatial cond: rule.loc='' rule.reg='' rule.roi_size=0 rule.bound_n=0 rule.area='' rule.pc_keys=0 event.loc='' event.reg='m3_zone_a' event.ch='gb_34020000001320002001' event.bbox_empty=1
+Sep 20 12:18:34 sophon smartgateway[784031]: [2026-09-20 12:18:34.658] [info] [LinkageEngine] [NO-FIRE] event=climbing ch=gb_34020000001320002001 sev=2 conf=0.900000 candidates=2 [le-video_perimeter_wall_v1-VP-wall-climb,m3-axis-e2e-20260920] cooldown_skips=0 skip:[spatial=1 disabled=1] trace=trace_1789877914648_0
+Sep 20 12:18:36 sophon smartgateway[784031]: [2026-09-20 12:18:36.855] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' sequence complete (2 steps, last gap 2206ms) — PASS
+Sep 20 12:18:38 sophon smartgateway[784031]: [2026-09-20 12:18:38.218] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' entered step 1/2 region='m3_zone_a'
+Sep 20 12:18:42 sophon smartgateway[784031]: [2026-09-20 12:18:42.914] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' sequence complete (2 steps, last gap 4696ms) — PASS
+Sep 20 12:18:42 sophon smartgateway[784031]: [2026-09-20 12:18:42.922] [info] [LinkageEngine] [FIRED] rule=M3-AXIS时序真机触发(临时)(id=m3-axis-e2e-20260920) event=climbing ch=0 exec=1 skip=0 8ms log_id=1789877922914448
+Sep 20 12:18:42 sophon smartgateway[784031]: [2026-09-20 12:18:42.946] [info] [LinkageEngine] Rule 'm3-axis-e2e-20260920' SKIP spatial cond: rule.loc='' rule.reg='' rule.roi_size=0 rule.bound_n=0 rule.area='' rule.pc_keys=0 event.loc='' event.reg='m3_zone_b' event.ch='gb_34020000001320002001' event.bbox_empty=1
+Sep 20 12:18:42 sophon smartgateway[784031]: [2026-09-20 12:18:42.946] [info] [LinkageEngine] [NO-FIRE] event=climbing ch=gb_34020000001320002001 sev=2 conf=0.900000 candidates=2 [le-video_perimeter_wall_v1-VP-wall-climb,m3-axis-e2e-20260920] cooldown_skips=0 skip:[spatial=1 disabled=1] trace=trace_1789877917095_2
+Sep 20 12:18:42 sophon smartgateway[784031]: [2026-09-20 12:18:42.967] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' entered step 1/2 region='m3_zone_a'
+Sep 20 12:18:42 sophon smartgateway[784031]: [2026-09-20 12:18:42.967] [info] [LinkageEngine] Rule 'm3-axis-e2e-20260920' SKIP spatial cond: rule.loc='' rule.reg='' rule.roi_size=0 rule.bound_n=0 rule.area='' rule.pc_keys=0 event.loc='' event.reg='m3_zone_a' event.ch='gb_34020000001320002001' event.bbox_empty=1
+Sep 20 12:18:50 sophon smartgateway[784031]: [2026-09-20 12:18:50.674] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-e2e-20260920' sequence complete (2 steps, last gap 7706ms) — PASS
+Sep 20 12:18:50 sophon smartgateway[784031]: [2026-09-20 12:18:50.689] [info] [LinkageEngine] [FIRED] rule=M3-AXIS时序真机触发(临时)(id=m3-axis-e2e-20260920) event=climbing ch=0 exec=1 skip=0 11ms log_id=1789877930678359
+[m3] ==== M3 done 2026-09-20 12:18:51 ====
+[m3] -- cleanup: delete rule --
+{"code":0,"data":{"id":"m3-axis-e2e-20260920","message":"规则已删除"},"message":"success","timestamp":1789877931279}

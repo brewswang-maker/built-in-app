@@ -1,0 +1,11 @@
+[g3] ==== G3 export-range boundary 2026-09-20 11:59:42 ====
+[g3] ===== B1_start-aligned_cross-micro [2026-09-20T10:58:12 ~ 2026-09-20T11:00:00] =====
+[g3] resp: {"code":0,"data":{"download_url":"/record/export/export_gb_34020000001320002001_1789876782.mp4","file_size":24121041,"filename":"export_gb_34020000001320002001_1789876782.mp4","segments_used":2},"message":"success","timestamp":1789876795019}
+[g3] B1_start-aligned_cross-micro: artifact=export_gb_34020000001320002001_1789876782.mp4 dur=95.377000 size=24121041
+[g3] ===== B2_end-at-boundary_no-overshoot [2026-09-20T10:58:12 ~ 2026-09-20T10:59:47] =====
+[g3] resp: {"code":0,"data":{"download_url":"/record/export/export_gb_34020000001320002001_1789876795.mp4","file_size":23908419,"filename":"export_gb_34020000001320002001_1789876795.mp4","segments_used":1},"message":"success","timestamp":1789876802940}
+[g3] B2_end-at-boundary_no-overshoot: artifact=export_gb_34020000001320002001_1789876795.mp4 dur=95.009000 size=23908419
+[g3] ===== B3_micro-slice_standalone [2026-09-20T10:59:47 ~ 2026-09-20T11:00:00] =====
+[g3] resp: {"code":0,"data":{"download_url":"/record/export/export_gb_34020000001320002001_1789876803.mp4","file_size":214096,"filename":"export_gb_34020000001320002001_1789876803.mp4","segments_used":1},"message":"success","timestamp":1789876803551}
+[g3] B3_micro-slice_standalone: artifact=export_gb_34020000001320002001_1789876803.mp4 dur=0.240000 size=214096
+[g3] ==== G3 done 2026-09-20 12:00:03 ====

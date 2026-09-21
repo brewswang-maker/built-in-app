@@ -1,0 +1,17 @@
+[u3] ==== U3 超窗补测 2026-09-20 12:24:40 ====
+[u3] service ready (attempt 1)
+[u3] -- create rule (window-test) --
+{"code":0,"data":{"id":"m3-axis-window-20260920","message":"规则已创建"},"message":"success","timestamp":1789878280996}
+[u3] == step1: e4'(m3_zone_a) 启动链 (期望日志 entered step 1/2) ==
+[U3-e4] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[u3] -- 34s 等待: dryRun 链起点=now, dispatch 链起点<=now+6s → 双路径超窗 --
+[u3] == step2: e5'(m3_zone_b) 期望 expired reset 不触发 ==
+[U3-e5] triggered=True rules_matched=0 m3_matched=False reason=空间条件不匹配
+[u3] -- journal [AXIS-SEQ|FIRED] (since 2026-09-20 12:24:40) --
+Sep 20 12:24:41 sophon smartgateway[810153]: [2026-09-20 12:24:41.046] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-window-20260920' entered step 1/2 region='m3_zone_a'
+Sep 20 12:24:41 sophon smartgateway[810153]: [2026-09-20 12:24:41.059] [info] [LinkageEngine] [NO-FIRE] event=climbing ch=gb_34020000001320002001 sev=2 conf=0.900000 candidates=2 [le-video_perimeter_wall_v1-VP-wall-climb,m3-axis-window-20260920] cooldown_skips=0 skip:[spatial=1 disabled=1] trace=trace_1789878281045_0
+Sep 20 12:25:15 sophon smartgateway[810153]: [2026-09-20 12:25:15.170] [info] [LinkageEngine] [AXIS-SEQ] rule='m3-axis-window-20260920' step gap 34124ms > 8000ms — sequence expired, reset
+Sep 20 12:25:15 sophon smartgateway[810153]: [2026-09-20 12:25:15.177] [info] [LinkageEngine] [NO-FIRE] event=climbing ch=gb_34020000001320002001 sev=2 conf=0.900000 candidates=2 [le-video_perimeter_wall_v1-VP-wall-climb,m3-axis-window-20260920] cooldown_skips=0 skip:[spatial=1 disabled=1] trace=trace_1789878315170_1
+[u3] ==== done 2026-09-20 12:25:15 ====
+[u3] -- cleanup: delete rule --
+{"code":0,"data":{"id":"m3-axis-window-20260920","message":"规则已删除"},"message":"success","timestamp":1789878315432}

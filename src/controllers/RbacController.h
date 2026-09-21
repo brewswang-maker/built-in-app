@@ -19,6 +19,7 @@
  *   - POST   /api/v1/rbac/users/:userId/roles
  */
 #include <QObject>
+#include <QSet>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -83,4 +84,7 @@ private:
     QVariantList m_currentUserRoles;
     QString m_currentUser;
     QString m_currentRole;
+    // [P0-B 2026-09-21] 权限点集合("resource:operation"), 数据源 GET /api/v1/auth/me
+    //   data.permissions (RestApiHandlers.cpp:1354)。替换原角色名启发式校验。
+    QSet<QString> m_grantedPerms;
 };

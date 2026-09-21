@@ -3,7 +3,7 @@
  * @brief ShieldBox内置应用入口
  *
  * 初始化Qt应用引擎 + 注册Controllers + 加载主QML
- * 通信方式: Local REST API (http://localhost:8080) 连接 box-sdk
+ * 通信方式: Local REST API (http://127.0.0.1:18080) 连接 box-sdk
  */
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -30,9 +30,13 @@
 #include "controllers/StreamingController.h"
 #include "controllers/RecordingController.h"
 #include "controllers/FaceController.h"
+// [P2-C 2026-09-21] 端侧性能预算采样 (TC-SYS-02, 监控网关主进程 smartgateway)
+#include "controllers/SystemPerfController.h"
 // [P1-#2 v7.0+] 首页态势大屏 — Web 端 1:1 对齐
 #include "controllers/SituationController.h"
 #include "streaming/StreamingDegradationChain.h"
+// [P1-1 2026-09-20] WebRtcRendererItem — WebRtcView.qml 依赖的渲染节点类型
+#include "streaming/WebRtcRenderer.h"
 #include "models/DeviceListModel.h"
 #include "models/AlarmListModel.h"
 #include "models/AlgorithmListModel.h"
@@ -113,6 +117,9 @@ int main(int argc, char *argv[]) {
     // [P1-#2 v7.0+] 首页态势大屏 (overview/agents/hourly/realtime/trend/map/channels)
     SituationController situationController(&apiClient);
 
+    // [P2-C 2026-09-21] 端侧性能预算 (5s 节流采样, DashboardEnhancedView 性能预算卡片)
+    SystemPerfController systemPerfController;
+
     // ── QML Engine ──
     QQmlApplicationEngine engine;
 
@@ -142,6 +149,8 @@ int main(int argc, char *argv[]) {
     engine.rootContext()->setContextProperty("faceController", &faceController);
     // [P1-#2 v7.0+] 首页态势大屏 (与 Web 端 SituationScreen.vue 1:1 对齐)
     engine.rootContext()->setContextProperty("situationController", &situationController);
+    // [P2-C] 性能预算指标 (cpuPercent/rssMb/tpuPercent + 阈值)
+    engine.rootContext()->setContextProperty("systemPerfController", &systemPerfController);
     engine.rootContext()->setContextProperty("channelModel", &channelModel);
     engine.rootContext()->setContextProperty("streamModel", &streamModel);
     // 统一 WS 路由器 (规范 b4ced019): QML 可订阅 stateString / reconnectAttempts
@@ -159,6 +168,13 @@ int main(int argc, char *argv[]) {
     if (wsRouter) {
         qmlRegisterUncreatableType<WsMessageRouter>("ShieldBox", 1, 0, "WsRouter", "Cannot create");
     }
+
+    // [P1-1 2026-09-20] WebRtcRendererItem 注册(WebRtcView.qml 依赖该类型)。
+    //   如实标注现状: setStreamUrl 为骨架实现(真实 H264/PeerConnection 通路
+    //   未接入,子任务 3 未完成);且 QQuickFramebufferObject 渲染依赖 GL,
+    //   软渲染设备(software backend)不可用。注册仅为消除"类型不可达",
+    //   真机渲染验证待解码通路 + GL 环境就绪(见 P1-1 记录)。
+    qmlRegisterType<WebRtcRendererItem>("ShieldBox", 1, 0, "WebRtcRendererItem");
 
     // 应用退出时优雅关闭 WS (规范 700c35a7)
     QObject::connect(&app, &QGuiApplication::aboutToQuit, [wsRouter]() {

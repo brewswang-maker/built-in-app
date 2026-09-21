@@ -231,6 +231,27 @@ Dialog {
                                 text: fieldData ? (fieldData.name + (fieldData.required ? " *" : "")) : ""
                                 color: "#303133"; font.pixelSize: 12; font.bold: fieldData && fieldData.required
                             }
+                            // [P2-4 2026-09-20] 参数语义 tooltip: 悬停显示 描述+默认值+范围+选项
+                            //   (与下方静态描述行互补; 触摸屏无悬停时静态描述仍可读)
+                            Text {
+                                id: tipIcon
+                                text: "?"
+                                color: "#4A4D58"; font.pixelSize: 11
+                                HoverHandler { id: tipHover }
+                                ToolTip.visible: tipHover.hovered
+                                ToolTip.delay: 300
+                                ToolTip.text: {
+                                    if (!fieldData) return ""
+                                    var parts = []
+                                    if (fieldData.description) parts.push(fieldData.description)
+                                    if (fieldData.default !== undefined) parts.push("默认: " + fieldData.default)
+                                    if (fieldData.min !== undefined || fieldData.max !== undefined)
+                                        parts.push("范围: " + (fieldData.min !== undefined ? fieldData.min : "-") +
+                                                   " ~ " + (fieldData.max !== undefined ? fieldData.max : "-"))
+                                    if (fieldData.options) parts.push("可选: " + fieldData.options.join("/"))
+                                    return parts.join("\n")
+                                }
+                            }
                             Item { Layout.fillWidth: true }
                             Text {
                                 text: fieldData ? (fieldData.type + (fieldData.options ? " (" + fieldData.options.length + " 项)" : "")) : ""

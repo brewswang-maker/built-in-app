@@ -16,6 +16,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     property var stats: ({ total: 0, blacklist: 0, whitelist: 0, visitor: 0 })
     property var records: []
     property int total: 0
@@ -57,7 +62,7 @@ Item {
     }
 
     function loadStats() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/face/database/stats", null, function(resp, status) {
+        xhrRequest("GET", apiBase + "/api/v1/face/database/stats", null, function(resp, status) {
             if (status === 200 && resp && resp.code === 0 && resp.data)
                 stats = resp.data
         })
@@ -65,7 +70,7 @@ Item {
 
     function loadRecords() {
         loading = true
-        var url = "http://localhost:8080/api/v1/face/database/records?page=" + page + "&page_size=" + pageSize
+        var url = apiBase + "/api/v1/face/database/records?page=" + page + "&page_size=" + pageSize
         if (filterGroup.length > 0) url += "&group_type=" + filterGroup
         if (searchKeyword.length > 0) url += "&search=" + encodeURIComponent(searchKeyword)
         xhrRequest("GET", url, null, function(resp, status) {
@@ -132,10 +137,10 @@ Item {
         }
         var url, method
         if (editingRecord) {
-            url = "http://localhost:8080/api/v1/face/database/records/" + editingRecord.person_id
+            url = apiBase + "/api/v1/face/database/records/" + editingRecord.person_id
             method = "PUT"
         } else {
-            url = "http://localhost:8080/api/v1/face/database/records"
+            url = apiBase + "/api/v1/face/database/records"
             method = "POST"
             if (fGroup === "visitor") body.valid_days = fValidDays
         }
@@ -152,7 +157,7 @@ Item {
     }
 
     function doDelete(row) {
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/face/database/records/" + row.person_id, null,
+        xhrRequest("DELETE", apiBase + "/api/v1/face/database/records/" + row.person_id, null,
             function(resp, status) {
                 if (status === 200 && resp && resp.code === 0) {
                     toastBox.showToast("删除成功")
@@ -162,7 +167,7 @@ Item {
     }
 
     function doToggle(row) {
-        xhrRequest("PUT", "http://localhost:8080/api/v1/face/database/records/" + row.person_id,
+        xhrRequest("PUT", apiBase + "/api/v1/face/database/records/" + row.person_id,
             { is_active: !row.is_active }, function(resp, status) {
                 if (status === 200 && resp && resp.code === 0) {
                     toastBox.showToast(row.is_active ? "禁用成功" : "启用成功")
@@ -173,7 +178,7 @@ Item {
 
     function doCleanup() {
         cleaning = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/face/database/cleanup", {}, function(resp, status) {
+        xhrRequest("POST", apiBase + "/api/v1/face/database/cleanup", {}, function(resp, status) {
             cleaning = false
             if (status === 200 && resp && resp.code === 0) {
                 toastBox.showToast("清理完成，已禁用 " + ((resp.data && resp.data.disabled) || 0) + " 条")

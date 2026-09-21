@@ -12,6 +12,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     // ── 扫描状态 ──
     property bool scanning: false
     property int scanProgress: 0
@@ -79,7 +84,7 @@ Item {
         scanProgress = 0
         discoveredDevices = []
         progressTimer.start()
-        xhrRequest("POST", "http://localhost:8080/api/v1/devices/discover",
+        xhrRequest("POST", apiBase + "/api/v1/devices/discover",
             { method: "onvif" }, function (status, resp) {
                 progressTimer.stop()
                 scanProgress = 100
@@ -107,7 +112,7 @@ Item {
     // ===== 已添加设备 =====
     function fetchAddedDevices() {
         addedLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/devices?protocol=onvif&limit=500", null,
+        xhrRequest("GET", apiBase + "/api/v1/devices?protocol=onvif&limit=500", null,
             function (status, resp) {
                 addedLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -126,7 +131,7 @@ Item {
             return
         }
         profilesLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/devices/onvif/profiles?ip="
+        xhrRequest("GET", apiBase + "/api/v1/devices/onvif/profiles?ip="
             + encodeURIComponent(formIp) + "&username=" + encodeURIComponent(formUsername)
             + "&password=" + encodeURIComponent(formPassword), null,
             function (status, resp) {
@@ -175,7 +180,7 @@ Item {
             var deviceId = "onvif_" + formIp.replace(/\./g, "") + "_" + Date.now()
             var authPart = (formUsername !== "" && formPassword !== "")
                 ? formUsername + ":" + formPassword + "@" : ""
-            xhrRequest("POST", "http://localhost:8080/api/v1/devices", {
+            xhrRequest("POST", apiBase + "/api/v1/devices", {
                 device_id: deviceId,
                 device_name: formName,
                 ip_address: formIp,
@@ -197,7 +202,7 @@ Item {
                 }
             })
         } else {
-            xhrRequest("PUT", "http://localhost:8080/api/v1/devices/" + encodeURIComponent(editingId), {
+            xhrRequest("PUT", apiBase + "/api/v1/devices/" + encodeURIComponent(editingId), {
                 device_name: formName,
                 ip_address: formIp,
                 config: {
@@ -225,7 +230,7 @@ Item {
 
     function confirmDelete() {
         if (!deleteTarget) return
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/devices/" + encodeURIComponent(deleteTarget.id),
+        xhrRequest("DELETE", apiBase + "/api/v1/devices/" + encodeURIComponent(deleteTarget.id),
             null, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("已删除")

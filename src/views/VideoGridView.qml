@@ -110,6 +110,33 @@ Item {
             mediaController.refreshAllStreamUrls(devIds)
     }
 
+    // [S3-4 2026-09-20] 从流 URL 推导协议标识(降级链输入)
+    function protocolOfUrl(url) {
+        var u = (url || "").toLowerCase()
+        if (u.indexOf("webrtc://") === 0
+                || (u.indexOf("http") === 0 && u.indexOf("/index/api/webrtc") > 0))
+            return "webrtc"
+        if (u.indexOf("rtsp://") === 0) return "rtsp"
+        if (u.indexOf("ws://") === 0 || u.indexOf("wss://") === 0) return "ws-flv"
+        if (u.indexOf(".m3u8") > 0) return "hls"
+        if (u.indexOf(".flv") > 0) return "flv"
+        return ""
+    }
+
+    // [S3-4 2026-09-20] 播放失败事件桥: VideoTile(WebRTC/MediaPlayer 错误)
+    //   → reportProtocolFailure → 降级链 advance → streamUrlsUpdated → 换源重播
+    function handleTileFailure(devId, url, reason) {
+        var proto = protocolOfUrl(url)
+        console.warn("[VideoGrid] tile failed:", devId, proto, reason)
+        if (devId.length === 0 || proto.length === 0) return
+        mediaController.reportProtocolFailure(devId, proto)
+        var next = mediaController.resolveStreamUrl(devId)
+        if (next.length > 0 && next !== url)
+            videoGridPage.showToast("播放失败，已协议降级", "warn")
+        else
+            videoGridPage.showToast("播放失败，无可用备用协议", "error")
+    }
+
     function showToast(text, kind) {
         toastText = text
         toastKind = kind || "info"
@@ -228,6 +255,28 @@ Item {
                             text: "图像"; enabled: videoGridPage.activeSlot >= 0
                             onClicked: imageDialog.open()
                         }
+                        // 画中画 [P0-2a 差异化扩展] Controller 就绪, 独立小窗第二路解码
+                        LightBtn {
+                            readonly property bool pipOnCurrent: videoGridPage.activeSlot >= 0
+                                && mediaController.pipChannelId !== ""
+                                && mediaController.pipChannelId === videoGridPage.slotChannelId(videoGridPage.activeSlot)
+                            text: pipOnCurrent ? "退出画中画" : "画中画"
+                            success: pipOnCurrent
+                            enabled: videoGridPage.activeSlot >= 0
+                            onClicked: {
+                                var devId = videoGridPage.slotChannelId(videoGridPage.activeSlot)
+                                if (mediaController.pipChannelId === devId) {
+                                    mediaController.exitPip()
+                                    videoGridPage.showToast("画中画已关闭", "info")
+                                } else {
+                                    mediaController.enterPip(devId)
+                                    // 该通道尚未拉流时主动触发, 保证小窗有画面
+                                    if (!mediaController.streamUrls[devId])
+                                        mediaController.startStream(devId, devId)
+                                    videoGridPage.showToast("画中画已开启: " + videoGridPage.activeChannelName, "ok")
+                                }
+                            }
+                        }
 
                         Item { Layout.fillWidth: true }
 
@@ -295,6 +344,11 @@ Item {
                             detectionBoxes: {
                                 var devId = index < deviceController.devices.length ? (deviceController.devices[index].id || deviceController.devices[index].device_id || "") : ""
                                 return mediaController.detections[devId] || []
+                            }
+
+                            // [S3-4 2026-09-20] 播放失败 → 降级链(WebRTC 断流/MediaPlayer 错误)
+                            onStreamFailed: function(reason) {
+                                videoGridPage.handleTileFailure(deviceId, streamUrl, reason)
                             }
 
                             // 双击全屏 + 滚轮 eZoom + 3D 定位点击
@@ -854,6 +908,12 @@ Item {
                 }
             }
         }
+    }
+
+    // ═══ 画中画悬浮窗 [P0-2a] (z 高于网格, 低于 toast z:60) ═══
+    PipOverlay {
+        id: pipOverlay
+        z: 50
     }
 
     Component.onCompleted: deviceController.refreshDevices()

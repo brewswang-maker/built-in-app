@@ -64,6 +64,11 @@ public:
     Q_INVOKABLE void createRuleChecked(const QVariantMap& rule);
     Q_INVOKABLE void updateRuleChecked(const QString& ruleId, const QVariantMap& updates);
 
+    // [P1-2 dry-run 2026-09-20] 规则模拟测试 (对齐 Web LinkageRuleView.vue:4918 调用)
+    //   payload: rule_id/alarm_type/channel_id_str/severity/confidence/region_id/location_id
+    //   响应 data 信封: {matched, rule_details[], simulated_actions[]}
+    Q_INVOKABLE void dryRunRule(const QVariantMap& payload);
+
     Q_INVOKABLE QStringList knownActionTypes() const;
     Q_INVOKABLE QVariantMap actionTypesByPrefix() const;
 
@@ -96,6 +101,9 @@ signals:
     void statsReceived(const QVariantMap& stats);
     void errorOccurred(int code, const QString& message);
     void validationFailed(int code, const QString& field, const QString& message);
+    // [P1-2 dry-run] 模拟测试结果 / 失败
+    void dryRunFinished(const QVariantMap& result);
+    void dryRunFailed(const QString& message);
 
 private:
     void buildKnownActionSet();

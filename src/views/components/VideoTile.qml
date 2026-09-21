@@ -14,6 +14,15 @@ Item {
     property var detectionBoxes: []
     property bool active: false
 
+    // [S3-4 2026-09-20] WebRTC 协议分支判定:
+    //   webrtc://host:port/index/api/webrtc?... 或 http(s)://.../index/api/webrtc?...
+    //   为 true 时绕过 Qt MediaPlayer(不支持 webrtc://), 改由 WebRtcView 软渲染显示
+    readonly property bool isWebRtcUrl: {
+        var u = root.streamUrl.toLowerCase()
+        return u.indexOf("webrtc://") === 0
+            || (u.indexOf("http") === 0 && u.indexOf("/index/api/webrtc") > 0)
+    }
+
     // [V4-V3] 画面调节属性
     property real imgBrightness: 0.0   // -0.5 ~ 0.5
     property real imgContrast: 1.0     // 0.0 ~ 2.0
@@ -27,6 +36,9 @@ Item {
     property real eZoomOffsetY: 0.5  // 缩放中心 Y (0.0~1.0)
 
     signal doubleClicked()
+    // [S3-4 2026-09-20] 播放失败事件(WebRTC/MediaPlayer 错误桥):
+    //   VideoGridView 接此信号 → mediaController.reportProtocolFailure 触发降级链
+    signal streamFailed(string reason)
 
     // Video playback
     Rectangle {
@@ -38,20 +50,24 @@ Item {
 
         MediaPlayer {
             id: mediaPlayer
-            source: root.streamUrl.length > 0 ? root.streamUrl : ""
+            // [S3-4 2026-09-20] WebRTC URL 不走 MediaPlayer(source 置空), 由下方 WebRtcView 承载
+            source: (root.streamUrl.length > 0 && !root.isWebRtcUrl) ? root.streamUrl : ""
             videoOutput: videoOutput
             autoPlay: true
             // [Audit-Fix P1] autoPlay=true 已在 source 变更时自动播放,
             //   onStreamUrlChanged 中不再显式调 play(), 避免 stop→play→黑屏 双触发
             onErrorOccurred: function(error, errorString) {
                 console.warn("MediaPlayer[" + root.deviceId + "] ERROR:", error, errorString)
+                // [S3-4] 错误上抛(降级链输入): 仅对生效中的非 WebRTC 流上报
+                if (root.streamUrl.length > 0 && !root.isWebRtcUrl)
+                    root.streamFailed("mediaplayer: " + errorString)
             }
         }
 
         VideoOutput {
             id: videoOutput
             anchors.fill: parent
-            visible: root.streamUrl.length > 0
+            visible: root.streamUrl.length > 0 && !root.isWebRtcUrl
             // [V4-V3] 镜像翻转 + [V4-V4] 电子放大
             transform: [
                 Scale {
@@ -92,6 +108,21 @@ Item {
                 ].join("\n")
             }
             // Connection established via MediaPlayer.videoOutput above
+        }
+
+        // [S3-4 2026-09-20] WebRTC 渲染分支(S3-2 信令/解包/解码 + S3-3 软渲染真实通路):
+        //   webrtc:// URL → WebRtcView 收流解码 → QQuickPaintedItem.drawImage;
+        //   失败信号上抛 root.streamFailed → VideoGridView 级降级
+        WebRtcView {
+            id: webRtcView
+            anchors.fill: parent
+            visible: root.isWebRtcUrl
+            streamUrl: root.isWebRtcUrl ? root.streamUrl : ""
+
+            onStreamFailed: function(reason) {
+                console.warn("WebRtc[" + root.deviceId + "] ERROR:", reason)
+                root.streamFailed(reason)
+            }
         }
 
         // [v7.7 对齐 Web video-empty] 空格: 摄像机图标 + "拖拽通道到此处"

@@ -107,9 +107,11 @@ void StreamingController::setHealthCheckIntervalSec(int s) {
 
 void StreamingController::onHealthTimerTick() {
     // 定时刷新健康状态 + 检测阈值后自动切换协议
-    // [FIX v7.6 2026-08-26] 向后兼容: 后端 /api/v1/media/health 当前仅返回 {zlm_status, timestamp},
-    //   尚未扩展 streams[]/lossRate/failCount/rttMs 等细粒度字段. 若后端未提供,
-    //   走 graceful degradation: zlm_status != "healthy" 时直接触发降级链.
+    // [FIX v7.6 2026-08-26] 向后兼容: 旧版后端 /api/v1/media/health 仅返回
+    //   {zlm_status, timestamp}, 走 graceful degradation: zlm_status != "healthy"
+    //   时直接触发降级链.
+    // [P0-C 2026-09-21] 后端已扩展 streams[]({channelId,streamId,active,lossRate,
+    //   failCount,rttMs}, MediaRouter::getHealthJson), 细粒度路径真实生效。
     m_api->get("/api/v1/media/health",
         [this](QJsonObject obj) {
             QJsonObject data = ApiClient::unwrapData(obj);
@@ -237,9 +239,15 @@ void StreamingController::takeSnapshot(const QString& channelId) {
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
+// [FIX 2026-09-21 P0-A] 原 QString("...").arg(streamId) 中 URL 无 %1 占位符,
+//   .arg() 为无效调用(静默返回原串)。后端 POST /api/v1/zlm/webrtc/play 为
+//   占位 SDP stub(RestApiHandlers.cpp:28074, 勿作为 WebRTC 播放依据);
+//   真实 WebRTC 播放链路 = WebRtcClient 直连 ZLM WHEP
+//   (WebRtcClient.h:9, POST /index/api/webrtc?app=<app>&stream=<id>&type=play)。
+//   本方法保留 REST 触发语义, streamId 改经 body 传递。
 void StreamingController::startWebRtcPlay(const QString& streamId) {
-    m_api->post(QString("/api/v1/zlm/webrtc/play").arg(streamId),
-                QJsonObject(),
+    m_api->post("/api/v1/zlm/webrtc/play",
+                QJsonObject{{"stream_id", streamId}},
         [](QJsonObject) {},
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

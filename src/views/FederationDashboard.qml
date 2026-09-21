@@ -14,6 +14,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     property var fedData: null           // /dashboard 数据 (后端未实现时为 null)
     property var tasks: []
     property var rounds: []
@@ -120,7 +125,7 @@ Item {
 
     // ── 数据加载 ──
     function fetchDashboard() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/federation/dashboard", null, function(resp, status) {
+        xhrRequest("GET", apiBase + "/api/v1/federation/dashboard", null, function(resp, status) {
             if (status === 200 && resp && (resp.code === 0 || resp.success === true) && resp.data)
                 fedData = resp.data
             else
@@ -129,7 +134,7 @@ Item {
     }
 
     function fetchTasks() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/federation/tasks?page=1&pageSize=50", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/federation/tasks?page=1&pageSize=50", null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true) && resp.data) {
                 tasks = resp.data.tasks || resp.data.items || (Array.isArray(resp.data) ? resp.data : [])
             } else {
@@ -139,7 +144,7 @@ Item {
     }
 
     function fetchRounds() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/federation/rounds", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/federation/rounds", null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true) && resp.data) {
                 rounds = resp.data.items || (Array.isArray(resp.data) ? resp.data : [])
             } else {
@@ -150,7 +155,7 @@ Item {
     }
 
     function fetchNodes() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/federation/nodes", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/federation/nodes", null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true) && resp.data)
                 nodes = Array.isArray(resp.data) ? resp.data : []
             else
@@ -168,7 +173,7 @@ Item {
     function startRound() {
         if (roundStarting) return
         roundStarting = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/federation/rounds/start", {}, function(resp) {
+        xhrRequest("POST", apiBase + "/api/v1/federation/rounds/start", {}, function(resp) {
             roundStarting = false
             if (resp && (resp.code === 0 || resp.success === true) && resp.data) {
                 var r = resp.data.round !== undefined ? resp.data.round : "?"
@@ -183,7 +188,7 @@ Item {
     }
 
     function controlTask(taskId, action, name) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/federation/tasks/" + taskId + "/" + action, {}, function(resp) {
+        xhrRequest("POST", apiBase + "/api/v1/federation/tasks/" + taskId + "/" + action, {}, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true)) {
                 if (action === "pause") showToast("success", "任务 \"" + name + "\" 已暂停")
                 else if (action === "resume") showToast("success", "任务 \"" + name + "\" 已恢复")
@@ -196,7 +201,7 @@ Item {
     }
 
     function deleteTask(taskId) {
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/federation/tasks/" + taskId, null, function(resp) {
+        xhrRequest("DELETE", apiBase + "/api/v1/federation/tasks/" + taskId, null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true)) {
                 showToast("success", "任务已删除")
                 fetchTasks()
@@ -228,7 +233,7 @@ Item {
             dpEpsilon: eps,
             dpDelta: delta
         }
-        xhrRequest("POST", "http://localhost:8080/api/v1/federation/tasks", body, function(resp) {
+        xhrRequest("POST", apiBase + "/api/v1/federation/tasks", body, function(resp) {
             creating = false
             if (resp && (resp.code === 0 || resp.success === true)) {
                 showToast("success", "联邦训练任务已创建")

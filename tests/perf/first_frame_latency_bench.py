@@ -20,6 +20,13 @@ first_frame_latency_bench.py - P0-2 端到端首帧延迟压测脚本
 用法:
   python3 first_frame_latency_bench.py --mock-port 18080 --concurrency 16 --protocols hls,flv
   python3 first_frame_latency_bench.py --mock-port 18080 --concurrency 64 --output bench.json
+
+  # [G2 2026-09-20] 真机 ZLM 直连模式(隧道复测): 无 SmartGateWay REST
+  # (/api/v1/zlm/streams)时跳过 mock healthz/streams API, 仅测协议握手首字节
+  # (HLS playlist / FLV header)延迟, 与 mock 模式 T2→T3 同口径
+  python3 first_frame_latency_bench.py --base-url http://127.0.0.1:9080 \
+      --stream-ids gb_xxx1,gb_xxx2,h264probe --protocols hls,flv \
+      --repeat 2 --output bench_real.json
 """
 
 from __future__ import annotations
@@ -58,6 +65,7 @@ class BenchResult:
     concurrency: int
     num_streams: int
     protocols: list
+    mode: str = "mock"  # [G2] mock | zlm-direct(真机直连)
     samples: list = field(default_factory=list)
     started_at: float = field(default_factory=time.perf_counter)
     finished_at: Optional[float] = None
@@ -132,24 +140,32 @@ def http_get_timed(url: str, timeout: float = 5.0) -> tuple:
 # ---------------------------------------------------------------------------
 # Bench worker
 # ---------------------------------------------------------------------------
-def run_one(base_url: str, stream_id: str, protocol: str) -> Sample:
+def run_one(base_url: str, stream_id: str, protocol: str,
+            zlm_mode: bool = False, app: str = "rtp") -> Sample:
     """Run a single stream-acquire-and-handshake cycle."""
-    # Step 1: query streams API
-    api_status, api_ms, _, api_err = http_get_timed(f"{base_url}/api/v1/zlm/streams")
-
-    if api_err:
-        return Sample(
-            protocol=protocol, stream_id=stream_id,
-            api_latency_ms=api_ms, handshake_latency_ms=0.0,
-            total_latency_ms=api_ms, fallback_triggered=False,
-            status_code=api_status, error=api_err,
-        )
+    if zlm_mode:
+        # [G2 2026-09-20] 真机 ZLM 直连: 无 SmartGateWay REST, 跳过 API 步骤
+        # (api_ms=0), 仅测协议握手首字节延迟(与 mock 的 T2→T3 同口径)
+        api_status, api_ms, api_err = 200, 0.0, None
+    else:
+        # Step 1: query streams API
+        api_status, api_ms, _, api_err = http_get_timed(f"{base_url}/api/v1/zlm/streams")
+        if api_err:
+            return Sample(
+                protocol=protocol, stream_id=stream_id,
+                api_latency_ms=api_ms, handshake_latency_ms=0.0,
+                total_latency_ms=api_ms, fallback_triggered=False,
+                status_code=api_status, error=api_err,
+            )
 
     # Step 2: pick URL based on protocol
+    #   真机 ZLM 直连路径: /{app}/{stream}/hls.m3u8 与 /{app}/{stream}.live.flv
     if protocol == "hls":
-        url = f"{base_url}/live/{stream_id}.m3u8"
+        url = (f"{base_url}/{app}/{stream_id}/hls.m3u8" if zlm_mode
+               else f"{base_url}/live/{stream_id}.m3u8")
     elif protocol == "flv":
-        url = f"{base_url}/live/{stream_id}.flv"
+        url = (f"{base_url}/{app}/{stream_id}.live.flv" if zlm_mode
+               else f"{base_url}/live/{stream_id}.flv")
     elif protocol == "rtsp":
         url = f"rtsp://{base_url.split('://', 1)[-1]}/live/{stream_id}"
     elif protocol == "webrtc":
@@ -194,25 +210,36 @@ def wait_for_mock(base_url: str, timeout_s: float = 5.0) -> bool:
 
 
 def run_bench(base_url: str, concurrency: int, num_streams: int,
-              protocols: list) -> BenchResult:
+              protocols: list, zlm_mode: bool = False, app: str = "rtp",
+              stream_ids: Optional[list] = None, repeat: int = 1) -> BenchResult:
     result = BenchResult(
-        concurrency=concurrency, num_streams=num_streams, protocols=protocols)
-
-    # Pre-register streams by hitting them once (mimics ZLM pull activation)
-    for i in range(num_streams):
-        sid = f"ch_{i:04d}"
-        http_get_timed(f"{base_url}/live/{sid}.m3u8", timeout=2.0)
+        concurrency=concurrency, num_streams=num_streams, protocols=protocols,
+        mode="zlm-direct" if zlm_mode else "mock")
 
     tasks = []
-    for i in range(num_streams):
-        sid = f"ch_{i:04d}"
-        proto = protocols[i % len(protocols)]
-        tasks.append((sid, proto))
+    if zlm_mode:
+        # [G2 2026-09-20] 真机: 流集合显式给定(设备真实流的 app/stream ID),
+        # 每 (流 × 协议) 采集 repeat 个样本
+        for sid in (stream_ids or []):
+            for proto in protocols:
+                for _ in range(max(1, repeat)):
+                    tasks.append((sid, proto))
+    else:
+        # Pre-register streams by hitting them once (mimics ZLM pull activation)
+        for i in range(num_streams):
+            sid = f"ch_{i:04d}"
+            http_get_timed(f"{base_url}/live/{sid}.m3u8", timeout=2.0)
+
+        for i in range(num_streams):
+            sid = f"ch_{i:04d}"
+            proto = protocols[i % len(protocols)]
+            tasks.append((sid, proto))
 
     started = time.perf_counter()
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
         futures = [
-            pool.submit(run_one, base_url, sid, proto) for sid, proto in tasks
+            pool.submit(run_one, base_url, sid, proto, zlm_mode, app)
+            for sid, proto in tasks
         ]
         for fut in as_completed(futures):
             try:
@@ -233,6 +260,7 @@ def print_report(result: BenchResult, verbose: bool = False) -> None:
     print("=" * 70)
     print(f"  Concurrency   : {result.concurrency}")
     print(f"  Streams       : {result.num_streams}")
+    print(f"  Mode          : {result.mode}")
     print(f"  Protocols     : {','.join(result.protocols)}")
     print(f"  Elapsed       : {result.elapsed_s*1000:.1f} ms ({result.elapsed_s:.3f} s)")
     print(f"  Throughput    : {rps:.1f} req/s")
@@ -287,6 +315,15 @@ def parse_args(argv):
     p.add_argument("--protocols", default="hls,flv",
                    help="Comma-separated: hls,flv,rtsp,webrtc")
     p.add_argument("--output", default=None, help="Write JSON report to file")
+    # [G2 2026-09-20] 真机 ZLM 直连模式(隧道复测)
+    p.add_argument("--base-url", default=None,
+                   help="[G2] 真机 ZLM 模式: 完整基址(如 http://127.0.0.1:9080); "
+                        "启用后跳过 mock healthz/streams API, 需配 --stream-ids")
+    p.add_argument("--stream-ids", default=None,
+                   help="[G2] 真机模式流 ID 列表(逗号分隔, 如 gb_xxx1,h264probe)")
+    p.add_argument("--app", default="rtp", help="[G2] 真机模式 ZLM app 名")
+    p.add_argument("--repeat", type=int, default=1,
+                   help="[G2] 真机模式每(流,协议)重复采样次数")
     p.add_argument("--verbose", action="store_true")
     p.add_argument("--wait-mock", type=float, default=5.0,
                    help="Seconds to wait for mock to be ready")
@@ -298,19 +335,35 @@ def main(argv) -> int:
     if args.num_streams is None:
         args.num_streams = args.concurrency
 
-    base_url = f"http://{args.mock_host}:{args.mock_port}"
     protocols = [p.strip() for p in args.protocols.split(",") if p.strip()]
 
-    if not wait_for_mock(base_url, args.wait_mock):
-        print(f"ERROR: mock server not reachable at {base_url}/healthz",
-              file=sys.stderr)
-        return 2
+    if args.base_url:
+        # [G2 2026-09-20] 真机 ZLM 直连模式: 无 mock 依赖(隧道指向设备 9080)
+        if not args.stream_ids:
+            print("ERROR: --base-url 模式需 --stream-ids 指定真机流", file=sys.stderr)
+            return 2
+        stream_ids = [s.strip() for s in args.stream_ids.split(",") if s.strip()]
+        if not stream_ids:
+            print("ERROR: --stream-ids 为空", file=sys.stderr)
+            return 2
+        base_url = args.base_url.rstrip("/")
+        result = run_bench(base_url, args.concurrency, len(stream_ids),
+                           protocols, zlm_mode=True, app=args.app,
+                           stream_ids=stream_ids, repeat=args.repeat)
+    else:
+        base_url = f"http://{args.mock_host}:{args.mock_port}"
 
-    result = run_bench(base_url, args.concurrency, args.num_streams, protocols)
+        if not wait_for_mock(base_url, args.wait_mock):
+            print(f"ERROR: mock server not reachable at {base_url}/healthz",
+                  file=sys.stderr)
+            return 2
+
+        result = run_bench(base_url, args.concurrency, args.num_streams, protocols)
     print_report(result, verbose=args.verbose)
 
     if args.output:
         report = {
+            "mode": result.mode,
             "concurrency": result.concurrency,
             "num_streams": result.num_streams,
             "protocols": result.protocols,

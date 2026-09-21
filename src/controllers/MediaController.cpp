@@ -15,6 +15,8 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QUrl>
+#include <QUrlQuery>
+#include <QSettings>
 #include <QJsonDocument>
 #include <QDebug>
 #include <QTimer>
@@ -32,10 +34,49 @@ MediaController::MediaController(ApiClient* api, QObject* parent)
       m_api(api),
       m_degradation(new StreamingDegradationChainController(this)),
       m_webrtcProvider(new WebRTCStreamProvider(this)) {
-    // P0-1: 默认禁用 WebRTC 探测,因为 Qt MediaPlayer 不支持 webrtc://
-    // (macOS AVFoundation/Windows WMF/Linux gstreamer 均未原生支持)。
-    // 启用需集成 libdatachannel 或 QtWebEngine(超出本任务范围)。
-    m_webrtcProvider->setEnabled(false);
+    // [P1-1 2026-09-20] WebRTC provider 启用开关(默认仍关):
+    //   该开关只控制 WebRTCStreamProvider 的"探测式"取得 webrtc_url 路径。
+    //   [S3-4 2026-09-20] 语义更新: 内置端 WebRtcRenderer 真实通路已就绪
+    //   (S3-2 信令/解包/解码 + S3-3 软渲染), 用户显式选择 WebRTC 格式
+    //   (降级链首=webrtc)时 applyZlmStreamUrls 直选 webrtc_url,
+    //   不再依赖本开关; 探测路径仅为旧兼容保留, 默认禁用。
+    //   取值顺序: 环境变量 SHIELDBOX_ENABLE_WEBRTC=1/true/yes
+    //             -> QSettings("webrtc/enabled") -> 默认 false
+    bool webrtcEnabled = false;
+    const QByteArray webrtcEnv = qgetenv("SHIELDBOX_ENABLE_WEBRTC");
+    if (!webrtcEnv.isEmpty()) {
+        const QString envValue = QString::fromLatin1(webrtcEnv).trimmed().toLower();
+        webrtcEnabled = (envValue == QStringLiteral("1")
+                         || envValue == QStringLiteral("true")
+                         || envValue == QStringLiteral("yes"));
+    } else {
+        QSettings settings("ShieldBox", "ShieldBox AI");
+        webrtcEnabled = settings.value(QStringLiteral("webrtc/enabled"), false).toBool();
+    }
+    m_webrtcProvider->setEnabled(webrtcEnabled);
+    qDebug() << "[MediaController] [P1-1] WebRTC provider enabled =" << webrtcEnabled;
+
+    // [P1-1 2026-09-20] 探测结果回传链路: 兑现 applyZlmStreamUrls 中的注释承诺
+    //   (此前 webRtcResolved/webRtcFallback 无任何接收者,探测结果被丢弃)。
+    connect(m_webrtcProvider, &WebRTCStreamProvider::webRtcResolved, this,
+            [this](const QString& host, int port, const QString& streamId,
+                   const QString& url) {
+        const QString deviceId = m_webrtcPendingStreams.take(streamId);
+        if (deviceId.isEmpty() || url.isEmpty())
+            return;
+        qDebug() << "[MediaController] [P1-1] webrtc resolved:" << deviceId
+                 << "->" << url << "(probe" << host << port << ")";
+        m_streamUrls.insert(deviceId, url);
+        emit streamUrlsUpdated();
+        emit streamStarted(deviceId, url);
+    });
+    connect(m_webrtcProvider, &WebRTCStreamProvider::webRtcFallback, this,
+            [this](const QString& host, int port, const QString& streamId,
+                   const QString& reason) {
+        m_webrtcPendingStreams.remove(streamId);
+        qDebug() << "[MediaController] [P1-1] webrtc fallback:" << host << port
+                 << streamId << "reason:" << reason;
+    });
 }
 
 void MediaController::setLayout(int grid) {
@@ -96,26 +137,54 @@ void MediaController::applyZlmStreamUrls(const QString& deviceId,
     //    即使降级到 RTSP client, 在 Sophon CV186AH + ZLM 上也不稳定)。
     //   实际验证: http://127.0.0.1:9080/rtp/...flv 返回 200 + FLV magic,
     //   是 Qt6 ffmpeg plugin 最稳的视频源。
+    //
+    // [S3-4 2026-09-20] 用户显式选择 WebRTC 格式(降级链首=webrtc)时直选 webrtcUrl:
+    //   内置端 WebRtcRenderer 真实通路已就绪(S3-2/S3-3), 无需再经
+    //   WebRTCStreamProvider 探测(探测路径仅作旧兼容保留)。
+    //   默认链(链首 flv/rtsp...)行为不变: webrtc 仍只作最后兜底。
     QString bestUrl;
+    const QStringList chain = m_degradation->chain(deviceId);
+    const bool webrtcPreferred = !chain.isEmpty()
+                                 && chain.first() == QStringLiteral("webrtc");
+    if (webrtcPreferred && !webrtcUrl.isEmpty()) {
+        bestUrl = webrtcUrl;
+        qDebug() << "[MediaController] [S3-4] webrtc preferred by chain:" << deviceId;
+    } else {
 #ifdef Q_OS_MACOS
-    if (!hlsUrl.isEmpty())       bestUrl = hlsUrl;
-    else if (!flvUrl.isEmpty())  bestUrl = flvUrl;
-    else                          bestUrl = rtspUrl;
+        if (!hlsUrl.isEmpty())       bestUrl = hlsUrl;
+        else if (!flvUrl.isEmpty())  bestUrl = flvUrl;
+        else                          bestUrl = rtspUrl;
 #else
-    if (!flvUrl.isEmpty())       bestUrl = flvUrl;
-    else if (!hlsUrl.isEmpty())  bestUrl = hlsUrl;
-    else                          bestUrl = rtspUrl;
+        if (!flvUrl.isEmpty())       bestUrl = flvUrl;
+        else if (!hlsUrl.isEmpty())  bestUrl = hlsUrl;
+        else                          bestUrl = rtspUrl;
 #endif
+    }
 
     // P0-1: 当 bestUrl 为空且只有 webrtcUrl 可用时,尝试用 WebRTCStreamProvider 探测
     //        如果服务不可达,降级链会继续推送到下一个协议
     if (bestUrl.isEmpty() && !webrtcUrl.isEmpty() && m_webrtcProvider->isEnabled()) {
-        qDebug() << "[MediaController] P0-1: best URL is webrtc, requesting probe for"
-                 << deviceId;
-        m_webrtcProvider->requestWebRtcUrl(QString(), 0, webrtcUrl);
-        // 注意: 实际探测是异步的;在此期间 QML 会拿到空 URL,
-        // 降级链会推到下一个有可用 URL 的协议。
-        // 探测完成后,如果服务可用,会在 webRtcResolved 中重新设置 m_streamUrls。
+        // [P1-1 2026-09-20] 修复探测参数: 从
+        //   webrtc://host:port/index/api/webrtc?app=live&stream=<id>
+        //   解析 host/port/streamId(原实现传空 host + 0 端口,导致探测 URL 为
+        //   http://:0/... 必然失败,且成功时构造的 URL 也是畸形)。
+        const QUrl wUrl(webrtcUrl);
+        const QString wHost = wUrl.host();
+        const int wPort = wUrl.port();
+        const QString wStream = QUrlQuery(wUrl).queryItemValue(
+            QStringLiteral("stream"));
+        if (!wHost.isEmpty() && wPort > 0 && !wStream.isEmpty()) {
+            qDebug() << "[MediaController] [P1-1] best URL is webrtc, requesting probe for"
+                     << deviceId << "stream:" << wStream;
+            m_webrtcPendingStreams.insert(wStream, deviceId);
+            m_webrtcProvider->requestWebRtcUrl(wHost, wPort, wStream);
+            // 注意: 实际探测是异步的;在此期间 QML 会拿到空 URL,
+            // 降级链会推到下一个有可用 URL 的协议。
+            // 探测完成后,如果服务可用,会在 webRtcResolved 中重新设置 m_streamUrls。
+        } else {
+            qDebug() << "[MediaController] [P1-1] malformed webrtc_url, skip probe:"
+                     << webrtcUrl;
+        }
     }
 
     if (!bestUrl.isEmpty()) {

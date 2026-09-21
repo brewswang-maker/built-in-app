@@ -2,6 +2,8 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file alias="DashboardView.qml">../src/views/DashboardView.qml</file>
+        <!-- [P2-A 2026-09-21] 设备地理分布地图 (Canvas 自绘, 首页中列第三态) -->
+        <file alias="MapPanel.qml">../src/views/MapPanel.qml</file>
         <!-- [v7.6 1:1 对齐 Web /dashboard 截图] 数据统计 Dashboard (idx 24) -->
         <file alias="DashboardEnhancedView.qml">../src/views/DashboardEnhancedView.qml</file>
         <file alias="VideoGridView.qml">../src/views/VideoGridView.qml</file>
@@ -12,6 +14,8 @@
         <file alias="StatisticsView.qml">../src/views/StatisticsView.qml</file>
         <file alias="AlarmPopup.qml">../src/views/AlarmPopup.qml</file>
         <file alias="VideoTile.qml">../src/views/components/VideoTile.qml</file>
+        <!-- [P0-2a 2026-09-20] 画中画悬浮小窗 -->
+        <file alias="PipOverlay.qml">../src/views/components/PipOverlay.qml</file>
         <file alias="StatusIndicator.qml">../src/views/components/StatusIndicator.qml</file>
         <file alias="AlarmBadge.qml">../src/views/components/AlarmBadge.qml</file>
         <file alias="PipelineEditorView.qml">../src/views/PipelineEditorView.qml</file>
@@ -43,9 +47,10 @@
         <file alias="ReActTraceView.qml">../src/views/components/ReActTraceView.qml</file>
         <file alias="HeatmapOverlay.qml">../src/views/components/HeatmapOverlay.qml</file>
         <file alias="Locate3DPanel.qml">../src/views/components/Locate3DPanel.qml</file>
-        <!-- [体育场3D] Qt Quick 3D 真 3D 场景组件与共享场景数据（与 Web 端 scene_config.json 1:1 同源） -->
-        <file alias="StadiumScene3D.qml">../src/views/components/StadiumScene3D.qml</file>
+        <!-- [体育场3D] 共享场景数据（与 Web 端 scene_config.json 1:1 同源; 去 3D 后由 Locate3DPanel 使用） -->
         <file alias="StadiumSceneData.js">../src/qml/StadiumSceneData.js</file>
+        <!-- [P1-1 2026-09-20] WebRTC 渲染视图（骨架; qrc 注册为真机验证提供入口） -->
+        <file alias="WebRtcView.qml">../src/qml/WebRtcView.qml</file>
                 <!-- [P1-#2 v7.0+] 视频轮巡面板 (DashboardView 中列视图切换) -->
                 <file alias="VideoPatrolPanel.qml">../src/views/components/VideoPatrolPanel.qml</file>
         <file alias="CardPanel.qml">../src/views/components/CardPanel.qml</file>

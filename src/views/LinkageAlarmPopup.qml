@@ -29,6 +29,13 @@ Window {
     property string noteText: ""        // 处理备注
     property int autoCloseSec: 60       // 默认60秒 (与 Web 截图一致)
 
+    // [P1-3 2026-09-20] 事件回放 (±90s) 状态: "" | exporting | playing | failed
+    //   链路: recordingController.exportAlarmClip → export-range-async 合成完整 MP4
+    //   (后端拼接, 零 ffmpeg 新代码) → alarmClipReady 后在弹窗内 Video 播放
+    //   (对齐 Web 联动回放 tab; 内置端选方案 A 单文件回放, 无片间断层)
+    property string clipState: ""
+    property string clipStatusText: ""
+
     readonly property var levelGradient: ({
         "critical": ["#F5365C", "#F9A825"],
         "high":     ["#FF6B35", "#FFB800"],
@@ -138,6 +145,8 @@ Window {
         borderAnim.start()
         // [FIX v7.6 2026-08-26] restart() 重置倒计时 — 首次 showAlarm 才启, dismiss 才会 stop
         autoCloseTimer.restart()
+        // [P1-3 2026-09-20] 新告警展示: 清理上一条的事件回放态 (在飞导出任务取消)
+        resetClipState()
         linkagePopup.show()
 
         // 初始化视频流
@@ -203,7 +212,36 @@ Window {
         }
     }
 
+    // [P1-3 2026-09-20] 事件回放导出任务状态 → 弹窗内播放
+    Connections {
+        target: recordingController
+        function onAlarmClipStateChanged(state) {
+            if (state === "exporting") {
+                clipState = "exporting"
+                clipStatusText = "事件回放 (±90s) 导出中..."
+            } else if (state === "failed") {
+                clipState = "failed"
+            }
+        }
+        function onAlarmClipReady(url, filename, fileSize, segments) {
+            clipState = "playing"
+            clipStatusText = "事件回放: " + (segments > 0
+                ? ("拼接 " + segments + " 个切片" + (fileSize > 0 ? " / " + (fileSize / 1048576).toFixed(1) + "MB" : ""))
+                : (filename || ""))
+            alarmVideo.source = url
+            alarmVideo.play()
+        }
+        function onAlarmClipFailed(reason) {
+            clipState = "failed"
+            clipStatusText = "事件回放失败: " + reason
+            // 失败恢复自动关闭倒计时 (避免弹窗因回放流程暂停后永不关闭)
+            autoCloseTimer.restart()
+        }
+    }
+
     function dismiss() {
+        // [P1-3 2026-09-20] 关闭弹窗: 取消在飞导出任务与回放态
+        resetClipState()
         alarmVideo.stop()
         alarmVideo.source = ""
         visible = false
@@ -211,8 +249,39 @@ Window {
         borderAnim.stop()
     }
 
+    // [P1-3 2026-09-20] 事件回放 (±90s): 告警时刻前后各 90s 经 export-range-async
+    //   合成完整 MP4 (复用后端区段拼接链) 后在弹窗内播放 — 对齐 Web 联动回放语义
+    //   ([FIX clip-90s 2026-09-19] 事件前后各 90 秒)。
+    function playAlarmClip() {
+        if (!currentAlarm) return
+        var t = currentAlarm.created_at || currentAlarm.timestamp || currentAlarm.time
+        if (!t) { clipStatusText = "告警无时间戳, 无法定位片段"; return }
+        var d = (typeof t === "string" || t > 1e12) ? new Date(t) : new Date(t * 1000)
+        if (isNaN(d.getTime())) { clipStatusText = "告警时间无效: " + t; return }
+        var chId = currentAlarm.channel_id_str || ("" + (currentAlarm.channel_id || ""))
+        if (chId === "" || chId === "undefined" || chId === "null") {
+            clipStatusText = "告警无通道, 无法定位片段"
+            return
+        }
+        // 播放期间暂停自动关闭 (3 分钟回放不应被倒计时打断; 关闭走 ✕/操作按钮)
+        autoCloseTimer.stop()
+        clipState = "exporting"
+        clipStatusText = "事件回放 (±90s) 导出中..."
+        recordingController.exportAlarmClip("" + (currentAlarm.device_id || ""),
+                                            chId,
+                                            Qt.formatDateTime(d, "yyyy-MM-ddTHH:mm:ss"))
+    }
+
+    function resetClipState() {
+        clipState = ""
+        clipStatusText = ""
+        // 无条件取消 (Controller 侧空任务为空操作)
+        recordingController.cancelAlarmClip()
+    }
+
     function refreshForCurrent() {
         // 切换队列告警后: 重新拉视频 + 刷新联动日志
+        resetClipState()  // [P1-3] 上一条告警的事件回放态清理
         if (alarmId) {
             linkageController.refreshLogs(alarmId)
             linkageController.getRuleStats()
@@ -456,8 +525,8 @@ Window {
                                 }
                             }
 
-                            // LIVE标签
-                            Rectangle { anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8; width: 48; height: 20; radius: 4; color: "#F56C6C"
+                            // LIVE标签 (事件回放播放中隐藏, 避免将合成片误认为直播)
+                            Rectangle { visible: linkagePopup.clipState !== "playing"; anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 8; width: 48; height: 20; radius: 4; color: "#F56C6C"
                                 Row { anchors.centerIn: parent; spacing: 2
                                     Rectangle { width: 6; height: 6; radius: 3; color: "#FFF"
                                         SequentialAnimation on opacity { running: true; loops: Animation.Infinite
@@ -705,6 +774,14 @@ Window {
                             }
                         }
                     }
+                    // [P1-3 2026-09-20] 事件回放 (±90s): 合成窗口 MP4 在弹窗内播放
+                    Button { text: linkagePopup.clipState === "exporting" ? "导出中..." : "事件回放"
+                        enabled: linkagePopup.clipState !== "exporting" && currentAlarm !== null
+                        font.pixelSize: 12
+                        background: Rectangle { color: "#F5F7FA"; radius: 8; width: 80; height: 32; border.color: "#409EFF"; border.width: 1 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 12; color: parent.enabled ? "#409EFF" : "#C0C4CC"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: linkagePopup.playAlarmClip()
+                    }
                     Button { text: "对讲"; font.pixelSize: 12
                         background: Rectangle { color: "#F5F7FA"; radius: 8; width: 70; height: 32 }
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -716,6 +793,15 @@ Window {
                     }
 
                     Item { Layout.fillWidth: true }
+
+                    // [P1-3] 事件回放状态提示 (导出中/播放中/失败原因)
+                    Text { text: linkagePopup.clipStatusText
+                        visible: text !== ""
+                        font.pixelSize: 12
+                        color: linkagePopup.clipState === "failed" ? "#F56C6C" : "#409EFF"
+                        elide: Text.ElideRight
+                        Layout.maximumWidth: 240
+                    }
 
                     Text { text: "自动关闭: " + autoCloseTimer.countdown + "s"; font.pixelSize: 12; color: "#4A4D58" }
                 }

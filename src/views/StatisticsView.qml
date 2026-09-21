@@ -21,6 +21,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: statsPage
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     // ── 状态 ──
     property string timeRange: "7d"          // 7d / 30d / 90d
     property bool loading: true
@@ -131,7 +136,7 @@ Item {
     // ── 安全评分 ──
     function loadSecurityScore() {
         var xhr = new XMLHttpRequest()
-        xhr.open("GET", "http://localhost:8080/api/v1/stats/security-score", true)
+        xhr.open("GET", apiBase + "/api/v1/stats/security-score", true)
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
@@ -150,7 +155,7 @@ Item {
     // ── Agent 端点探测 (box-sdk 通常无此端点 → 如实空态) ──
     function probeAgentActivity() {
         var xhr = new XMLHttpRequest()
-        xhr.open("GET", "http://localhost:8080/api/v1/stats/agent-activity", true)
+        xhr.open("GET", apiBase + "/api/v1/stats/agent-activity", true)
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
@@ -299,6 +304,49 @@ Item {
                             Text {
                                 visible: statsPage.scoreLoaded && (!statsPage.securityScore || !statsPage.securityScore.dimensions)
                                 text: "暂无安全评分数据"; font.pixelSize: 13; color: "#909399"
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ══ 行1.5: [P2-E2 2026-09-21] 处置时长 (MTTR) — /api/v1/stats/mttr ══
+            // 口径: resolved_at-created_at 聚合 (仅主行, 见后端端点注释)
+            Component.onCompleted: statisticsController.refreshMttr(30)
+            RowLayout {
+                Layout.fillWidth: true; spacing: 12
+
+                Repeater {
+                    model: [
+                        { label: "平均处置时长", key: "avgMttrSec", isCount: false },
+                        { label: "P50 中位数",   key: "p50Sec",    isCount: false },
+                        { label: "P90 长尾",     key: "p90Sec",    isCount: false },
+                        { label: "窗口内待处置",  key: "pendingCount", isCount: true }
+                    ]
+                    delegate: Rectangle {
+                        Layout.fillWidth: true; Layout.preferredHeight: 96
+                        color: "#FFFFFF"; radius: 4; border.color: "#EBEEF5"
+                        Column {
+                            anchors.centerIn: parent; spacing: 4
+                            Text { text: modelData.label; font.pixelSize: 12; color: "#6b7280" }
+                            Text {
+                                font.pixelSize: 22; font.bold: true; color: "#303133"
+                                text: {
+                                    var m = statisticsController.mttr
+                                    var v = (m[modelData.key] !== undefined) ? Number(m[modelData.key]) : 0
+                                    if (modelData.isCount) return v + " 起"
+                                    if (v <= 0) return "--"
+                                    if (v < 60) return v.toFixed(0) + " 秒"
+                                    if (v < 3600) return (v / 60).toFixed(1) + " 分"
+                                    return (v / 3600).toFixed(1) + " 小时"
+                                }
+                            }
+                            Text {
+                                font.pixelSize: 11; color: "#909399"
+                                text: modelData.isCount ?
+                                      ("近 " + (statisticsController.mttr.days || 30) + " 天未处置") :
+                                      ((statisticsController.mttr.resolvedCount || 0) + " 起已处置样本 · 近 " +
+                                       (statisticsController.mttr.days || 30) + " 天")
                             }
                         }
                     }

@@ -35,6 +35,17 @@ Item {
     property string suppressAfterRule: ""
     property bool   suppressLowerPriority: false
 
+    // ── [AXIS-TEMPORAL 2026-09-20] 事件时序编辑态 (P2-3, 对标海康 AXIS) ──
+    //   模式: ""=无(普通几何) / "sequence"=顺序穿越 / "conditional"=时序条件;
+    //   保存写 rule.spatial_cond 三字段 (sequence_json/conditional_json/
+    //   exclusion_pause), 契约见后端 LinkageEngine.h [AXIS 2026-09-13]
+    property string axisMode: ""
+    property var    axisSteps: []            // 顺序穿越链: [{region_id, gap_s}]
+    property string axisTargetRegion: ""    // 时序条件: 目标区域ID
+    property string axisPriorRegion: ""     // 时序条件: 前置区域ID
+    property int    axisLookbackS: 300      // 时序条件: 回看窗口秒 (默认 5min)
+    property bool   axisExclusionPause: false  // 排除区暂停计时 (仅时序路径生效)
+
     // ── 数据收集函数 ──
     function collectRuleData() {
         // 时间条件 (P1 #8: 顶层 time_cond)
@@ -95,6 +106,13 @@ Item {
             location_id: locationCombo.currentIndex > 0 ? locationCombo.currentText : "",
             device_group_id: groupCombo.currentIndex > 0 ? groupCombo.currentText : ""
         }
+        // [AXIS-TEMPORAL 2026-09-20] 时序语义落库 (P2-3): 与后端 LinkageEngine.h
+        //   [AXIS 2026-09-13] 契约一致 — 字段值 = 嵌套 JSON 字符串 (后端
+        //   std::string); 两字段均非空时引擎 sequence 优先; 空串 = 存量
+        //   普通几何路径零变更。
+        spatialCond.sequence_json = serializeAxisSequence()
+        spatialCond.conditional_json = serializeAxisConditional()
+        spatialCond.exclusion_pause = axisExclusionPause
         // merge_cond (P1 #7 顶层)
         var mergeCond = {
             enabled: mergeEnabledCheck.checked,
@@ -138,6 +156,77 @@ Item {
         return rule
     }
 
+    // ── [AXIS-TEMPORAL 2026-09-20] 时序语义序列化/编辑辅助 (P2-3) ──
+    // 顺序穿越链 → [{region_id, max_gap_ms}]: 间隔钳位 [1s, 24h] (与引擎
+    //   matchAxisTemporal 同口径); 模式非 sequence 返回空串 (切模式即清链)。
+    function serializeAxisSequence() {
+        if (axisMode !== "sequence") return ""
+        var arr = []
+        for (var i = 0; i < axisSteps.length; i++) {
+            var st = axisSteps[i] || {}
+            var rid = ("" + (st.region_id || "")).trim()
+            if (rid === "") continue
+            var gapS = Math.min(86400, Math.max(1, Math.round(st.gap_s || 60)))
+            arr.push({ region_id: rid, max_gap_ms: gapS * 1000 })
+        }
+        return arr.length > 0 ? JSON.stringify(arr) : ""
+    }
+    // 时序条件 → {target_region_id, prior_region_id, lookback_ms}: 回看钳位
+    //   [1s, 24h] 默认 5min; 目标区域为空 = 不生效 (返回空串)。
+    function serializeAxisConditional() {
+        if (axisMode !== "conditional") return ""
+        var t = ("" + axisTargetRegion).trim()
+        if (t === "") return ""
+        var lookS = Math.min(86400, Math.max(1, Math.round(axisLookbackS || 300)))
+        return JSON.stringify({ target_region_id: t,
+                                prior_region_id: ("" + axisPriorRegion).trim(),
+                                lookback_ms: lookS * 1000 })
+    }
+    function resetAxisState() {
+        axisMode = ""
+        axisSteps = []
+        axisTargetRegion = ""
+        axisPriorRegion = ""
+        axisLookbackS = 300
+        axisExclusionPause = false
+    }
+    function addAxisStep() {
+        var arr = axisSteps.slice()
+        arr.push({ region_id: "", gap_s: 60 })
+        axisSteps = arr
+    }
+    function removeAxisStep(idx) {
+        var arr = axisSteps.slice()
+        if (idx >= 0 && idx < arr.length) arr.splice(idx, 1)
+        axisSteps = arr
+    }
+    function updateAxisStep(idx, key, val) {
+        var arr = axisSteps.slice()
+        if (idx >= 0 && idx < arr.length) {
+            arr[idx][key] = val
+            axisSteps = arr
+        }
+    }
+
+    // ── [P1-2] dry-run 参数组装: 从表单提取首事件类型/首通道 ──
+    //   对齐 Web (LinkageRuleView.vue:4918-4939): confidence = 阈值 + 5% (封顶 1.0)
+    function buildDryRunPayload() {
+        var ruleData = collectRuleData()
+        var sc = ruleData.source_cond || {}
+        var sp = ruleData.spatial_cond || {}
+        var evtTypes = sc.event_types || []
+        var chans = sc.channel_ids || []
+        return {
+            rule_id: editingRule ? (editingRule.id || editingRule.rule_id || "") : "",
+            alarm_type: evtTypes.length > 0 ? String(evtTypes[0]) : "",
+            channel_id_str: chans.length > 0 ? String(chans[0]) : "",
+            severity: sc.min_severity || 1,
+            confidence: Math.min(1.0, (sc.min_confidence || 0) + 0.05),
+            region_id: sp.region_id || "",
+            location_id: sp.location_id || ""
+        }
+    }
+
     // ── 回填编辑表单 ──
     function populateForm(ruleData) {
         ruleNameField.text = ruleData.name || ""
@@ -163,6 +252,34 @@ Item {
         locationCombo.currentIndex = Math.max(0, locationCombo.model.indexOf(sc.location_id || sc.location || ""))
         roiCombo.currentIndex      = Math.max(0, roiCombo.model.indexOf(sc.region_id || sc.roi || ""))
         groupCombo.currentIndex    = Math.max(0, groupCombo.model.indexOf(sc.device_group_id || sc.group || ""))
+
+        // [AXIS-TEMPORAL 2026-09-20] 时序语义回显 (P2-3): sequence 优先 (引擎同序);
+        //   JSON 损坏/字段缺失 → 回落"无"且清状态 (不阻塞其余表单回显)。
+        resetAxisState()
+        var seqArr = null, condObj = null
+        try { if (sc.sequence_json) seqArr = JSON.parse(sc.sequence_json) } catch (e) { seqArr = null }
+        try { if (sc.conditional_json) condObj = JSON.parse(sc.conditional_json) } catch (e) { condObj = null }
+        if (seqArr && seqArr.length > 0) {
+            var steps = []
+            for (var si = 0; si < seqArr.length; si++) {
+                var s = seqArr[si] || {}
+                if (!s.region_id) continue
+                steps.push({ region_id: "" + s.region_id,
+                             gap_s: Math.min(86400, Math.max(1, Math.round((s.max_gap_ms || 60000) / 1000))) })
+            }
+            if (steps.length > 0) {
+                axisSteps = steps
+                axisMode = "sequence"
+            }
+        } else if (condObj && (condObj.target_region_id || condObj.prior_region_id)) {
+            axisMode = "conditional"
+            axisTargetRegion = "" + (condObj.target_region_id || "")
+            axisPriorRegion = "" + (condObj.prior_region_id || "")
+            axisLookbackS = Math.min(86400, Math.max(1, Math.round((condObj.lookback_ms || 300000) / 1000)))
+        }
+        axisExclusionPause = sc.exclusion_pause === true
+        axisModeCombo.currentIndex = axisMode === "sequence" ? 1
+            : axisMode === "conditional" ? 2 : 0
 
         // eventTypes
         var evtArr = []
@@ -321,6 +438,10 @@ Item {
         treeRootEditor.refresh(conditionTree)
         treeModeSwitch.checked = false
 
+        // [AXIS-TEMPORAL 2026-09-20] 事件时序状态复位 (P2-3)
+        resetAxisState()
+        axisModeCombo.currentIndex = 0
+
         var columns = [clientActionColumn, webActionColumn, appActionColumn, mpActionColumn, sysActionColumn]
         for (var t = 0; t < columns.length; t++) {
             var col = columns[t]
@@ -357,6 +478,16 @@ Item {
             validationField = field || ""
             validationCode = code || -1
             errorBanner.visible = true
+        }
+        // [P1-2] dry-run 模拟测试结果 / 失败
+        function onDryRunFinished(result) {
+            dryRunDialog.pending = false
+            dryRunDialog.result = result || null
+        }
+        function onDryRunFailed(message) {
+            dryRunDialog.pending = false
+            dryRunDialog.result = null
+            dryRunDialog.errorText = message || "模拟测试失败"
         }
     }
 
@@ -619,6 +750,120 @@ Item {
                         Text { text: "设备分组"; font.pixelSize: 12; color: "#909399" }
                         ComboBox { id: groupCombo; width: parent.width; height: 28; model: ["全部分组", "东区摄像头", "室内摄像头", "室外摄像头"]; background: Rectangle { color: "#F5F7FA"; radius: 4 }
                             contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#303133"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
+
+                        // [AXIS-TEMPORAL 2026-09-20] 事件时序 (P2-3, 对标海康 AXIS 事件时序):
+                        //   顺序穿越 = 事件按序命中链上各区域 (每步间隔 ≤ 阈值, 钳位 [1s,24h],
+                        //   默认 60s) 链走完当刻触发; 时序条件 = 进入目标区域时回看窗口内
+                        //   未先经前置区域则通过; 排除区暂停 = 命中排除区期间间隔计时暂停
+                        //   (仅时序路径生效)。序列化见 serializeAxisSequence/Conditional。
+                        Rectangle { height: 1; color: "#E4E7ED"; width: parent.width }
+                        Text { text: "事件时序 (AXIS)"; font.pixelSize: 12; color: "#909399" }
+                        ComboBox {
+                            id: axisModeCombo
+                            width: parent.width; height: 28
+                            model: ["无 (普通几何判定)", "顺序穿越", "时序条件"]
+                            background: Rectangle { color: "#F5F7FA"; radius: 4 }
+                            contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#303133"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                            onActivated: {
+                                linkagePage.axisMode = ["", "sequence", "conditional"][currentIndex]
+                                if (linkagePage.axisMode === "sequence" && linkagePage.axisSteps.length === 0)
+                                    linkagePage.axisSteps = [{ region_id: "", gap_s: 60 }]
+                            }
+                        }
+                        // 顺序穿越: 步骤列表 (区域ID + 最大间隔秒)
+                        Column {
+                            visible: linkagePage.axisMode === "sequence"
+                            width: parent.width; spacing: 4
+                            Repeater {
+                                model: linkagePage.axisSteps
+                                delegate: Row {
+                                    spacing: 4
+                                    property int stepIndex: index
+                                    TextField {
+                                        width: 118; height: 26
+                                        text: modelData.region_id || ""
+                                        placeholderText: "区域ID"
+                                        color: "#303133"; font.pixelSize: 12
+                                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                                        onTextChanged: linkagePage.updateAxisStep(stepIndex, "region_id", text)
+                                    }
+                                    Text { text: "间隔"; font.pixelSize: 12; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                                    SpinBox {
+                                        width: 112; height: 26
+                                        from: 1; to: 86400
+                                        value: modelData.gap_s || 60
+                                        onValueChanged: linkagePage.updateAxisStep(stepIndex, "gap_s", value)
+                                    }
+                                    Text { text: "秒"; font.pixelSize: 12; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                                    Button {
+                                        width: 24; height: 24
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        background: Rectangle { color: "transparent" }
+                                        contentItem: Text { text: "X"; font.pixelSize: 12; color: "#F56C6C"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                        onClicked: linkagePage.removeAxisStep(stepIndex)
+                                    }
+                                }
+                            }
+                            Button {
+                                text: "+ 添加步骤"; font.pixelSize: 12
+                                background: Rectangle { color: "#3B82F6"; radius: 3; width: 84; height: 24 }
+                                contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#FFF"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                onClicked: linkagePage.addAxisStep()
+                            }
+                            Text { text: "事件须按序命中各区域, 每步间隔 ≤ 阈值; 链走完当刻触发 (单事件模拟测试不通过属预期)"; font.pixelSize: 11; color: "#909399"; width: parent.width; wrapMode: Text.WordWrap }
+                        }
+                        // 时序条件: 目标/前置区域 + 回看窗口
+                        Column {
+                            visible: linkagePage.axisMode === "conditional"
+                            width: parent.width; spacing: 4
+                            Row { spacing: 4
+                                Text { text: "目标区域"; font.pixelSize: 12; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                                TextField {
+                                    width: 150; height: 26
+                                    text: linkagePage.axisTargetRegion
+                                    placeholderText: "进入的区域ID"
+                                    color: "#303133"; font.pixelSize: 12
+                                    background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                                    onTextChanged: linkagePage.axisTargetRegion = text
+                                }
+                            }
+                            Row { spacing: 4
+                                Text { text: "前置区域"; font.pixelSize: 12; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                                TextField {
+                                    width: 150; height: 26
+                                    text: linkagePage.axisPriorRegion
+                                    placeholderText: "应先经过的区域ID"
+                                    color: "#303133"; font.pixelSize: 12
+                                    background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                                    onTextChanged: linkagePage.axisPriorRegion = text
+                                }
+                            }
+                            Row { spacing: 4
+                                Text { text: "回看窗口"; font.pixelSize: 12; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                                SpinBox {
+                                    width: 112; height: 26
+                                    from: 1; to: 86400
+                                    value: linkagePage.axisLookbackS
+                                    onValueChanged: linkagePage.axisLookbackS = value
+                                }
+                                Text { text: "秒"; font.pixelSize: 12; color: "#909399"; anchors.verticalCenter: parent.verticalCenter }
+                            }
+                            Text { text: "进入目标区域时检查窗口内是否曾进入前置区域: 未先经 → 通过; 已先经 → 拦截"; font.pixelSize: 11; color: "#909399"; width: parent.width; wrapMode: Text.WordWrap }
+                        }
+                        // 排除区暂停 (仅时序路径生效)
+                        CheckBox {
+                            visible: linkagePage.axisMode !== ""
+                            id: axisExclusionCheck
+                            text: "排除区暂停计时"
+                            checked: linkagePage.axisExclusionPause
+                            onToggled: linkagePage.axisExclusionPause = checked
+                            contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133" }
+                        }
+                        Text {
+                            visible: linkagePage.axisMode !== ""
+                            text: "命中排除区期间间隔计时暂停且不触发, 离开续计 (仅时序路径生效)"
+                            font.pixelSize: 11; color: "#909399"; width: parent.width; wrapMode: Text.WordWrap
+                        }
                     }
                 }
 
@@ -954,6 +1199,22 @@ Item {
                 Rectangle { height: 1; color: "#F5F7FA"; width: parent.width }
 
                 Row { spacing: 12; anchors.horizontalCenter: parent.horizontalCenter
+                    // [P1-2] 模拟测试: 对齐 Web "请先保存规则后再进行模拟测试" 约束
+                    Button { text: "模拟测试"; font.pixelSize: 13
+                        enabled: editingRule !== null
+                        background: Rectangle { color: enabled ? "#ECF5FF" : "#F5F7FA"; radius: 8; width: 90; height: 38
+                            border.color: enabled ? "#D9ECFF" : "#EBEEF5"; border.width: 1 }
+                        contentItem: Text { text: parent.text; font.pixelSize: 13
+                            color: enabled ? "#409EFF" : "#C0C4CC"
+                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        onClicked: {
+                            dryRunDialog.result = null
+                            dryRunDialog.errorText = ""
+                            dryRunDialog.pending = true
+                            dryRunDialog.open()
+                            linkageController.dryRunRule(buildDryRunPayload())
+                        }
+                    }
                     Button { text: "取消"; font.pixelSize: 13
                         background: Rectangle { color: "#F5F7FA"; radius: 8; width: 90; height: 38 }
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
@@ -1015,6 +1276,122 @@ Item {
 
     // ─── 条件树节点编辑器已迁移到独立文件 LinkageConditionNode.qml ───
     // 原因: Qt 6 内联 component 不允许自递归, 独立文件支持无限嵌套
+
+    // ═══ P1-2: 模拟测试结果弹窗 (对齐 Web el-dialog LinkageRuleView.vue:1341-1373) ═══
+    Popup {
+        id: dryRunDialog
+        anchors.centerIn: parent; width: 680; height: 500
+        modal: true
+        property var result: null
+        property bool pending: false
+        property string errorText: ""
+        background: Rectangle { color: "#FFFFFF"; radius: 8; border.color: "#EBEEF5" }
+
+        ColumnLayout {
+            anchors.fill: parent; anchors.margins: 16; spacing: 10
+
+            RowLayout {
+                Layout.fillWidth: true
+                Text { text: "模拟测试结果"; font.pixelSize: 15; font.bold: true; color: "#303133" }
+                Item { Layout.fillWidth: true }
+                Button { text: "关闭"; font.pixelSize: 12
+                    background: Rectangle { color: "#F5F7FA"; radius: 6; width: 64; height: 28 }
+                    contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#606266"
+                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                    onClicked: dryRunDialog.close()
+                }
+            }
+
+            // 状态条 (匹配 / 未匹配 / 失败 / 进行中)
+            Rectangle {
+                Layout.fillWidth: true; height: 38; radius: 6; border.width: 1
+                color: dryRunDialog.errorText !== "" ? "#FEF0F0"
+                     : dryRunDialog.pending ? "#ECF5FF"
+                     : (dryRunDialog.result && dryRunDialog.result.matched) ? "#F0F9EB" : "#F4F4F5"
+                border.color: dryRunDialog.errorText !== "" ? "#FDE2E2"
+                     : dryRunDialog.pending ? "#D9ECFF"
+                     : (dryRunDialog.result && dryRunDialog.result.matched) ? "#E1F3D8" : "#E9E9EB"
+                Text {
+                    anchors.centerIn: parent
+                    text: dryRunDialog.errorText !== "" ? ("✖ " + dryRunDialog.errorText)
+                        : dryRunDialog.pending ? "正在调用后端 dry-run…"
+                        : (dryRunDialog.result && dryRunDialog.result.matched) ? "✔ 规则匹配成功" : "✖ 未匹配到规则动作"
+                    font.pixelSize: 13
+                    color: dryRunDialog.errorText !== "" ? "#F56C6C"
+                        : dryRunDialog.pending ? "#409EFF"
+                        : (dryRunDialog.result && dryRunDialog.result.matched) ? "#67C23A" : "#909399"
+                }
+            }
+
+            // rule_details 明细表 (规则名/匹配/时间/空间/源/冷却/原因)
+            ScrollView {
+                Layout.fillWidth: true; Layout.fillHeight: true
+                clip: true
+                Column {
+                    width: 648; spacing: 0
+                    Rectangle { width: parent.width; height: 30; color: "#F5F7FA"
+                        Row {
+                            anchors.fill: parent
+                            Text { width: 150; height: 30; text: "规则名"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            Text { width: 46; height: 30; text: "匹配"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            Text { width: 46; height: 30; text: "时间"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            Text { width: 46; height: 30; text: "空间"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            Text { width: 46; height: 30; text: "源"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            Text { width: 46; height: 30; text: "冷却"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                            Text { width: 268; height: 30; text: "原因"; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                        }
+                    }
+                    Repeater {
+                        model: (dryRunDialog.result && dryRunDialog.result.rule_details) || []
+                        delegate: Rectangle {
+                            width: parent.width; height: 30
+                            color: index % 2 === 0 ? "#FFFFFF" : "#FAFAFA"
+                            Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: "#F0F0F0" }
+                            Row {
+                                anchors.fill: parent
+                                Text { width: 150; height: 30; text: modelData.rule_name || modelData.rule_id || "-"; font.pixelSize: 12; color: "#303133"; elide: Text.ElideRight; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { width: 46; height: 30; text: modelData.matched ? "✔" : "✖"; font.pixelSize: 12; color: modelData.matched ? "#67C23A" : "#F56C6C"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { width: 46; height: 30; text: modelData.time_matched ? "✔" : "✖"; font.pixelSize: 12; color: modelData.time_matched ? "#67C23A" : "#F56C6C"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { width: 46; height: 30; text: modelData.spatial_matched ? "✔" : "✖"; font.pixelSize: 12; color: modelData.spatial_matched ? "#67C23A" : "#F56C6C"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { width: 46; height: 30; text: modelData.source_matched ? "✔" : "✖"; font.pixelSize: 12; color: modelData.source_matched ? "#67C23A" : "#F56C6C"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { width: 46; height: 30; text: modelData.cooldown_active ? "冷却中" : "—"; font.pixelSize: 11; color: modelData.cooldown_active ? "#E6A23C" : "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
+                                Text { width: 268; height: 30; text: modelData.match_reason || ""; font.pixelSize: 12; color: "#606266"; elide: Text.ElideRight; leftPadding: 8; verticalAlignment: Text.AlignVCenter }
+                            }
+                        }
+                    }
+                    Text {
+                        visible: dryRunDialog.result !== null && (!dryRunDialog.result.rule_details || dryRunDialog.result.rule_details.length === 0)
+                        width: parent.width; height: 80
+                        text: "无规则明细 (后端未返回 rule_details)"
+                        font.pixelSize: 12; color: "#C0C4CC"
+                        horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                    }
+                }
+            }
+
+            // simulated_actions 标签
+            RowLayout {
+                Layout.fillWidth: true; spacing: 8
+                Text { text: "模拟动作:"; font.pixelSize: 12; color: "#909399" }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Repeater {
+                        model: (dryRunDialog.result && dryRunDialog.result.simulated_actions) || []
+                        Rectangle {
+                            height: 24; radius: 4; color: "#ECF5FF"; border.color: "#D9ECFF"; border.width: 1
+                            width: actLabel.implicitWidth + 16
+                            Text { id: actLabel; anchors.centerIn: parent; text: String(modelData); font.pixelSize: 12; color: "#409EFF" }
+                        }
+                    }
+                    Text {
+                        visible: dryRunDialog.result !== null && (!dryRunDialog.result.simulated_actions || dryRunDialog.result.simulated_actions.length === 0)
+                        text: "(无)"; font.pixelSize: 12; color: "#C0C4CC"
+                    }
+                }
+            }
+        }
+    }
 
     // ═══ P3.4: 规则导出弹窗 ═══
     Popup {

@@ -768,13 +768,13 @@ scripts/
 | ~~**11**~~ | ~~#11 告警导出多格式~~ | ~~🟠 P1~~ | ✅ **已完成** | ~~3 人天~~ | TC-ALM-01 | `AlarmController.cpp:258-341` |
 | ~~**12**~~ | ~~#13 视频倍速/PiP~~ | ~~🟡 P2~~ | ✅ **已完成** | ~~3 人天~~ | TC-VID-04/05 | `VideoGridView.qml:188-235` |
 | ~~**18**~~ | ~~#18 WS token 鉴权~~ | ~~🟡 P2~~ | ✅ **已完成** | ~~0.5 人天~~ | TC-WST-04 | `WsMessageRouter.cpp:216-222` |
-| **R1** | #1 动作参数配置表单(每类动作 schema 驱动弹窗) | 🟡 P2 | ⏳ 待实现 | 3 人天 | TC-LNK-08 | `LinkageRuleView.qml:967`(`配置`按钮无弹窗) |
-| **R2** | #12 ReAct 回放面板 UI | 🟡 P2 | ⏳ 待实现 | 2 人天 | TC-AI-01 | `AIController.cpp:42-51`(有数据无 UI) |
-| **R3** | #17 RBAC `<PermissionCheck>` QML 组件 | 🟡 P2 | ⏳ 待实现 | 1.5 人天 | TC-RBAC-01 | `RbacController.h:62`(有 hasPermission 缺 QML 包装) |
-| **R4** | #8 WebRTC 实际渲染(Qt 集成 libdatachannel) | 🟡 P2 | ⏳ 待实现 | 4 人天 | TC-VID-07 | `VideoGridView.qml:19`(降级链已有,渲染端待集) |
-| **R5** | #15 录像 AI 标签检索字段 | 🟡 P2 | ⏳ 待实现 | 0.5 人天 | TC-REC-01 | `RecordingController.h:41` |
+| **R1** | #1 动作参数配置表单(每类动作 schema 驱动弹窗) | 🟡 P2 | ✅ **已完成** [2026-09-21 复核] | ~~3 人天~~ | TC-LNK-08 | `src/views/components/ActionParamDialog.qml`(487 行) + `box-sdk/data/action_schemas.json`(886 行/35 keys) |
+| **R2** | #12 ReAct 回放面板 UI | 🟡 P2 | ✅ **已完成** [2026-09-21 复核] | ~~2 人天~~ | TC-AI-01 | `src/views/components/ReActTraceView.qml`(601 行, 1x/2x/4x 回放) |
+| **R3** | #17 RBAC `<PermissionCheck>` QML 组件 | 🟡 P2 | ✅ **已完成** [2026-09-21 复核] | ~~1.5 人天~~ | TC-RBAC-01 | `src/views/components/PermissionCheck.qml`(perm 包装 + hide/disable); [P0-B] `hasPermission` 底层已替换为 auth/me 权限点集合(`RbacController.cpp`, fail-closed) |
+| **R4** | #8 WebRTC 实际渲染(Qt 集成 libdatachannel) | 🟡 P2 | ✅ **已完成** [2026-09-21 复核] | ~~4 人天~~ | TC-VID-07 | `src/streaming/` 12 文件(libdatachannel v0.24.5 WHEP + FFmpeg 软解); 真机 FIRST_FRAME 1191ms + `tests/evidence/webrtc_s35_final.png`; ⚠️ 主程序构建默认 OFF(`CMakeLists.txt:107`) |
+| **R5** | #15 录像 AI 标签检索字段 | 🟡 P2 | ✅ **已完成** [2026-09-21 复核] | ~~0.5 人天~~ | TC-REC-01 | `RecordingController.cpp:38-60`(ai_tag→target_type 透传) + `RecordingView.qml` target_type 下拉 [P1-A] |
 | **R6** | #16 Dashboard 地图视图(QtLocation) | 🔵 P3 | ⏳ 待实现 | 3 人天 | TC-DASH-02 | — |
-| **R7** | P3 优化(主题/i18n/快捷键/水印/版本diff) | 🔵 P3 | ⏳ 持续 | 持续 | 各项 | — |
+| **R7** | P3 优化(主题/i18n/快捷键/水印/版本diff) | 🔵 P3 | ⏳ 持续(部分推进：水印 ✅ [P2-2 2026-09-20]；i18n 选择器置灰 [P1-B 2026-09-21]；主题/快捷键/版本 diff 待做) | 持续 | 各项 | — |
 
 ### 6.2 阶段里程碑 — v2.0
 
@@ -1023,6 +1023,7 @@ v2.0 R1 标记为待实现 (3d) "动作参数配置表单 (每类动作 schema �
 | v1.1 | 2026-06-20 | 叠加项目规范符合度审视:新增 D15(25%);12 项规范×21 缺口矩阵;加权 53.63% | Qoder |
 | **v2.0** | **2026-06-22** | **P0/P1/P2 改进全面落地后的代码级重核**:15 维度全部重新验证;加权从 53.63% 跃升至 **94.00%**;v1.1 中标记为 P0/P1 的 11 项缺口（WS 重构/联动 43 类动作/视频降级链/条件树/互斥组/合并窗口/时间窗/设备搜索/AI 指标/多格式导出/倍速PiP）**全部已实现并附代码行号证据**;剩余缺口缩减至 5 项 P2 + 2 项 P3;更新修复优先级表（删除已完成项,新增 R1~R7）;更新里程碑（里程碑1✅/里程碑2⏳/里程碑3⏳）;更新风险评估（5 项中 3 项已解决） | Qoder |
 | **v3.0** | **2026-07-01** | **全量 14 模块扫描 + 人脸库管理 P0 补齐 + 录像 AI 标签 filter 修复**:新增人脸库前端(9 个文件),新增 FaceController,集成 main.qml navGroups;修复 LinkageRuleView 语法错误;修复 LinkageController moc 缓存;修复 FaceController del() callback 参数不匹配;qmllint 全部 0 Error;加权从 94.00% → **96.00%** | Qoder |
+| **v4.0** | **2026-09-21** | **R1-R7 表全量复核修正**(对标分析报告 §1.2 交叉审计):R1/R2/R3/R4/R5 由「⏳ 待实现」改为「✅ 已完成」并附本轮锚点(R1 ActionParamDialog+action_schemas.json; R2 ReActTraceView; R3 PermissionCheck+P0-B 权限点集合底层; R4 WebRTC 真机取证; R5 ai_tag 透传+P1-A 下拉);R7 改「部分推进」;对齐度维持 96.00% 官方口径(v1.1 复核 ≈97.6% 引用不重算) | Qoder |
 
 ---
 

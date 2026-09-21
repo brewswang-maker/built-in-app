@@ -14,6 +14,11 @@ import QtMultimedia
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口无对应服务(设备 nginx web-admin 监听 8088, REST
+    //   直连 18080), 请求必然失败 —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     // ── 状态 ──
     property var devices: []              // [{id, name}]
     property var channels: []             // 当前设备的通道 [{channel_id, name}]
@@ -36,10 +41,20 @@ Item {
     // 智能检索
     property var smartResults: []
     property bool smartLoading: false
+    // [P1-A 2026-09-21] target_type 筛选(对齐 Web 端 smart-search 口径);
+    //   选项动态拉取 /api/v1/recordings/smart-search/target-types (alarm metadata class_name)
+    property var smartTargetTypes: []
+    property string smartTargetType: ""   // "" = 全部
 
     // 录像计划
     property var schedules: []
     property bool scheduleLoading: false
+
+    // [P2-2 2026-09-20] 录像水印配置 (GET/PUT /api/v1/channels/:id/watermark)
+    //   契约与 Web 端 RecordingView.vue [P0-2] 对齐; 应用范围如实标注见弹窗脚注
+    property var watermarkConfig: null
+    // 位置枚举 (与后端 top_left/top_right/bottom_left/bottom_right 对应)
+    property var wmPositions: ["top_left", "top_right", "bottom_left", "bottom_right"]
 
     Component.onCompleted: loadDevices()
 
@@ -59,7 +74,7 @@ Item {
     }
 
     function loadDevices() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/devices?limit=200", null,
+        xhrRequest("GET", apiBase + "/api/v1/devices?limit=200", null,
             function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     var d = resp.data || {}
@@ -77,7 +92,7 @@ Item {
 
     function loadChannels(deviceId) {
         if (deviceId === "") { channels = []; return }
-        xhrRequest("GET", "http://localhost:8080/api/v1/channels?limit=200", null,
+        xhrRequest("GET", apiBase + "/api/v1/channels?limit=200", null,
             function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     var d = resp.data || {}
@@ -102,7 +117,7 @@ Item {
         }
         loading = true
         loadError = ""
-        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/query", {
+        xhrRequest("POST", apiBase + "/api/v1/recordings/query", {
             device_id: selectedDeviceId,
             channel_id: selectedChannelId,
             start_time: selectedDate + " 00:00:00",
@@ -123,7 +138,7 @@ Item {
 
     function fetchLocalRecordings() {
         localLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/recordings?limit=100", null,
+        xhrRequest("GET", apiBase + "/api/v1/recordings?limit=100", null,
             function (status, resp) {
                 localLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -137,7 +152,7 @@ Item {
 
     function fetchSchedules() {
         scheduleLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/recording-schedules", null,
+        xhrRequest("GET", apiBase + "/api/v1/recording-schedules", null,
             function (status, resp) {
                 scheduleLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -154,14 +169,19 @@ Item {
             showToast("请先选择设备和通道")
             return
         }
-        smartLoading = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/smart-search", {
+        // [P1-A 2026-09-21] 目标类型选项懒加载(幂等; 拉取失败时下拉仅「全部」)
+        if (smartTargetTypes.length === 0) fetchSmartTargetTypes()
+        var smartBody = {
             device_id: selectedDeviceId,
             channel_id: selectedChannelId,
             start_time: selectedDate + "T00:00:00",
             end_time: selectedDate + "T23:59:59",
             min_confidence: 0
-        }, function (status, resp) {
+        }
+        // [P1-A 2026-09-21] target_type 非空透传(后端 smart-search 按此过滤)
+        if (smartTargetType !== "") smartBody.target_type = smartTargetType
+        smartLoading = true
+        xhrRequest("POST", apiBase + "/api/v1/recordings/smart-search", smartBody, function (status, resp) {
             smartLoading = false
             if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                 var d = resp.data || {}
@@ -173,6 +193,17 @@ Item {
         })
     }
 
+    // [P1-A 2026-09-21] 目标类型下拉选项(从告警 metadata 的 class_name 去重提取)
+    function fetchSmartTargetTypes() {
+        xhrRequest("GET", apiBase + "/api/v1/recordings/smart-search/target-types", null,
+            function (status, resp) {
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    var d = resp.data || {}
+                    smartTargetTypes = d.target_types || []
+                }
+            })
+    }
+
     function playSegment(seg) {
         var recId = seg.id || ""
         // ZLM 源录像有直接 url 时可走播放; 否则走 GB28181 回放
@@ -182,7 +213,7 @@ Item {
             playbackDialog.visible = true
             return
         }
-        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/" + encodeURIComponent(recId) + "/play", {
+        xhrRequest("POST", apiBase + "/api/v1/recordings/" + encodeURIComponent(recId) + "/play", {
             id: recId,
             device_id: seg.device_id || selectedDeviceId,
             channel_id: seg.channel_id || selectedChannelId,
@@ -208,16 +239,19 @@ Item {
 
     function stopPlayback() {
         if (playbackCallId !== "") {
-            xhrRequest("POST", "http://localhost:8080/api/v1/recordings/" + encodeURIComponent(playbackCallId) + "/stop",
+            xhrRequest("POST", apiBase + "/api/v1/recordings/" + encodeURIComponent(playbackCallId) + "/stop",
                 { id: playbackCallId }, function () {})
         }
         playbackUrl = ""
         playbackCallId = ""
         playbackDialog.visible = false
+        // [P0-2b] 关闭后重置倍速, 下次回放从 1x 开始
+        playbackPlayer.playbackRate = 1.0
+        mediaController.setPlaybackRate(1.0)
     }
 
     function downloadSegment(seg) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/recordings/download", {
+        xhrRequest("POST", apiBase + "/api/v1/recordings/download", {
             device_id: seg.device_id || selectedDeviceId,
             channel_id: seg.channel_id || selectedChannelId,
             start_time: seg.start_time || "",
@@ -260,6 +294,74 @@ Item {
         function onExportClipFailed(recordingId, code, reason) {
             showToast("MP4 导出失败 [" + code + "]: " + reason)
         }
+    }
+
+    // [P2-2 2026-09-20] 水印配置 — GET/PUT /api/v1/channels/:id/watermark
+    //   字段: enabled/show_timestamp/show_channel_name/custom_text/position/
+    //   font_size/color/bg_color; 先 GET 回显再弹窗, 读取失败按默认值兜底
+    function openWatermarkDialog() {
+        if (selectedChannelId === "") {
+            showToast("请先选择通道")
+            return
+        }
+        xhrRequest("GET", apiBase + "/api/v1/channels/" + encodeURIComponent(selectedChannelId) + "/watermark", null,
+            function (status, resp) {
+                var d = null
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    d = resp.data || {}
+                } else {
+                    // 对齐 Web: 读取失败按默认值打开, 便于首次配置
+                    d = { channel_id: selectedChannelId, enabled: false, show_timestamp: true,
+                          show_channel_name: true, custom_text: "", position: "top_left",
+                          font_size: 16, color: "#FFFFFF", bg_color: "#00000080" }
+                }
+                watermarkConfig = d
+                wmEnabled.checked = d.enabled === true
+                wmShowTimestamp.checked = d.show_timestamp !== false
+                wmShowChannelName.checked = d.show_channel_name !== false
+                wmCustomText.text = d.custom_text || ""
+                wmPosition.currentIndex = Math.max(0, wmPositions.indexOf(d.position || "top_left"))
+                wmFontSize.text = String(d.font_size || 16)
+                wmColor.text = d.color || "#FFFFFF"
+                wmBgColor.text = d.bg_color || "#00000080"
+                watermarkDialog.visible = true
+            })
+    }
+
+    function saveWatermark() {
+        if (selectedChannelId === "") {
+            showToast("请先选择通道")
+            return
+        }
+        var fs = parseInt(wmFontSize.text)
+        if (isNaN(fs)) fs = 16
+        fs = Math.min(48, Math.max(10, fs))   // 对齐 Web el-input-number min=10/max=48
+        var body = {
+            enabled: wmEnabled.checked,
+            show_timestamp: wmShowTimestamp.checked,
+            show_channel_name: wmShowChannelName.checked,
+            custom_text: wmCustomText.text,
+            position: wmPositions[wmPosition.currentIndex],
+            font_size: fs,
+            color: wmColor.text || "#FFFFFF",
+            bg_color: wmBgColor.text || "#00000080"
+        }
+        xhrRequest("PUT", apiBase + "/api/v1/channels/" + encodeURIComponent(selectedChannelId) + "/watermark", body,
+            function (status, resp) {
+                if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
+                    showToast("水印配置已保存")
+                    watermarkDialog.visible = false
+                } else {
+                    showToast("水印配置保存失败: " + ((resp && (resp.message || resp.error)) || ("HTTP " + status)))
+                }
+            })
+    }
+
+    function channelLabel(chId) {
+        for (var i = 0; i < channels.length; i++) {
+            if (channels[i].channel_id === chId) return channels[i].name || chId
+        }
+        return chId
     }
 
     // ── 格式化 ──
@@ -454,9 +556,27 @@ Item {
                         }
                     }
 
+                    // [P1-A 2026-09-21] 智能检索 target_type 筛选(对齐 Web 端 fetchSmartFilterOptions 口径)
+                    Text { visible: root.recordingSource === "smart"; text: "目标类型:"; font.pixelSize: 13; color: "#606266" }
+                    ComboBox {
+                        visible: root.recordingSource === "smart"
+                        width: 130; height: 30
+                        model: ["全部"].concat(root.smartTargetTypes)
+                        currentIndex: {
+                            var idx = model.indexOf(root.smartTargetType === "" ? "全部" : root.smartTargetType)
+                            return idx >= 0 ? idx : 0
+                        }
+                        onActivated: {
+                            var v = model[currentIndex]
+                            root.smartTargetType = (v === "全部") ? "" : v
+                        }
+                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#303133"; leftPadding: 6; verticalAlignment: Text.AlignVCenter }
+                    }
+
                     // 设备录像按钮组
                     RecBtn { visible: root.recordingSource === "device"; label: "查询设备录像"; filled: true; onTap: root.fetchRecordings() }
-                    RecBtn { visible: root.recordingSource === "device"; label: "水印设置"; onTap: root.showToast("当前版本暂不支持水印设置") }
+                    RecBtn { visible: root.recordingSource === "device"; label: "水印设置"; onTap: root.openWatermarkDialog() }
                     RecBtn { visible: root.recordingSource === "device"; label: "片段下载"; onTap: root.showToast("请先在片段列表中选择要下载的录像") }
                     // 本地录像
                     RecBtn { visible: root.recordingSource === "local"; label: "查询本地录像"; filled: true; onTap: root.fetchLocalRecordings() }
@@ -1045,7 +1165,184 @@ Item {
                                 playbackPlayer.play()
                         }
                     }
+                    // 倍速档位 [P0-2b]: 对齐 Web RecordingView.vue:1571 与宇视 1~4 倍回放
+                    //   数据源 mediaController.supportedPlaybackRates() = {1, 2, 4}
+                    RowLayout {
+                        spacing: 4
+                        Repeater {
+                            model: mediaController.supportedPlaybackRates()
+                            RecBtn {
+                                label: modelData + "x"
+                                small: true
+                                filled: Math.abs(playbackPlayer.playbackRate - modelData) < 0.01
+                                onTap: {
+                                    var r = mediaController.normalizePlaybackRate(modelData)
+                                    playbackPlayer.playbackRate = r
+                                    mediaController.setPlaybackRate(r)   // 同步 Controller (跨页口径统一)
+                                }
+                            }
+                        }
+                    }
                     RecBtn { label: "关闭"; small: true; onTap: root.stopPlayback() }
+                }
+            }
+        }
+    }
+
+    // ═══ [P2-2] 水印配置弹窗 (对齐 Web RecordingView.vue [P0-2] "录像水印配置") ═══
+    Rectangle {
+        id: watermarkDialog
+        visible: false
+        anchors.fill: parent
+        color: "#CC000000"
+        z: 150
+
+        Rectangle {
+            width: 460
+            height: wmCol.implicitHeight + 32
+            anchors.centerIn: parent
+            color: "#FFFFFF"
+            radius: 6
+
+            ColumnLayout {
+                id: wmCol
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 10
+
+                Text {
+                    text: "录像水印配置"
+                    font.pixelSize: 15
+                    font.bold: true
+                    color: "#303133"
+                }
+                Text {
+                    text: "通道: " + root.channelLabel(root.selectedChannelId)
+                    font.pixelSize: 12
+                    color: "#909399"
+                }
+
+                // 开关组
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "启用水印"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    Switch { id: wmEnabled }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "显示时间戳"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    Switch { id: wmShowTimestamp }
+                }
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "显示通道名"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    Switch { id: wmShowChannelName }
+                }
+
+                // 自定义文字
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "自定义文字"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    TextField {
+                        id: wmCustomText
+                        Layout.fillWidth: true
+                        height: 30
+                        font.pixelSize: 12
+                        color: "#303133"
+                        placeholderText: "如: 华盾智能安防"
+                        placeholderTextColor: "#C0C4CC"
+                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                    }
+                }
+
+                // 位置
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "位置"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    ComboBox {
+                        id: wmPosition
+                        Layout.preferredWidth: 160
+                        height: 30
+                        font.pixelSize: 12
+                        model: ["左上", "右上", "左下", "右下"]
+                    }
+                }
+
+                // 字号 (对齐 Web min=10/max=48)
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "字号 (10-48)"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    TextField {
+                        id: wmFontSize
+                        Layout.preferredWidth: 120
+                        height: 30
+                        font.pixelSize: 12
+                        color: "#303133"
+                        inputMethodHints: Qt.ImhDigitsOnly
+                        validator: IntValidator { bottom: 10; top: 48 }
+                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                    }
+                }
+
+                // 文字颜色
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "文字颜色"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    TextField {
+                        id: wmColor
+                        Layout.preferredWidth: 160
+                        height: 30
+                        font.pixelSize: 12
+                        color: "#303133"
+                        placeholderText: "#FFFFFF"
+                        placeholderTextColor: "#C0C4CC"
+                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                    }
+                }
+
+                // 背景色
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+                    Text { text: "背景色"; Layout.preferredWidth: 84; font.pixelSize: 13; color: "#606266" }
+                    TextField {
+                        id: wmBgColor
+                        Layout.preferredWidth: 160
+                        height: 30
+                        font.pixelSize: 12
+                        color: "#303133"
+                        placeholderText: "#00000080"
+                        placeholderTextColor: "#C0C4CC"
+                        background: Rectangle { color: "#FFFFFF"; radius: 4; border.color: "#DCDFE6" }
+                    }
+                }
+
+                // 应用范围标注 (2026-09-21 [P2-B] 自动桥接已实现):
+                //   PUT 保存后 WatermarkConfigService 热写入 → 运行中管线下一帧生效;
+                //   管线部署时 PipelineOrchestrator::applyChannelWatermarks 从
+                //   channel_watermarks 表注入 OSD 节点 (含颜色字段) — 无需重启服务
+                Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: 11
+                    color: "#909399"
+                    text: "应用范围: 水印由 AI 分析管线 (OSD 插件) 对视频帧实时叠加, 非录像文件烧录; 保存后自动桥接至渲染管线 (无需重启), 支持 时间戳/通道名/自定义文字/位置/字号/前景色/背景色; 源通道未匹配到分析管线时下次管线启用生效。"
+                }
+
+                // 底部按钮
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Item { Layout.fillWidth: true }
+                    RecBtn { label: "取消"; onTap: watermarkDialog.visible = false }
+                    RecBtn { label: "保存"; filled: true; onTap: root.saveWatermark() }
                 }
             }
         }

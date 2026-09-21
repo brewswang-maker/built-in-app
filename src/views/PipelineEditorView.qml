@@ -11,6 +11,10 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口无对应服务, 请求必然失败 —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     // ── 模式: list | editor ──
     property string viewMode: "list"
 
@@ -60,7 +64,7 @@ Item {
     // ===== 列表数据 =====
     function loadPipelines() {
         listLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/pipelines", null,
+        xhrRequest("GET", apiBase + "/api/v1/pipelines", null,
             function (status, resp) {
                 listLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -78,7 +82,7 @@ Item {
             (function (idx) {
                 var p = pipelines[idx]
                 if (!p.id || !isStoppable(p.deploy_state)) return
-                xhrRequest("GET", "http://localhost:8080/api/v1/pipelines/"
+                xhrRequest("GET", apiBase + "/api/v1/pipelines/"
                     + encodeURIComponent(p.id) + "/runtime", null,
                     function (status, resp) {
                         if (status === 200 && resp && (resp.code === 0 || resp.success === true) && resp.data) {
@@ -136,7 +140,7 @@ Item {
 
     // ===== 列表行操作 =====
     function deployRow(row) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/pipelines/" + encodeURIComponent(row.id) + "/deploy",
+        xhrRequest("POST", apiBase + "/api/v1/pipelines/" + encodeURIComponent(row.id) + "/deploy",
             {}, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("流水线 \"" + (row.name || row.id) + "\" 已部署")
@@ -155,7 +159,7 @@ Item {
     function confirmStop() {
         if (!stopTarget) return
         var row = stopTarget
-        xhrRequest("POST", "http://localhost:8080/api/v1/pipelines/" + encodeURIComponent(row.id) + "/undeploy",
+        xhrRequest("POST", apiBase + "/api/v1/pipelines/" + encodeURIComponent(row.id) + "/undeploy",
             {}, function (status, resp) {
                 stopTarget = null
                 stopDialog.close()
@@ -172,7 +176,7 @@ Item {
         if (!deleteTarget) return
         var row = deleteTarget
         var inEditor = (viewMode === "editor" && row.id === editingId)
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/pipelines/" + encodeURIComponent(row.id),
+        xhrRequest("DELETE", apiBase + "/api/v1/pipelines/" + encodeURIComponent(row.id),
             null, function (status, resp) {
                 deleteTarget = null
                 deleteDialog.close()
@@ -254,7 +258,7 @@ Item {
             connections: connections
         }
         if (editingId !== "") body.id = editingId
-        xhrRequest("POST", "http://localhost:8080/api/v1/pipelines", body,
+        xhrRequest("POST", apiBase + "/api/v1/pipelines", body,
             function (status, resp) {
                 saving = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -274,7 +278,7 @@ Item {
             return
         }
         validating = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/pipelines/" + encodeURIComponent(editingId) + "/validate",
+        xhrRequest("POST", apiBase + "/api/v1/pipelines/" + encodeURIComponent(editingId) + "/validate",
             {}, function (status, resp) {
                 validating = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -291,7 +295,7 @@ Item {
             return
         }
         deploying = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/pipelines/" + encodeURIComponent(editingId) + "/deploy",
+        xhrRequest("POST", apiBase + "/api/v1/pipelines/" + encodeURIComponent(editingId) + "/deploy",
             {}, function (status, resp) {
                 deploying = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -309,7 +313,7 @@ Item {
             showToast("请先保存流水线")
             return
         }
-        xhrRequest("POST", "http://localhost:8080/api/v1/pipelines/" + encodeURIComponent(editingId) + "/undeploy",
+        xhrRequest("POST", apiBase + "/api/v1/pipelines/" + encodeURIComponent(editingId) + "/undeploy",
             {}, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("已停止")

@@ -21,6 +21,9 @@ Item {
         if (perm.length === 0) return true
         var parts = perm.split(".")
         if (parts.length < 2) return true
+        // [P0-B 2026-09-21] 依赖 currentUser 属性通知: 权限刷新(currentUserChanged)
+        //   时本绑定重估(Q_INVOKABLE 函数调用本身不建立 QML 依赖跟踪)
+        var _dep = rbacController.currentUser
         return rbacController.hasPermission(parts[0], parts[1])
     }
 

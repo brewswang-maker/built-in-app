@@ -14,6 +14,7 @@ Item {
 
     Component.onCompleted: {
         auditController.refreshLogs(currentPage, pageSize)
+        auditController.refreshStats()   // [P2-E2] 审计统计真值 (后端 stub 已补真值)
     }
 
     Connections {
@@ -110,6 +111,20 @@ Item {
                 Text {
                     text: "共 " + (auditController.totalCount || 0) + " 条记录"
                     font.pixelSize: 12; color: "#909399"
+                }
+
+                // [P2-E2 2026-09-21] 审计统计真值 (audit/stats: audit_logs 表聚合)
+                Row { spacing: 16
+                    Column { spacing: 2
+                        Text { text: String(auditController.stats.todayCount || 0)
+                            font.pixelSize: 18; font.bold: true; color: "#409EFF" }
+                        Text { text: "今日新增"; font.pixelSize: 11; color: "#909399" }
+                    }
+                    Column { spacing: 2
+                        Text { text: String(auditController.stats.errorCount || 0)
+                            font.pixelSize: 18; font.bold: true; color: "#F56C6C" }
+                        Text { text: "异常操作"; font.pixelSize: 11; color: "#909399" }
+                    }
                 }
 
                 Rectangle { height: 1; color: "#F5F7FA"; width: parent.width - 24 }

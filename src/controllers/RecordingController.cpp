@@ -5,6 +5,8 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QUrl>
+#include <QDateTime>
+#include <QTimer>
 
 RecordingController::RecordingController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {}
@@ -215,21 +217,45 @@ void RecordingController::deleteRecording(const QString& recordingId) {
 }
 
 // [P2-#13 v7.6+] MP4 导出:
-//   步骤 1: GET /api/v1/recordings/:id/download → {url}
+//   步骤 1: 获取 download_url
+//     - ZLM 切片 id (磁盘绝对路径含 '/') → GET /api/v1/recordings/download-file?path=<urlencoded>
+//     - 设备端录像 id (无 '/') → GET /api/v1/recordings/:id/download (兼容入口返回 400 中文引导)
 //   步骤 2: 用 ApiClient.downloadToFile 把 url 内容流式落盘到 localPath
 //   与 Web 端 ExportClipButton 行为对齐 (下载进度 + 完成提示)
+// [P2-1 2026-09-20] 修正第一步路径 (对齐 Web [FIX rec-dl 2026-09-11]): 原实现固定
+//   走 /recordings/:id/download, 但 ZLM 切片 id 为磁盘路径 (多级含 '/'),
+//   Drogon 路由 :id 单段不匹配 → 恒 404; 改走 query 形态主入口 download-file?path=。
 void RecordingController::exportClip(const QString& recordingId, const QString& localPath) {
+    // [P2-1] 文件名取 basename: 磁盘路径 id 避免在 ~/Downloads 下复刻深层目录
+    QString baseName = recordingId;
+    const int slashPos = baseName.lastIndexOf(QLatin1Char('/'));
+    if (slashPos >= 0) baseName = baseName.mid(slashPos + 1);
+    if (baseName.isEmpty()) baseName = QStringLiteral("clip");
+
     // 计算默认本地路径
     QString path = localPath;
     if (path.isEmpty()) {
         QString dlDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
         if (dlDir.isEmpty()) dlDir = QDir::homePath() + "/Downloads";
         QDir().mkpath(dlDir);
-        path = dlDir + "/" + recordingId + ".mp4";
+        path = dlDir + "/" + baseName;
+        if (!path.endsWith(QStringLiteral(".mp4"), Qt::CaseInsensitive))
+            path += QStringLiteral(".mp4");
+    }
+
+    // [P2-1 2026-09-20] 按 id 形态选择入口:
+    //   - ZLM 切片 (含 '/') → download-file?path= (主入口, query 形态)
+    //   - 设备端 id (无 '/') → /:id/download 兼容入口 (返回 400 中文引导 NVR 下载任务)
+    QString endpoint;
+    if (recordingId.contains(QLatin1Char('/'))) {
+        endpoint = QStringLiteral("/api/v1/recordings/download-file?path=%1")
+                       .arg(QString::fromLatin1(QUrl::toPercentEncoding(recordingId)));
+    } else {
+        endpoint = QStringLiteral("/api/v1/recordings/%1/download").arg(recordingId);
     }
 
     auto self = this;
-    m_api->get(QString("/api/v1/recordings/%1/download").arg(recordingId),
+    m_api->get(endpoint,
         [self, recordingId, path](QJsonObject obj) {
             QJsonObject data = ApiClient::unwrapData(obj);
             QString url = data.value("url").toString();
@@ -253,4 +279,106 @@ void RecordingController::exportClip(const QString& recordingId, const QString& 
         [self, recordingId](int code, QString msg) {
             emit self->exportClipFailed(recordingId, code, msg);
         });
+}
+
+// [P1-3 2026-09-20] 告警事件 ±90s 点播 (方案 A: export-range-async 复用, 零 ffmpeg 新代码)
+//   链路: POST /api/v1/recordings/export-range-async {device_id?, channel_id,
+//   start_time, end_time} → task_id → 2.5s 轮询 GET /api/v1/recordings/export-range-status
+//   → status=done 后取 download_url (相对 /record/, 拼 baseUrl 绝对化) → alarmClipReady。
+//   对齐 Web recording.ts exportRangeRecordingAsync: 轮询间隔 2.5s, 上限 12min;
+//   区间 = 告警时刻前后各 90s (Web [FIX clip-90s 2026-09-19] 同语义)。
+namespace {
+constexpr int kAlarmClipPreSec = 90;                     // 事件前窗口 (s)
+constexpr int kAlarmClipPostSec = 90;                    // 事件后窗口 (s)
+constexpr int kAlarmClipPollMs = 2500;                   // 轮询间隔 (对齐 Web)
+constexpr qint64 kAlarmClipTimeoutMs = 12 * 60 * 1000;  // 轮询上限 (对齐 Web)
+}  // namespace
+
+void RecordingController::exportAlarmClip(const QString& deviceId, const QString& channelId,
+                                          const QString& alarmTimeIso) {
+    if (channelId.isEmpty()) {
+        emit alarmClipFailed(QStringLiteral("告警通道为空, 无法定位录像片段"));
+        return;
+    }
+    QDateTime alarmTime = QDateTime::fromString(alarmTimeIso, QStringLiteral("yyyy-MM-ddTHH:mm:ss"));
+    if (!alarmTime.isValid())
+        alarmTime = QDateTime::fromString(alarmTimeIso, Qt::ISODate);
+    if (!alarmTime.isValid()) {
+        emit alarmClipFailed(QStringLiteral("告警时间无效: %1").arg(alarmTimeIso));
+        return;
+    }
+    cancelAlarmClip();  // 重复调用/切换告警: 取消在飞旧任务
+
+    QJsonObject body;
+    body["channel_id"] = channelId;
+    if (!deviceId.isEmpty()) body["device_id"] = deviceId;
+    body["start_time"] = alarmTime.addSecs(-kAlarmClipPreSec)
+                             .toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss"));
+    body["end_time"] = alarmTime.addSecs(kAlarmClipPostSec)
+                           .toString(QStringLiteral("yyyy-MM-ddTHH:mm:ss"));
+
+    emit alarmClipStateChanged(QStringLiteral("exporting"));
+    m_api->post("/api/v1/recordings/export-range-async", body,
+        [this](QJsonObject obj) {
+            const QString taskId = ApiClient::unwrapData(obj).value("task_id").toString();
+            if (taskId.isEmpty()) {
+                emit alarmClipStateChanged(QStringLiteral("failed"));
+                emit alarmClipFailed(QStringLiteral("后端未返回导出任务 id"));
+                return;
+            }
+            m_alarmClipTaskId = taskId;
+            m_alarmClipDeadlineMs = QDateTime::currentMSecsSinceEpoch() + kAlarmClipTimeoutMs;
+            ensureAlarmClipTimer()->start(kAlarmClipPollMs);
+        },
+        [this](int code, QString msg) {
+            emit alarmClipStateChanged(QStringLiteral("failed"));
+            emit alarmClipFailed(QStringLiteral("提交导出任务失败 [%1]: %2").arg(code).arg(msg));
+        });
+}
+
+void RecordingController::cancelAlarmClip() {
+    if (m_alarmClipPollTimer) m_alarmClipPollTimer->stop();
+    m_alarmClipTaskId.clear();
+}
+
+QTimer* RecordingController::ensureAlarmClipTimer() {
+    if (m_alarmClipPollTimer) return m_alarmClipPollTimer;
+    m_alarmClipPollTimer = new QTimer(this);
+    connect(m_alarmClipPollTimer, &QTimer::timeout, this, [this]() {
+        if (m_alarmClipTaskId.isEmpty()) { m_alarmClipPollTimer->stop(); return; }
+        if (QDateTime::currentMSecsSinceEpoch() > m_alarmClipDeadlineMs) {
+            m_alarmClipPollTimer->stop();
+            m_alarmClipTaskId.clear();
+            emit alarmClipStateChanged(QStringLiteral("failed"));
+            emit alarmClipFailed(QStringLiteral("导出超时 (超过 12 分钟), 请稍后重试"));
+            return;
+        }
+        const QString taskId = m_alarmClipTaskId;
+        m_api->get(QStringLiteral("/api/v1/recordings/export-range-status?task_id=%1").arg(taskId),
+            [this, taskId](QJsonObject obj) {
+                if (taskId != m_alarmClipTaskId) return;  // 过期任务响应, 丢弃
+                const QJsonObject d = ApiClient::unwrapData(obj);
+                const QString st = d.value("status").toString();
+                if (st == QStringLiteral("done")) {
+                    m_alarmClipPollTimer->stop();
+                    m_alarmClipTaskId.clear();
+                    QString url = d.value("download_url").toString();
+                    if (url.startsWith(QLatin1Char('/'))) url = m_api->baseUrl() + url;
+                    emit alarmClipStateChanged(QStringLiteral("done"));
+                    emit alarmClipReady(url, d.value("filename").toString(),
+                                        static_cast<qint64>(d.value("file_size").toDouble()),
+                                        d.value("segments_used").toInt());
+                } else if (st == QStringLiteral("failed")) {
+                    m_alarmClipPollTimer->stop();
+                    m_alarmClipTaskId.clear();
+                    emit alarmClipStateChanged(QStringLiteral("failed"));
+                    emit alarmClipFailed(d.value("error").toString(QStringLiteral("导出任务失败")));
+                }
+                // running: 保持轮询
+            },
+            [](int, QString) {
+                // 单次轮询失败不终止 (网络抖动), 由超时兜底
+            });
+    });
+    return m_alarmClipPollTimer;
 }

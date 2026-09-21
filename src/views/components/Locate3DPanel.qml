@@ -1,9 +1,9 @@
 // ========================================================================
-// Locate3DPanel.qml — 3D 室内定位场景 [R2 任务4] [体育场3D 降级实现]
+// Locate3DPanel.qml — 室内定位场景 (Canvas 2.5D 等轴测) [R2 任务4] [体育场3D]
 // 参照 Web 端 Scene3D.vue (three.js) + LocationTrackView.vue (定位/告警标记):
 //   Canvas 2.5D 等轴测投影 · 告警脉冲联动 · 点击联动
-// [体育场3D] Qt Quick 3D 不可用时的降级渲染, 场景数据改引 StadiumSceneData.js
-// (与 scene_config.json 同源, 保证与 StadiumScene3D/Web 端命名/坐标 1:1 一致)
+// [去 3D 2026-09-20] 内置端去 3D 后本组件为唯一场景渲染, 场景数据引 StadiumSceneData.js
+// (与 scene_config.json 同源, 保证与 Web 端命名/坐标 1:1 一致)
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15

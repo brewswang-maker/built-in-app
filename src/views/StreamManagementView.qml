@@ -14,6 +14,11 @@ import QtMultimedia
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     // ── 统计 ──
     property int activeStreams: 0
     property int totalViewers: 0
@@ -90,7 +95,7 @@ Item {
     // ===== 流列表 =====
     function fetchStreams() {
         streamsLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/zlm/streams", null,
+        xhrRequest("GET", apiBase + "/api/v1/zlm/streams", null,
             function (status, resp) {
                 streamsLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -118,7 +123,7 @@ Item {
     // ===== ZLM 状态 =====
     function fetchZlmStatus() {
         zlmLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/streams/zlm-status", null,
+        xhrRequest("GET", apiBase + "/api/v1/streams/zlm-status", null,
             function (status, resp) {
                 zlmLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true) && resp.data) {
@@ -139,7 +144,7 @@ Item {
 
     // ===== 推理需求状态 =====
     function fetchDemandStatus() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/inference/demand-status", null,
+        xhrRequest("GET", apiBase + "/api/v1/inference/demand-status", null,
             function (status, resp) {
                 if (status === 200 && resp && resp.code === 0 && resp.data)
                     demandStatus = resp.data
@@ -150,7 +155,7 @@ Item {
 
     // ===== 流操作 =====
     function stopStream(row) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/zlm/stream/stop",
+        xhrRequest("POST", apiBase + "/api/v1/zlm/stream/stop",
             { app: row.app, stream: row.stream, schema: row.schema },
             function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -163,7 +168,7 @@ Item {
     }
 
     function screenshotStream(row) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/zlm/stream/screenshot",
+        xhrRequest("POST", apiBase + "/api/v1/zlm/stream/screenshot",
             { app: row.app, stream: row.stream },
             function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true))
@@ -194,7 +199,7 @@ Item {
             return
         }
         proxySubmitting = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/zlm/proxy/add",
+        xhrRequest("POST", apiBase + "/api/v1/zlm/proxy/add",
             { url: proxyUrl, app: proxyApp, stream: proxyStream },
             function (status, resp) {
                 proxySubmitting = false

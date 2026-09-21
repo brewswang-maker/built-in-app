@@ -156,6 +156,9 @@ private:
     StreamingDegradationChainController* m_degradation = nullptr;
     // P0-1: WebRTC 探测器,默认禁用(Qt MediaPlayer 不支持 webrtc://)
     WebRTCStreamProvider* m_webrtcProvider = nullptr;
+    // [P1-1 2026-09-20] WebRTC 探测 pending 映射: streamId -> deviceId,
+    //   供 webRtcResolved 回写对应设备的 streamUrls(探测结果回传链路)
+    QHash<QString, QString> m_webrtcPendingStreams;
     QString m_pipChannelId;
     float m_pipOpacity = 0.85f;
     float m_playbackRate = 1.0f;

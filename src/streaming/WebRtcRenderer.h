@@ -1,65 +1,73 @@
 #pragma once
-#include <QQuickFramebufferObject>
+#include <QQuickPaintedItem>
 #include <QImage>
+#include <QSize>
 #include <memory>
 
 #include "WebRtcFrameSink.h"
 
+class QTimer;
+class QPainter;
+#ifdef SHIELDBOX_ENABLE_WEBRTC_CLIENT
+class WebRtcClient;
+#endif
+
 /**
  * @brief WebRtcRendererItem
  *
- * 子任务 2 — V4-V1 WebRTC 渲染引擎集成(SmartGateWay v4.0 §4.1)
+ * 子任务 2 — V4-V1 WebRTC 渲染引擎集成(SmartGateway v4.0 §4.1)
  *
- * QQuickFramebufferObject 子类,作为 QML 中可放置的 WebRTC 视频节点。
- *   - QML 端:`WebRtcView { anchors.fill: parent; url: "..." }`
- *   - 渲染端:createRenderer() 返回 QtQuick 自管理线程的 Renderer 实例。
+ * QML 中可放置的 WebRTC 视频节点(类型名沿用 main.cpp qmlRegisterType 注册)。
+ *   - QML 端:`WebRtcView { streamUrl: "webrtc://..." }`
  *
- * 渲染流程:
- *   1. QML 渲染线程 → FBO Renderer::render() 每帧调用一次。
- *   2. render() 从 WebRtcFrameSink::swapFrameForRender() 取出最新 decoded frame。
- *   3. 通过 QPainter::drawImage() 绘制到 FBO → Qt Quick 主合成 → HDMI 输出。
+ * [S3-3 2026-09-20] 基类改判: QQuickFramebufferObject → QQuickPaintedItem
+ *   - 原因: 56mf 设备为软渲染(software backend, GL 不可用), FBO/GL 路径全失效;
+ *     解码亦按实改判为 CPU 软解(见 H264Decoder)。S1T6 原"FBO + 硬解"假设作废。
+ *   - paint() 从 WebRtcFrameSink 取最新帧 drawImage(等比缩放 + letterbox),
+ *     由 33ms 定时器(有流时)驱动 update()。
+ *   - 兼容保留: injectTestFrame / setStreamUrl / stats 属性 / sourceSize 接口不变。
  *
- * 设计要点:
- *   - **零拷贝纹理上传**:QImage 直接 drawImage,Qt Quick 内部升级为纹理
- *     (避免 glTexImage2D 调用)。
- *   - **生产/消费线程分离**:Producer = H264Decoder / 测试桩,Consumer = Quick FBO 线程,
- *     中间通过 WebRtcFrameSink 的 lock-free 双缓冲协调。
- *   - **Q_INVOKABLE 接口**:暴露给 QML,允许 QML 侧读取 stats 监控丢帧率。
- *
- * 局限(子任务 3 解决):
- *   - 当前无 PeerConnection 接入,frames 通过 injectTestFrame() 仅用于测试桩与 QML 调试。
- *
- * 验收(本子任务):test_webrtc_framebuffer.cpp --6 TEST_F PASS。
- *   真实 SDP/ICE/H264 在子任务 3 由 libdatachannel + FFmpeg 完成。
+ * [S3-4 2026-09-20] setStreamUrl 接入真实通路:
+ *   - 解析 webrtc://host:port/... 或 http(s)://... 的 app/stream 查询参数
+ *   - 驱动内部 WebRtcClient(start/stop)收流解码 → sink → paint
+ *   - 默认 OFF 构建(无 SHIELDBOX_ENABLE_WEBRTC_CLIENT)时 setStreamUrl 仅告警
  */
-class WebRtcRendererItem : public QQuickFramebufferObject {
+class WebRtcRendererItem : public QQuickPaintedItem {
     Q_OBJECT
     Q_PROPERTY(QSize sourceSize READ sourceSize NOTIFY sourceSizeChanged)
     Q_PROPERTY(int totalProduced READ totalProduced NOTIFY statsChanged)
     Q_PROPERTY(int totalConsumed READ totalConsumed NOTIFY statsChanged)
     Q_PROPERTY(int totalDropped READ totalDropped NOTIFY statsChanged)
+    Q_PROPERTY(int totalDecoded READ totalDecoded NOTIFY statsChanged)
 
 public:
     explicit WebRtcRendererItem(QQuickItem* parent = nullptr);
     ~WebRtcRendererItem() override;
 
-    /// 注入测试桩(Q_INVOKABLE,QML 调试用;子任务 3 删)
+    /// 注入测试帧(Q_INVOKABLE,QML 调试/单测用)
     Q_INVOKABLE void injectTestFrame(int width, int height, int sequence);
 
-    /// QML 设置 URL(setEnabled + requestWebRtcUrl 链路后续接入)
+    /// 设置流地址(webrtc:// 或 http(s)://, 空串=停止); 内部驱动 WebRtcClient
     Q_INVOKABLE void setStreamUrl(const QString& url);
 
-    /// 渲染骨架入口(createRenderer 自定义)
-    /// 注意:嵌套类名 Renderer 与基类 QQuickFramebufferObject::Renderer 同名,
-    ///       必须用完全限定名作为返回类型,否则 override 检查不通过。
-    class Renderer;
-    QQuickFramebufferObject::Renderer* createRenderer() const override;
+    /// 停止收流并复位渲染定时器
+    Q_INVOKABLE void stopStream();
+
+    /// 请求关键帧(PLI; 断流恢复/G1 故障注入用)
+    Q_INVOKABLE bool requestKeyframe();
+
+    /// 当前流地址
+    Q_INVOKABLE QString streamUrl() const { return m_stream_url; }
+
+    /// 渲染回调(QQuickPaintedItem, 软渲染线程=GUI 线程)
+    void paint(QPainter* painter) override;
 
     // Property getters
     QSize sourceSize() const;
     int totalProduced() const;
     int totalConsumed() const;
     int totalDropped() const;
+    int totalDecoded() const;
 
     /// 暴露给测试桩以直接 pushFrame
     WebRtcFrameSink* frameSink() { return m_sink.get(); }
@@ -67,38 +75,21 @@ public:
 signals:
     void sourceSizeChanged();
     void statsChanged();
+    void firstFrameRendered();               // 首帧送达渲染器(S3-5 取证锚点)
+    void streamFailed(const QString& reason); // 收流失败(降级链输入)
 
 private:
+    void ensureRepaintTimer(bool start);
+    void parseAndStart(const QString& url);
+
     std::unique_ptr<WebRtcFrameSink> m_sink;
-};
+    QImage m_image;              // 最近一帧(paint 复用, 无新帧时重绘不闪黑)
+    QSize m_last_frame_size;     // 实际解码尺寸(sourceSize 上报)
+    QTimer* m_repaint_timer = nullptr;
+    QString m_stream_url;
+    uint64_t m_last_emitted_produced = 0;
 
-/**
- * @brief Renderer
- *
- * QtQuick 自管理线程上的渲染器。当 FBO 需要重新绘制时调用 render()。
- * 这里实现一次性 QPainter::drawImage,把 WebRtcFrameSink 中的最新帧贴到 FBO。
- *
- * 与 QQuickFramebufferObject::Renderer 关系:
- *   - Qt 会在专用线程(RenderThread)上创建 Renderer 实例。
- *   - 每个 Renderer 实例对应一个 FBO,该 FBO 由 Qt Quick 主合成器采样。
- *   - 多线程安全:由 Qt Quick 通过信号控制 render() 的调用节流(vsync 60Hz / 30Hz)。
- */
-class WebRtcRendererItem::Renderer : public QQuickFramebufferObject::Renderer {
-public:
-    Renderer();
-    ~Renderer() override;
-
-    /// 每帧调用(Qt 内部 vsync 同步)
-    /// render() 必须在 RenderThread 上短暂执行,Qt Quick 会保证不会与合成线程同时访问
-    void render() override;
-
-    /// 首次创建 / 尺寸变更时调用,FBO texture 由 Qt 分配
-    QOpenGLFramebufferObject* createFramebufferObject(const QSize& size) override;
-
-    /// 同步 FBO 渲染线程看到的源尺寸(主线程 → 渲染线程)
-    void synchronize(QQuickFramebufferObject* item) override;
-
-private:
-    QImage m_image;
-    QSize m_source_size;
+#ifdef SHIELDBOX_ENABLE_WEBRTC_CLIENT
+    WebRtcClient* m_client = nullptr; // QObject 子对象(生命周期随本 item)
+#endif
 };

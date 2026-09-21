@@ -49,7 +49,7 @@ var BUILDINGS = [
     }
 ];
 // [v1.9.0] thetaDeg: LED 大屏绕 Y 朝向角(度), 朝场心角 ±15° 偏向观众席
-// (Quick3D Node.eulerRotation 单位为度; Web 端 m.rotation.y 弧度制, 双端同源)
+// (本端单位为度; Web 端 m.rotation.y 弧度制, 双端同源)
 
 // 默认演示设备点位（与 Web 端 DEMO_SCENE_DEVICES / scene_config.json demoDevices 同名同坐标）
 // [v1.9.5] 删 8 处场外配套区点位（喷泉广场/广告大屏/配套楼顶/停车场×2/

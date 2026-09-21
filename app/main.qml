@@ -72,7 +72,8 @@ ApplicationWindow {
     readonly property int secondaryIconSize:   18    // 二级菜单图标
     readonly property int secondaryPadL:       16    // 二级菜单行左内边距
     readonly property int secondaryPadR:       14    // 二级菜单行右内边距
-    readonly property int headerIconBtnSize:   36    // Header 右侧圆形按钮尺寸
+    // [P2-D3 2026-09-21] 36→44: 触屏目标国标下限 (审计 §5 清单整改; 原值仅桌面鼠标口径)
+    readonly property int headerIconBtnSize:   44    // Header 右侧圆形按钮尺寸
     readonly property int radiusMenu:          6     // 菜单项圆角
     readonly property int radiusPopup:         8     // 弹层圆角
     readonly property int headerRightSpacing:  10    // Header 右侧控件间距
@@ -95,7 +96,7 @@ ApplicationWindow {
             label: "定位",
             items: [
                 { idx: 8,  icon: "situation", label: "定位与轨迹", tip: "Location & Tracks" },
-                { idx: 23, icon: "map",       label: "3D定位",     tip: "3D Location" }
+                { idx: 23, icon: "map",       label: "室内定位",   tip: "Indoor Location" }
             ]
         },
         {
@@ -137,7 +138,7 @@ ApplicationWindow {
             label: "平台管理",
             items: [
                 { idx: 11, icon: "device",   label: "设备管理",   tip: "Devices" },
-                { idx: 17, icon: "folder",   label: "3D场景管理", tip: "Scene Manage" },
+                { idx: 17, icon: "folder",   label: "场景方案",   tip: "Scene Manage" },
                 { idx: 25, icon: "map",      label: "网络拓扑",   tip: "Network Topology" },
                 { idx: 18, icon: "linkage",  label: "联动规则",   tip: "Event Linkage" },
                 { idx: 16, icon: "audit",    label: "审计中心",   tip: "Audit Center" },
@@ -197,6 +198,43 @@ ApplicationWindow {
             if (activePrimaryMenu.items[i].idx === sidebarCurrentIndex) return i
         }
         return 0
+    }
+
+    // ═══ [P2-D1 2026-09-21] 壳层键盘/遥控导航 (触屏遥控审计 §6 P1-1) ═══
+    // ←/→: 切换一级菜单 (selectPrimary 联动侧栏首项); ↑/↓: 当前菜单侧栏项间移动
+    // (index 即选中, 选中即激活, 同点击语义); Esc/Back: 关闭全局弹层
+    // (userMenuPopup 为手动 Rectangle 弹层无自动 Esc; notifPopup 自带
+    // CloseOnEscape, 此处兜底)。输入控件获焦时按键被控件优先消费, 不影响打字。
+    focus: true
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+            var n = primaryMenus.length, cur = 0
+            for (var i = 0; i < n; i++) {
+                if (primaryMenus[i].key === activePrimaryKey) { cur = i; break }
+            }
+            var nxt = (cur + (event.key === Qt.Key_Right ? 1 : n - 1)) % n
+            selectPrimary(primaryMenus[nxt].key)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+            var items = activePrimaryMenu.items
+            if (items.length > 0) {
+                var ci = 0
+                for (var j = 0; j < items.length; j++) {
+                    if (items[j].idx === sidebarCurrentIndex) { ci = j; break }
+                }
+                sidebarCurrentIndex = items[
+                    (ci + (event.key === Qt.Key_Down ? 1 : items.length - 1)) % items.length].idx
+            }
+            event.accepted = true
+        } else if (event.key === Qt.Key_Escape) {
+            if (userMenuPopup.visible) {
+                userMenuPopup.visible = false
+                event.accepted = true
+            } else if (notifPopup.visible) {
+                notifPopup.close()
+                event.accepted = true
+            }
+        }
     }
 
     Component.onCompleted: {
@@ -369,8 +407,9 @@ ApplicationWindow {
                 Layout.preferredHeight: parent.height
 
                 // 通知铃铛 (复用现有 NotificationBell)
+                // [P2-D3] 36→headerIconBtnSize(44) 触屏目标
                 Item {
-                    width: 36; height: 36
+                    width: root.headerIconBtnSize; height: root.headerIconBtnSize
 
                     Rectangle {
                         anchors.fill: parent
@@ -396,7 +435,7 @@ ApplicationWindow {
 
                 // 全屏切换按钮
                 Item {
-                    width: 36; height: 36
+                    width: root.headerIconBtnSize; height: root.headerIconBtnSize
 
                     Rectangle {
                         anchors.fill: parent
@@ -433,7 +472,7 @@ ApplicationWindow {
                     // [FIX 2026-08-19] 自适应宽度: 原固定 80px 会挤压
                     //   "admin" 文字 (avatar32 + spacing8 + 文字 + chevron)
                     width: userRow.implicitWidth + 20
-                    height: 36
+                    height: root.headerIconBtnSize   // [P2-D3] 36→44 触屏目标
 
                     Rectangle {
                         anchors.fill: parent
@@ -498,7 +537,7 @@ ApplicationWindow {
 
                 // 折叠按钮 (右侧, Web 端 .sidebar-collapse-btn 在 sidebar 底部)
                 Item {
-                    width: 36; height: 36
+                    width: root.headerIconBtnSize; height: root.headerIconBtnSize
 
                     Rectangle {
                         anchors.fill: parent
@@ -993,7 +1032,7 @@ ApplicationWindow {
         FaceDatabaseView {}
         FaceRealtimeView {}
         SettingsView {}
-        Locate3DPanel {}          // idx 23: 3D定位一级菜单 (支持拖拽旋转/滚轮缩放)
+        Locate3DPanel {}          // idx 23: 室内定位一级菜单 (支持拖拽旋转/滚轮缩放)
         DashboardEnhancedView {}  // idx 24: AI智能→仪表盘 (Web /dashboard 对齐)
         NetworkTopologyView {}    // idx 25: 平台管理→网络拓扑 (Web /topology 对齐)
     }

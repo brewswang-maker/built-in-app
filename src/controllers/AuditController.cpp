@@ -16,6 +16,16 @@ void AuditController::refreshLogs(int page, int pageSize) {
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
+void AuditController::refreshStats() {
+    // [P2-E2 2026-09-21] 审计统计真值 (totalLogs/todayCount/errorCount)
+    m_api->get("/api/v1/audit/stats",
+        [this](QJsonObject obj) {
+            m_stats = ApiClient::unwrapData(obj).toVariantMap();
+            emit statsUpdated();
+        },
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
 void AuditController::searchLogs(const QVariantMap& filters) {
     QStringList params;
     for (auto it = filters.begin(); it != filters.end(); ++it) {

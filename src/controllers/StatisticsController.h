@@ -47,6 +47,8 @@ class StatisticsController : public QObject {
     Q_PROPERTY(QVariantList riskZones READ riskZones NOTIFY dashboardUpdated)
     Q_PROPERTY(QVariantList recentEvents READ recentEvents NOTIFY recentEventsUpdated)
     Q_PROPERTY(QVariantMap alarmLevelDist READ alarmLevelDist NOTIFY alarmLevelDistUpdated)
+    // [P2-E2 2026-09-21] 处置时长 (MTTR): GET /api/v1/stats/mttr
+    Q_PROPERTY(QVariantMap mttr READ mttr NOTIFY mttrUpdated)
     Q_PROPERTY(QVariantMap deviceStats READ deviceStats NOTIFY deviceStatsUpdated)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(int securityScore READ securityScore NOTIFY dashboardUpdated)
@@ -73,6 +75,7 @@ public:
     QVariantList riskZones() const { return m_riskZones; }
     QVariantList recentEvents() const { return m_recentEvents; }
     QVariantMap alarmLevelDist() const { return m_alarmLevelDist; }
+    QVariantMap mttr() const { return m_mttr; }
     QVariantMap deviceStats() const { return m_deviceStats; }
     bool loading() const { return m_loading; }
     int securityScore() const { return m_dashboard.value("security_score").toInt(); }
@@ -95,6 +98,7 @@ public:
     Q_INVOKABLE void refreshRecentEvents(int limit = 20);
     Q_INVOKABLE void refreshFalseAlarmBaseline(int days = 30);
     Q_INVOKABLE void refreshAlarmLevelDist();
+    Q_INVOKABLE void refreshMttr(int days = 30);
     Q_INVOKABLE void refreshDeviceStats();
     Q_INVOKABLE void refreshAll();
     // ── v7.0 P1 #10 AI 推理 / 模型健康 ──
@@ -106,6 +110,7 @@ signals:
     void overviewUpdated();
     void recentEventsUpdated();
     void alarmLevelDistUpdated();
+    void mttrUpdated();
     void deviceStatsUpdated();
     void loadingChanged();
     void falseAlarmBaselineUpdated(const QVariantMap& baseline);
@@ -136,6 +141,7 @@ private:
     QVariantList m_riskZones;
     QVariantList m_recentEvents;
     QVariantMap m_alarmLevelDist;
+    QVariantMap m_mttr;
     QVariantMap m_deviceStats;
     bool m_loading = false;
     // ── v7.0 P1 #10 AI 推理指标状态 ──

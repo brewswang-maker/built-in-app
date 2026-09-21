@@ -13,6 +13,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     // ── SIP 配置状态 ──
     property bool cfgLoaded: false
     property bool cfgError: false
@@ -71,7 +76,7 @@ Item {
 
     function fetchConfig() {
         cfgError = false
-        xhrRequest("GET", "http://localhost:8080/api/v1/system/gb28181/config", null,
+        xhrRequest("GET", apiBase + "/api/v1/system/gb28181/config", null,
             function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     var d = resp.data || {}
@@ -114,7 +119,7 @@ Item {
 
     function fetchDevices() {
         devicesLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/system/gb28181/devices", null,
+        xhrRequest("GET", apiBase + "/api/v1/system/gb28181/devices", null,
             function (status, resp) {
                 devicesLoading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -128,7 +133,7 @@ Item {
 
     function toggleServer(start) {
         toggling = true
-        xhrRequest("POST", "http://localhost:8080/api/v1/system/gb28181/server",
+        xhrRequest("POST", apiBase + "/api/v1/system/gb28181/server",
             { action: start ? "start" : "stop" },
             function (status, resp) {
                 toggling = false
@@ -153,7 +158,7 @@ Item {
             return
         }
         saving = true
-        xhrRequest("PUT", "http://localhost:8080/api/v1/system/gb28181/config", {
+        xhrRequest("PUT", apiBase + "/api/v1/system/gb28181/config", {
             sip_server_id: sipServerId,
             sip_server_domain: sipServerDomain,
             sip_server_ip: sipServerIp,
@@ -190,7 +195,7 @@ Item {
         scanning = true
         discoveredDevices = []
         scanStatus = method === "gb28181" ? "正在发送 SIP SEARCH 广播..." : "正在发送 ONVIF Probe..."
-        xhrRequest("GET", "http://localhost:8080/api/v1/devices/discover/" + method, null,
+        xhrRequest("GET", apiBase + "/api/v1/devices/discover/" + method, null,
             function (status, resp) {
                 scanning = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -210,7 +215,7 @@ Item {
     }
 
     function addDiscoveredDevice(dev) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/devices", {
+        xhrRequest("POST", apiBase + "/api/v1/devices", {
             name: dev.name || "",
             ip: dev.ip || "",
             port: dev.port || 0,
@@ -233,7 +238,7 @@ Item {
     }
 
     function queryCatalog(devId) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/system/gb28181/devices/" + encodeURIComponent(devId) + "/catalog",
+        xhrRequest("POST", apiBase + "/api/v1/system/gb28181/devices/" + encodeURIComponent(devId) + "/catalog",
             {}, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true))
                     showToast("目录查询指令已发送")
@@ -243,7 +248,7 @@ Item {
     }
 
     function removeDevice(devId) {
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/system/gb28181/devices/" + encodeURIComponent(devId),
+        xhrRequest("DELETE", apiBase + "/api/v1/system/gb28181/devices/" + encodeURIComponent(devId),
             { id: devId }, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("已移除")

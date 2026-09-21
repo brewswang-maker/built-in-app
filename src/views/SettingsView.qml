@@ -140,7 +140,10 @@ Item {
                         contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#303133"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
 
                     Text { text: "Language:"; font.pixelSize: 12; color: "#909399" }
-                    ComboBox { width: 240; height: 32; model: ["zh-CN", "en-US", "ja-JP"]; currentIndex: model.indexOf(cfgLanguage)
+                    // [P1-B 2026-09-21] i18n 未实装(全仓 qsTr 0 命中), 语言选择为占位展示:
+                    //   置灰防止误导; 恢复需先完成字符串外化(~2.5 人天, 对标报告 §3.2 P1-B 方案 B)。
+                    //   cfgLanguage 持久化链路保留(后端配置字段无副作用)。
+                    ComboBox { enabled: false; width: 240; height: 32; model: ["zh-CN（默认）"]; currentIndex: 0
                         background: Rectangle { color: "#F5F7FA"; radius: 6 }
                         contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#303133"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
 
@@ -175,6 +178,18 @@ Item {
                     CheckBox { text: "Alert Popup"; checked: configController.config.alertPopup !== false; onCheckedChanged: configController.saveConfig("alertPopup", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133" } }
                     CheckBox { text: "Sound & Light"; checked: configController.config.alertSoundLight !== false; onCheckedChanged: configController.saveConfig("alertSoundLight", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133" } }
                     CheckBox { text: "Auto-dismiss (15s)"; checked: configController.config.autoDismiss === true; onCheckedChanged: configController.saveConfig("autoDismiss", checked); contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133" } }
+                }
+
+// [P2-E 2026-09-21] 主题明暗切换为占位展示（方案 A，同 P1-B 惯例）：
+//   执行期核实 ThemeConfig(utils) 已注册 context 属性 "theme"(main.cpp:133)
+//   但全仓 QML 0 引用（grep "theme\." 0 命中），50 个 QML 色值全部硬编码亮色；
+//   此际提供可切换开关无真实效果，置灰防误导。恢复路径：先完成色值语义化
+//   外化（迁 theme.* 并拆暗/亮双套值，估 8~10 人天，见对标报告 §3.2 P2-E）。
+                Row { spacing: 8
+                    Text { text: "Theme:"; font.pixelSize: 12; color: "#909399" }
+                    ComboBox { enabled: false; width: 240; height: 32; model: ["浅色（默认）"]; currentIndex: 0
+                        background: Rectangle { color: "#F5F7FA"; radius: 6 }
+                        contentItem: Text { text: parent.displayText; font.pixelSize: 12; color: "#303133"; leftPadding: 6; verticalAlignment: Text.AlignVCenter } }
                 }
 
                 Rectangle { height: 1; color: "#F5F7FA"; width: parent.width }

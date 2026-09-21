@@ -407,6 +407,25 @@ void LinkageController::updateRuleChecked(const QString& ruleId, const QVariantM
     updateRule(ruleId, updates);
 }
 
+// [P1-2 dry-run 2026-09-20] 规则模拟测试 (对齐 Web LinkageRuleView.vue:4918 调用样例)
+//   后端契约: POST /api/v1/linkage/rules/dry-run (RestApiHandlers.cpp:19373)
+//   通道走 channel_id_str 主形态 (GB28181 20 位编码, 防 int32 截断 [CID-P1 2026-09-16] 治理)
+void LinkageController::dryRunRule(const QVariantMap& payload) {
+    if (!m_api) {
+        emit dryRunFailed(QStringLiteral("ApiClient 未初始化"));
+        return;
+    }
+    QJsonObject body = QJsonObject::fromVariantMap(payload);
+    m_api->post("/api/v1/linkage/rules/dry-run", body,
+        [this](QJsonObject obj) {
+            // 后端 makeOkResponse 信封: {code, message, data:{matched,...}} → 解包 data
+            emit dryRunFinished(ApiClient::unwrapData(obj).toVariantMap());
+        },
+        [this](int code, QString msg) {
+            emit dryRunFailed(QStringLiteral("dry-run 失败 [%1]: %2").arg(code).arg(msg));
+        });
+}
+
 void LinkageController::updateRule(const QString& ruleId, const QVariantMap& updates) {
     QJsonObject body = QJsonObject::fromVariantMap(updates);
     m_api->put(QString("/api/v1/linkage/rules/%1").arg(ruleId), body,

@@ -13,6 +13,9 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: root
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口无对应服务, 请求必然失败 —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
     // [P2-#12] ReActTraceView 通过 aiChatPage.copyToClipboard 导出, 提供 alias id
     property alias aiChatPage: root
 
@@ -73,7 +76,7 @@ Item {
 
     // ── 会话管理 ──
     function loadConversations() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/ai/sessions", null, function(resp, status) {
+        xhrRequest("GET", apiBase + "/api/v1/ai/sessions", null, function(resp, status) {
             if (status === 200 && resp && (resp.code === 0 || resp.success === true) && resp.data && Array.isArray(resp.data.sessions)) {
                 conversations = resp.data.sessions
             } else {
@@ -101,7 +104,7 @@ Item {
             messages = []
             return
         }
-        xhrRequest("GET", "http://localhost:8080/api/v1/ai/sessions/" + id + "/messages", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/ai/sessions/" + id + "/messages", null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true) && resp.data && Array.isArray(resp.data))
                 messages = resp.data
             else
@@ -110,7 +113,7 @@ Item {
     }
 
     function deleteConversation(id) {
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/ai/sessions/" + id, null, function() {})
+        xhrRequest("DELETE", apiBase + "/api/v1/ai/sessions/" + id, null, function() {})
         var list = []
         for (var i = 0; i < conversations.length; i++)
             if (conversations[i].id !== id) list.push(conversations[i])
@@ -174,15 +177,15 @@ Item {
             }
             cb(ctx)
         }
-        xhrRequest("GET", "http://localhost:8080/api/v1/channels?limit=100", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/channels?limit=100", null, function(resp) {
             if (resp && resp.data) channels = resp.data.channels || resp.data.items || (Array.isArray(resp.data) ? resp.data : [])
             done()
         })
-        xhrRequest("GET", "http://localhost:8080/api/v1/devices?limit=100", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/devices?limit=100", null, function(resp) {
             if (resp && resp.data) devices = resp.data.devices || resp.data.items || (Array.isArray(resp.data) ? resp.data : [])
             done()
         })
-        xhrRequest("GET", "http://localhost:8080/api/v1/alarms/history?limit=20", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/alarms/history?limit=20", null, function(resp) {
             if (resp && resp.data) alarms = resp.data.alarms || resp.data.items || (Array.isArray(resp.data) ? resp.data : [])
             done()
         })
@@ -197,7 +200,7 @@ Item {
         msgList.positionViewAtEnd()
 
         buildContext(function(ctx) {
-            xhrRequest("POST", "http://localhost:8080/api/v1/ai/chat/json", {
+            xhrRequest("POST", apiBase + "/api/v1/ai/chat/json", {
                 message: text + ctx,
                 conversation_id: currentConvId
             }, function(resp, status) {
@@ -547,6 +550,9 @@ Item {
                                     }
                                 }
                             }
+                        }
+                        // [FIX qml-brace 2026-09-20] 补回 msgList 闭合: d7b2546 引入 chatRow 并排布局时,
+                        //   Loader/Component 插在 msgList 闭合之前且漏补该行, 导致尾部内容错误嵌套进 Row
                         }
                         // [P2-#12] 找回: 嵌入式 ReActTraceView (右侧抽屉)
                         Loader {

@@ -12,6 +12,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     property var allModels: []
     property bool loading: false
     property string loadError: ""
@@ -45,7 +50,7 @@ Item {
     function loadModels() {
         loading = true
         loadError = ""
-        xhrRequest("GET", "http://localhost:8080/api/v1/models?limit=200", null,
+        xhrRequest("GET", apiBase + "/api/v1/models?limit=200", null,
             function (status, resp) {
                 loading = false
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
@@ -98,7 +103,7 @@ Item {
     }
 
     function activateModel(m) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/models/" + encodeURIComponent(m.id) + "/activate",
+        xhrRequest("POST", apiBase + "/api/v1/models/" + encodeURIComponent(m.id) + "/activate",
             {}, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("模型 " + displayName(m) + " 已激活")
@@ -110,7 +115,7 @@ Item {
     }
 
     function deactivateModel(m) {
-        xhrRequest("POST", "http://localhost:8080/api/v1/models/" + encodeURIComponent(m.id) + "/deactivate",
+        xhrRequest("POST", apiBase + "/api/v1/models/" + encodeURIComponent(m.id) + "/deactivate",
             {}, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("模型 " + displayName(m) + " 已卸载")
@@ -122,7 +127,7 @@ Item {
     }
 
     function doDelete(m) {
-        xhrRequest("DELETE", "http://localhost:8080/api/v1/models/" + encodeURIComponent(m.id),
+        xhrRequest("DELETE", apiBase + "/api/v1/models/" + encodeURIComponent(m.id),
             { id: m.id }, function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {
                     showToast("已删除")
@@ -139,7 +144,7 @@ Item {
             return
         }
         // 内置端无文件选择能力: 不携带文件, 如实上报后端结果
-        xhrRequest("POST", "http://localhost:8080/api/v1/models/upload",
+        xhrRequest("POST", apiBase + "/api/v1/models/upload",
             { model_name: upName.trim(), model_type: upType, precision: upPrecision, description: upDesc },
             function (status, resp) {
                 if (status === 200 && resp && (resp.code === 0 || resp.success === true)) {

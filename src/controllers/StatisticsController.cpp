@@ -265,6 +265,17 @@ void StatisticsController::refreshAlarmLevelDist() {
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
+// [P2-E2 2026-09-21] 处置时长 (MTTR) — 后端由 alarm_events.resolved_at-created_at 聚合
+// (口径见 RestApiHandlers.cpp /api/v1/stats/mttr 注释; 评估文档 §2.1)
+void StatisticsController::refreshMttr(int days) {
+    m_api->get(QString("/api/v1/stats/mttr?days=%1").arg(days),
+        [this](QJsonObject obj) {
+            m_mttr = ApiClient::unwrapData(obj).toVariantMap();
+            emit mttrUpdated();
+        },
+        [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
 void StatisticsController::refreshDeviceStats() {
     m_api->get("/api/v1/devices/stats",
         [this](QJsonObject obj) {
@@ -281,6 +292,7 @@ void StatisticsController::refreshAll() {
     refreshHourlyTrend();
     refreshRecentEvents(20);
     refreshAlarmLevelDist();
+    refreshMttr();     // [P2-E2] 处置时长
     refreshDeviceStats();
     // ── v7.0 P1 #10: AI 推理指标刷新 ──
     refreshModelHealth();

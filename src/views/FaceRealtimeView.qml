@@ -18,6 +18,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     property var events: []               // [{uid, alarmId, timestamp, personId, name, group, similarity, livenessScore, isLive, qualityScore, channelName, snapshotUrl}]
     property string filterGroup: "all"
     property bool soundEnabled: false
@@ -140,7 +145,7 @@ Item {
 
     // ── 周期拉取历史人脸事件 (与 Web loadRecentFaceAlarms 一致) ──
     function loadRecentFaceAlarms() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/alarms?count=20&page=1", null, function(resp, status) {
+        xhrRequest("GET", apiBase + "/api/v1/alarms?count=20&page=1", null, function(resp, status) {
             if (status !== 200 || !resp || resp.code !== 0) return
             var payload = resp.data || {}
             var items = payload.items || payload.alarms || []
@@ -153,7 +158,7 @@ Item {
 
     function loadPassRecords() {
         passLoading = true
-        xhrRequest("GET", "http://localhost:8080/api/v1/face/database/pass-records?hours=" + passRecordHours + "&limit=500",
+        xhrRequest("GET", apiBase + "/api/v1/face/database/pass-records?hours=" + passRecordHours + "&limit=500",
             null, function(resp, status) {
                 passLoading = false
                 if (status === 200 && resp && resp.code === 0 && resp.data)

@@ -11,7 +11,7 @@
 //   ⑤ GB/T 28181 SIP 服务器配置 (后端启用时如实展示)
 //
 // 数据: deviceController (box-sdk REST API)
-//       SIP 配置: GET http://localhost:8080/api/v1/system/gb28181/config
+//       SIP 配置: GET /api/v1/system/gb28181/config (基址 apiBase = apiClient.baseUrl)
 // ========================================================================
 import QtQuick 2.15
 import QtQuick.Controls 2.15
@@ -19,6 +19,10 @@ import QtQuick.Layouts 1.15
 
 Item {
     id: devicesView
+
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口无对应服务, 请求必然失败 —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
 
     // ── 筛选状态 (Web: search/statusFilter/typeFilter/projectFilter) ──
     property string searchText: ""
@@ -234,7 +238,7 @@ Item {
         if (typeof root !== "undefined" && root !== null) root.selectPrimary("video")
     }
     function pickLocation(deviceData) {
-        // Web: 地图选点; 内置端切换到 定位 组 (3D 场景选点)
+        // Web: 地图选点; 内置端切换到 定位 组 (室内定位场景选点)
         statusText.text = "请在定位页面为设备选点: " + (deviceData.name || deviceData.deviceId || "")
         statusText.color = "#909399"; statusTimer.start()
         if (typeof root !== "undefined" && root !== null) root.selectPrimary("locate")
@@ -258,7 +262,7 @@ Item {
     function loadSipConfig() {
         sipLoading = true
         var xhr = new XMLHttpRequest()
-        xhr.open("GET", "http://localhost:8080/api/v1/system/gb28181/config", true)
+        xhr.open("GET", apiBase + "/api/v1/system/gb28181/config", true)
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 sipLoading = false

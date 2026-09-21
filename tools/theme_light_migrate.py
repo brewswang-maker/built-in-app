@@ -3,7 +3,7 @@
 """
 [v7.6 1:1 对齐 Web 截图] 深色主题 → Web 浅色主题 批量转换
 映射依据: Web 端截图均为 Element 风格浅色内容区 (白卡片/#F5F7FA 页底)
-跳过: DashboardView (首页截图本身为深蓝) / Locate3DPanel / StadiumScene3D / VideoTile
+跳过: DashboardView (首页截图本身为深蓝) / Locate3DPanel / VideoTile
 """
 import re, sys, io
 

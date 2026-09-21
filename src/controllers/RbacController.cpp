@@ -51,11 +51,23 @@ void RbacController::refreshPermissionTree() {
 void RbacController::refreshCurrentUser() {
     m_api->get("/api/v1/auth/me",
         [this](QJsonObject obj) {
-            // 后端响应: {code,message,data:{username,role,roles:[...]}}
+            // 后端响应: {code,message,data:{user:{...}, permissions:[...], roles:[...]}}
             QJsonObject data = ApiClient::unwrapData(obj);
+            // [P0-B 2026-09-21] 后端 data 无顶层 username/role 字段, 从 user 子对象取
+            //   (RestApiHandlers.cpp:1352-1361: data={user,permissions,roles})
+            QJsonObject userObj = data.value("user").toObject();
             QString user = data.value("username").toString();
-            QString role = data.value("role").toString();
+            if (user.isEmpty()) user = userObj.value("username").toString();
             QVariantList roles = data.value("roles").toArray().toVariantList();
+            QString role = data.value("role").toString();
+            if (role.isEmpty() && !roles.isEmpty())
+                role = roles.first().toMap().value("name").toString();
+            // [P0-B 2026-09-21] 真权限点集合替换角色名启发式:
+            //   admin/super_admin 仍直通; 其余按 auth/me 下发的
+            //   permissions("resource:operation") 精确判定, 未下发=拒绝(fail-closed)。
+            m_grantedPerms.clear();
+            const auto perms = data.value("permissions").toArray();
+            for (const auto& p : perms) m_grantedPerms.insert(p.toString());
             setCurrentUser(user, role, roles);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -133,12 +145,14 @@ void RbacController::revokeRole(const QString& userId, const QString& roleId) {
 
 bool RbacController::hasPermission(const QString& resource,
                                     const QString& operation) const {
-    // 简单校验：当前用户角色名包含资源关键字
+    // [P0-B 2026-09-21] 权限点精确判定, 替换原「角色名包含资源关键字」启发式
+    //   (启发式曾致 viewer 角色名含 "device" 字样即放行 device.delete)。
+    //   数据源: GET /api/v1/auth/me → data.permissions ("resource:operation"),
+    //   与后端网关 RBACManager::hasPermission (SecurityManager.cpp:176) 对齐。
     for (const auto& r : m_currentUserRoles) {
         QString name = r.toMap().value("name").toString();
         if (name == "admin" || name == "super_admin") return true;
-        if (name.contains(resource, Qt::CaseInsensitive)) return true;
     }
-    Q_UNUSED(operation);
-    return false;
+    // 未就绪(未登录/未刷新)时拒绝 (fail-closed)
+    return m_grantedPerms.contains(resource + ":" + operation);
 }

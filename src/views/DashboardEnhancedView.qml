@@ -24,6 +24,7 @@ Item {
     Component.onCompleted: {
         statisticsController.refreshAll()
         statisticsController.refreshModelHealth()  // P1 #10: AI 模型健康度
+        systemPerfController.start()               // [P2-C] 端侧性能预算 5s 采样
     }
 
     // ── 30秒自动刷新 ──
@@ -456,8 +457,96 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 visible: statisticsController.modelHealthList.length === 0
-                                text: "暂无论型数据, 点击「刷新」加载"
+                                text: "暂无模型数据, 点击「刷新」加载"
                                 color: "#4A4D58"; font.pixelSize: 13
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── ②.8 [P2-C 2026-09-21] 端侧性能预算 (TC-SYS-02) ──
+            // 数据源: systemPerfController (5s 节流): CPU=/proc/stat 差值(top 同源),
+            // RSS=/proc/<pid>/status VmRSS, TPU=bm-smi; 超阈值变红, 接近阈值变黄,
+            // 未就绪/网关不在显示 "--"。配套 24h 落盘: scripts/rss_sample.sh (cron)。
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 150
+                Layout.leftMargin: 12; Layout.rightMargin: 12
+                color: "#FFFFFF"; radius: 10
+
+                ColumnLayout {
+                    anchors.fill: parent; anchors.margins: 12
+                    spacing: 8
+
+                    RowLayout {
+                        Text { text: "性能预算"; color: "#303133"; font.pixelSize: 14; font.bold: true }
+                        Text {
+                            text: "网关进程 smartgateway · 5s 采样"
+                            color: "#909399"; font.pixelSize: 12
+                        }
+                        Item { Layout.fillWidth: true }
+                        Rectangle {
+                            width: 64; height: 22; radius: 4
+                            color: systemPerfController.gatewayFound ? "#67C23A" : "#909399"
+                            Text {
+                                anchors.centerIn: parent
+                                text: systemPerfController.gatewayFound ? "监测中" : "未运行"
+                                color: "#F5F7FA"; font.pixelSize: 12; font.bold: true
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true; Layout.fillHeight: true
+                        spacing: 10
+
+                        Repeater {
+                            model: [
+                                { label: "CPU 占用", key: "cpu" },
+                                { label: "内存 RSS", key: "rss" },
+                                { label: "TPU 利用率", key: "tpu" }
+                            ]
+                            delegate: Rectangle {
+                                id: perfTile
+                                Layout.fillWidth: true; Layout.fillHeight: true
+                                color: "#F5F7FA"; radius: 8
+
+                                property double val: modelData.key === "cpu" ? systemPerfController.cpuPercent :
+                                                     modelData.key === "rss" ? systemPerfController.rssMb :
+                                                     systemPerfController.tpuPercent
+                                property int threshold: modelData.key === "cpu" ? systemPerfController.cpuThresholdPercent :
+                                                        modelData.key === "rss" ? systemPerfController.rssThresholdMb :
+                                                        systemPerfController.tpuThresholdPercent
+                                property bool exceeded: val > threshold            // 超阈值 → 红
+                                property bool nearLimit: val > threshold * 0.8     // 接近阈值 → 黄
+
+                                ColumnLayout {
+                                    anchors.fill: parent; anchors.margins: 10
+                                    spacing: 2
+                                    Text { text: modelData.label; color: "#909399"; font.pixelSize: 12 }
+                                    RowLayout {
+                                        spacing: 4
+                                        Text {
+                                            text: perfTile.val >= 0 ?
+                                                  perfTile.val.toFixed(modelData.key === "rss" ? 0 : 1) : "--"
+                                            color: perfTile.exceeded ? "#F56C6C" :
+                                                   (perfTile.nearLimit ? "#E6A23C" : "#67C23A")
+                                            font.pixelSize: 26; font.bold: true
+                                        }
+                                        Text {
+                                            text: modelData.key === "rss" ?
+                                                  "MB / 预算 " + perfTile.threshold + "MB" : "%"
+                                            color: "#909399"; font.pixelSize: 12
+                                        }
+                                    }
+                                    Text {
+                                        text: perfTile.val >= 0 ?
+                                              "阈值 " + perfTile.threshold + (modelData.key === "rss" ? "MB" : "%") :
+                                              "采样不可用 (网关未运行/无 bm-smi)"
+                                        color: "#4A4D58"; font.pixelSize: 11
+                                    }
+                                }
                             }
                         }
                     }

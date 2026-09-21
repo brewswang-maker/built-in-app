@@ -2,10 +2,10 @@
 // DashboardView.qml — 首页总览 [R2 第二轮界面升级 / R2.2 Web 态势大屏 1:1 对齐]
 // 总览页严格对齐 Web 端 SituationScreen.vue (/situation 真实首页) 布局:
 //   左列(400px): 安全评分(半环仪表) | 今日统计(2×2) | 设备状态(环形饼图)
-//   中列: 园区态势图(3D 场景, 支持拖拽旋转/滚轮缩放) + 实时告警表格
+//   中列: 园区态势图(2.5D 场景, 支持拖拽旋转/滚轮缩放) + 实时告警表格
 //   右列(400px): 告警类型分布(饼图) | 告警趋势(4 级折线) | 多盒子算力负载柱状图
-//   [2026-08-19 导航重构] 总览只保留总览内容: 统计分析/3D定位/视频监控页签
-//   已移除, 分别由顶部一级菜单(3D定位/视频)与首页二级菜单(数据分析)承接
+//   [2026-08-19 导航重构] 总览只保留总览内容: 统计分析/室内定位/视频监控页签
+//   已移除, 分别由顶部一级菜单(室内定位/视频)与首页二级菜单(数据分析)承接
 //   + AI 助手悬浮输入框 (默认收起, 点击展开, 不遮挡统计内容)
 // ========================================================================
 import QtQuick 2.15
@@ -22,7 +22,8 @@ Item {
     property string trendMode: "24h"      // 24h | 7d | 30d (Web 默认 24h)
     property int lastUpdatedSec: 0        // 距上次刷新秒数 (对齐 Web lastUpdated)
     // [P1-#2 v7.0+] 中列视图切换 (对齐 Web centerView)
-    property string centerView: "3d"      // "3d" | "video"
+    // [P2-A 2026-09-21] 新增 "map": 设备地理分布地图 (Canvas 自绘, 见 MapPanel.qml)
+    property string centerView: "3d"      // "3d" | "video" | "map"
 
     // [体育场3D] 场景数据 (scene_config.json 覆盖 → JS 兜底, mapDevices 合并真实状态, 与 SituationView 同源)
     readonly property var sceneMeta: situationController.sceneConfigLoaded
@@ -655,7 +656,8 @@ Item {
                                 RowLayout {
                                     anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 6
                                     Text {
-                                        text: dashboard.centerView === "3d" ? "园区态势图" : "视频轮询"
+                                        text: dashboard.centerView === "3d" ? "园区态势图"
+                                            : (dashboard.centerView === "map" ? "设备分布地图" : "视频轮询")
                                         font.pixelSize: 14; font.bold: true; color: "#00B4FF"
                                     }
 
@@ -682,7 +684,7 @@ Item {
                                                 horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                                             }
                                             onClicked: {
-                                                // [FIX v7.3] centerViewLoader.item = threeDScene 外层 stadiumLoader,
+                                                // [FIX v7.3] centerViewLoader.item = threeDScene 外层 sceneLoader,
                                                 //   已封装 resetView/setShowLabels/patrolStep 转发
                                                 var ldr = centerViewLoader.item
                                                 if (dashboard.centerView !== "3d" || !ldr) return
@@ -759,7 +761,7 @@ Item {
 
                                     Item { Layout.fillWidth: true }
 
-                                    // ── 视图切换按钮 (对齐 Web view-switch-btn: 园区态势图 / 视频监控) ──
+                                    // ── 视图切换按钮 (对齐 Web view-switch-btn: 态势图/视频/地图) ──
                                     Row {
                                         spacing: 0
                                         Rectangle {
@@ -792,6 +794,25 @@ Item {
                                                 onClicked: dashboard.setCenterView("video")
                                             }
                                         }
+                                        // [P2-A 2026-09-21] 地图视图入口 (Canvas 自绘设备分布)
+                                        Rectangle {
+                                            width: 80; height: 26
+                                            color: dashboard.centerView === "map" ? "#00B4FF" : "transparent"
+                                            border.color: "#00B4FF"; border.width: 1
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "地图"
+                                                color: dashboard.centerView === "map" ? "#040C2B" : "#00B4FF"
+                                                font.pixelSize: 12
+                                            }
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                onClicked: {
+                                                    deviceController.refreshDevices()  // 点位数据就绪
+                                                    dashboard.setCenterView("map")
+                                                }
+                                            }
+                                        }
                                     }
 
                                     Button {
@@ -811,43 +832,36 @@ Item {
                                 }
                             }
 
-                            // 内容区: 3D 态势图 / 视频轮巡 (对齐 Web swipe-container, 使用 Loader 避免与 Locate3DPanel 互住)
+                            // 内容区: 场景态势图 / 视频轮巡 / 设备地图 (对齐 Web swipe-container, 使用 Loader 避免互住)
                             Loader {
                                 id: centerViewLoader
                                 Layout.fillWidth: true; Layout.fillHeight: true
-                                sourceComponent: dashboard.centerView === "3d" ? threeDScene : videoPatrolScene
+                                sourceComponent: dashboard.centerView === "3d" ? threeDScene
+                                                   : dashboard.centerView === "map" ? mapScene : videoPatrolScene
+                            }
+
+                            // [P2-A 2026-09-21] 地图视图: Canvas 自绘设备地理分布 + 点位/列表联动
+                            Component {
+                                id: mapScene
+                                MapPanel {
+                                    anchors.fill: parent
+                                    devices: deviceController.devices
+                                }
                             }
 
                             Component {
                                 id: threeDScene
-                                // [体育场3D] 运行时探测 Quick3D 可用性:
-                                //   可用 → StadiumScene3D (Qt Quick 3D 真 3D); 否则回退 Locate3DPanel (Canvas 2.5D)
+                                // [去 3D 2026-09-20] 场景渲染收敛为 Canvas 2.5D (Locate3DPanel), 移除 Quick3D 双轨探测
                                 Loader {
-                                    id: stadiumLoader
+                                    id: sceneLoader
                                     Layout.fillWidth: true; Layout.fillHeight: true
+                                    source: "Locate3DPanel.qml"
 
                                     Component.onCompleted: {
                                         situationController.refreshSceneConfig()
                                         situationController.refreshMapDevices()
-                                        pickSceneSource()
                                     }
-                                    // [设备兼容] 先探明渲染后端再加载: legacy 软件渲染无 RHI,
-                                    // View3D 实例化后析构会 SEGV → 软件环境直接加载 Canvas 2.5D, 不碰 StadiumScene3D
-                                    function pickSceneSource() {
-                                        var api = GraphicsInfo.api
-                                        if (api === GraphicsInfo.Unknown) { pickTimer.start(); return }
-                                        if (api === GraphicsInfo.Software) {
-                                            console.log("[DashboardView] 软件渲染 (无 RHI) → 直接加载 Locate3DPanel")
-                                            setSource("Locate3DPanel.qml")
-                                            return
-                                        }
-                                        var comp = Qt.createComponent("StadiumScene3D.qml")
-                                        console.log("[DashboardView] StadiumScene3D.qml status=" + comp.status
-                                            + (comp.status !== Component.Ready ? " err=" + comp.errorString() : ""))
-                                        setSource(comp.status === Component.Ready ? "StadiumScene3D.qml" : "Locate3DPanel.qml")
-                                    }
-                                    Timer { id: pickTimer; interval: 100; onTriggered: stadiumLoader.pickSceneSource() }
-                                    onStatusChanged: console.log("[DashboardView] stadiumLoader status=" + status
+                                    onStatusChanged: console.log("[DashboardView] sceneLoader status=" + status
                                         + (status === Loader.Error ? " (" + source + ")" : ""))
                                     onItemChanged: bindSceneItem()
 
@@ -859,15 +873,13 @@ Item {
                                             try { item.sceneMeta = Qt.binding(function () { return dashboard.sceneMeta }) } catch (e) {}
                                         }
                                     }
-                                    // 视角预设按钮调用入口 (原 Locate3DPanel.resetView 转发)
+                                    // 视角预设按钮调用入口 (Locate3DPanel.resetView 转发)
                                     function resetView() { if (item && item.resetView) item.resetView() }
-                                    // [v7.6] 标签显隐转发 (StadiumScene3D.showLabels)
+                                    // [v7.6] 标签显隐转发 (场景组件暴露 showLabels 时生效)
                                     function setShowLabels(v) { if (item && item.showLabels !== undefined) item.showLabels = v }
-                                    // [v7.6] 自动巡视单步: StadiumScene3D 走 targetYaw 阻尼,
-                                    //   Locate3DPanel(Canvas) 走 yaw + 手动重绘
+                                    // [v7.6] 自动巡视单步: Locate3DPanel(Canvas) 走 yaw + 手动重绘
                                     function patrolStep() {
                                         if (!item) return
-                                        if (item.targetYaw !== undefined) { item.targetYaw += 0.01; return }
                                         if (item.yaw !== undefined) {
                                             item.yaw += 0.01
                                             if (item.scene && item.scene.requestPaint) item.scene.requestPaint()

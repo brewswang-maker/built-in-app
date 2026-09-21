@@ -1,6 +1,6 @@
 // ========================================================================
 // SituationView.qml — 安全态势大屏 [R2 任务2 优化] [体育场3D]
-// 体育场 3D 场景 (Qt Quick 3D, 降级 Canvas 2.5D) + GPS 告警标记 + 实时告警流
+// 场景渲染: Canvas 2.5D 等轴测 (Locate3DPanel, 去 3D 后唯一场景渲染) + GPS 告警标记 + 实时告警流
 // 场景数据同源 scene_config.json (situationController 运行时覆盖 + mapDevices 状态合并)
 // 数据源: statusController + alarmController + situationController (box-sdk REST API + WebSocket)
 //   + WsMessageRouter alarm-map-marker 推送 (GPS 定位告警渲染)
@@ -154,11 +154,11 @@ Item {
         return sceneProject(wx, 0, wz)
     }
 
-    // ═══ 场景投影统一入口: Quick3D mapFrom3DScene 优先, Canvas iso 投影兜底 ═══
+    // ═══ 场景投影统一入口: 组件暴露 projectPoint 时优先, 否则 Canvas iso 投影兜底 ═══
     function sceneProject(x, y, z) {
         if (scene3d.item && scene3d.item.projectPoint !== undefined) {
             var p = scene3d.item.projectPoint(x, y, z)
-            return { x: p.x + 4, y: p.y + 4 }   // View3D 内部 margin 补偿
+            return { x: p.x + 4, y: p.y + 4 }   // 场景组件内部 margin 补偿
         }
         return iso(x, y, z)
     }
@@ -626,26 +626,12 @@ Item {
                         }
                     }
 
-                    // ═══ [体育场3D] 3D 场景: Qt Quick 3D 优先, 模块不可用时降级 Canvas 2.5D ═══
+                    // ═══ [去 3D 2026-09-20] 场景渲染收敛为 Canvas 2.5D (Locate3DPanel) ═══
                     Loader {
                         id: scene3d
                         anchors.fill: parent; anchors.margins: 8
+                        source: "Locate3DPanel.qml"
 
-                        Component.onCompleted: pickSceneSource()
-                        // [设备兼容] 先探明渲染后端再加载: legacy 软件渲染无 RHI,
-                        // View3D 实例化后析构会 SEGV → 软件环境直接加载 Canvas 2.5D
-                        function pickSceneSource() {
-                            var api = GraphicsInfo.api
-                            if (api === GraphicsInfo.Unknown) { pickTimer.start(); return }
-                            if (api === GraphicsInfo.Software) {
-                                console.log("[SituationView] 软件渲染 (无 RHI) → 直接加载 Locate3DPanel")
-                                setSource("Locate3DPanel.qml")
-                                return
-                            }
-                            var comp = Qt.createComponent("StadiumScene3D.qml")
-                            setSource(comp.status === Component.Ready ? "StadiumScene3D.qml" : "Locate3DPanel.qml")
-                        }
-                        Timer { id: pickTimer; interval: 100; onTriggered: scene3d.pickSceneSource() }
                         onItemChanged: bindSceneItem()
 
                         function bindSceneItem() {

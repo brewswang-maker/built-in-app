@@ -3,6 +3,11 @@
 #include <QObject>
 #include <QColor>
 
+// [P2-E 2026-09-21] 现状如实说明：本类已注册为 QML context 属性 "theme"
+// (app/main.cpp:133)，但全仓 QML 对 theme.* 的引用为 0（grep 实证），
+// 且本类色值为硬编码 CONSTANT 暗色系，与各视图实际硬编码的亮色系不一致。
+// 明暗切换需先完成：色值语义化外化（50 个 QML 迁 theme.*）+ 双套色值 +
+// NOTIFY 化，估 8~10 人天（对标报告 §3.2 P2-E）；在此之前保持只读。
 class ThemeConfig : public QObject {
     Q_OBJECT
 

@@ -16,6 +16,9 @@ __pycache__/
 # 备份/日志
 *.bak
 *.log
+# [P1-D 2026-09-21] 真机取证日志放行: tests/evidence/*.log 是 v1.1/对标分析报告
+#   引用的证据链, 须可复核 (其余 *.log 仍忽略)
+!tests/evidence/*.log
 
 # 环境/IDE
 .env*

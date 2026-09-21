@@ -15,6 +15,11 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
 
+    // [P2-1 2026-09-20] REST 基址统一走 ApiClient (默认 http://127.0.0.1:18080):
+    //   原硬编码 8080 端口为设备平台服务(sophliteos, 实测 /api 404), 请求必然失败
+    //   —— 统一改由 apiClient.baseUrl 提供。
+    readonly property string apiBase: apiClient.baseUrl
+
     property bool loading: false
     property string searchKeyword: ""
     property string sortBy: "rating"
@@ -83,7 +88,7 @@ Item {
 
     // ── 数据加载 ──
     function fetchCategories() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/marketplace/categories", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/marketplace/categories", null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true) && resp.data)
                 categories = Array.isArray(resp.data) ? resp.data : []
         })
@@ -91,7 +96,7 @@ Item {
 
     function fetchProducts() {
         loading = true
-        var url = "http://localhost:8080/api/v1/marketplace/algorithms?page=1&pageSize=100"
+        var url = apiBase + "/api/v1/marketplace/algorithms?page=1&pageSize=100"
         if (activeCategory !== "all") url += "&category=" + activeCategory
         xhrRequest("GET", url, null, function(resp) {
             loading = false
@@ -122,7 +127,7 @@ Item {
     }
 
     function fetchLicenses() {
-        xhrRequest("GET", "http://localhost:8080/api/v1/marketplace/licenses?page=1&pageSize=200", null, function(resp) {
+        xhrRequest("GET", apiBase + "/api/v1/marketplace/licenses?page=1&pageSize=200", null, function(resp) {
             if (resp && (resp.code === 0 || resp.success === true) && resp.data) {
                 var list = resp.data.items || resp.data.licenses || []
                 var ids = []
@@ -149,7 +154,7 @@ Item {
         if (!selectedProduct) return
         purchasing = true
         var p = selectedProduct
-        xhrRequest("POST", "http://localhost:8080/api/v1/marketplace/algorithms/" + p.id + "/install", {}, function(resp) {
+        xhrRequest("POST", apiBase + "/api/v1/marketplace/algorithms/" + p.id + "/install", {}, function(resp) {
             purchasing = false
             if (resp && (resp.code === 0 || resp.success === true)) {
                 var free = (p.price === undefined || p.price === null || p.price <= 0)

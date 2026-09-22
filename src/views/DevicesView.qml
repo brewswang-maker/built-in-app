@@ -994,7 +994,8 @@ Item {
                         contentItem: Text { text: parent.text; font.pixelSize: 13; color: "#606266"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } }
                     Button { text: "确认添加"; font.pixelSize: 13
                         onClicked: {
-                            deviceController.addDevice(addProtocol, addIp, 0, "", "")
+                            // [FIX api-contract 2026-09-22] 透传表单全部字段(原先丢弃 name/type/location)
+                            deviceController.addDevice(addProtocol, addIp, addName, addDeviceType, addLocation)
                             showAddDialog = false
                         }
                         background: Rectangle { color: "#409EFF"; radius: 4; width: 120; height: 38 }

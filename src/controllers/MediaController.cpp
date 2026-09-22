@@ -340,8 +340,10 @@ void MediaController::fetchStreamUrlsFromZlm(const QString& deviceId,
 }
 
 void MediaController::stopStream(const QString& sessionId) {
-    m_api->del(QString("/api/v1/zlm/streams/%1").arg(sessionId),
-        [this, sessionId]() {
+    // [FIX api-contract 2026-09-22] 契约纠正: 后端无 DELETE /zlm/streams/:id 路由,
+    // canonical = POST /api/v1/streams/:id/stop(真实实现, 含 inference 引用计数保护)。
+    m_api->post(QString("/api/v1/streams/%1/stop").arg(sessionId), QJsonObject(),
+        [this, sessionId](QJsonObject) {
             emit streamStopped(sessionId);
         },
         [this](int code, QString msg) {
@@ -429,9 +431,12 @@ void MediaController::snapshotToFile(const QString& channelId) {
     m_api->post(QString("/api/v1/channels/%1/snapshot").arg(channelId),
                 QJsonObject(),
         [this, channelId](QJsonObject resp) {
-            const QString url = resp.value("url").toString();
-            const QString dataB64 = resp.value("data_base64").toString();
-            const QString hint = resp.value("filename").toString();
+            // [FIX api-contract 2026-09-22] 后端响应为信封, data 仅含 {url}
+            // (无 data_base64/filename 字段)。旧实现读裸顶层 → 三者全空。
+            const QJsonObject data = ApiClient::unwrapData(resp);
+            const QString url = data.value("url").toString();
+            const QString dataB64 = data.value("data_base64").toString();
+            const QString hint = data.value("filename").toString();
             const QString fileName = timestampedFileName(channelId, hint);
             const QString fullPath = defaultSnapshotDir() + QLatin1Char('/') + fileName;
 

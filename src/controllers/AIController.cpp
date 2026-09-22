@@ -258,7 +258,14 @@ void AIController::sendMultimodal(const QString& text, const QString& imageBase6
     if (!m_currentSessionId.isEmpty()) body["session_id"] = m_currentSessionId;
     m_api->post("/api/v1/ai/chat/multimodal", body,
         [this](QJsonObject obj) {
-            m_currentResponse = obj.value("response").toString();
+            // [FIX api-contract 2026-09-22] 响应为信封:
+            // data.{sessionId, message:{content,...}}; 旧实现读顶层 "response"(不存在)。
+            const QJsonObject data = ApiClient::unwrapData(obj);
+            m_currentResponse = data.value("message").toObject().value("content").toString();
+            if (m_currentResponse.isEmpty())
+                m_currentResponse = data.value("response").toString();  // 兼容旧字段
+            const QString sid = data.value("sessionId").toString();
+            if (!sid.isEmpty()) m_currentSessionId = sid;
             emit tokenReceived(m_currentResponse);
             QVariantMap aiMsg;
             aiMsg["role"] = "assistant";
@@ -368,7 +375,9 @@ void AIController::callTool(const QString& toolName, const QVariantMap& params) 
     body["parameters"] = QJsonObject::fromVariantMap(params);
     m_api->post("/api/v1/ai/tools", body,
         [this, toolName, params](QJsonObject resp) {
-            QString result = QString::fromUtf8(QJsonDocument(resp).toJson(QJsonDocument::Compact));
+            // [FIX api-contract 2026-09-22] 响应为信封, dump 前先 unwrapData,
+            // 否则结果串里全是 code/data 包装层。
+            QString result = QString::fromUtf8(QJsonDocument(ApiClient::unwrapData(resp)).toJson(QJsonDocument::Compact));
             QVariantMap call;
             call["name"] = toolName;
             call["args"] = params;
@@ -390,7 +399,8 @@ void AIController::invokeAgent(const QString& agentName, const QVariantMap& para
         [this, agentName](QJsonObject resp) {
             QVariantMap call;
             call["name"] = QString("agent:%1").arg(agentName);
-            call["result"] = resp.toVariantMap();
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData。
+            call["result"] = ApiClient::unwrapData(resp).toVariantMap();
             call["status"] = "done";
             m_toolCalls.append(call);
             emit toolCallAppended(call);
@@ -402,7 +412,8 @@ void AIController::analyzeAlarm(const QString& alarmId) {
     QJsonObject body; body["alarmId"] = alarmId;
     m_api->post("/api/v1/ai/analyze/alarm", body,
         [this, alarmId](QJsonObject resp) {
-            emit alarmAnalyzed(alarmId, resp.toVariantMap());
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData。
+            emit alarmAnalyzed(alarmId, ApiClient::unwrapData(resp).toVariantMap());
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

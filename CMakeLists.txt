@@ -192,6 +192,28 @@ if(Qt6Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
     endif()
     foreach(test_src ${TEST_SOURCES})
         get_filename_component(test_name ${test_src} NAME_WE)
+        set(_test_extra_srcs "")
+        if(test_name STREQUAL "test_api_contract_fixes")
+            # [api-contract 2026-09-22] 契约回归单测依赖:
+            #   12 个 controller + WS 路由(单例, 无 WebSockets 时内部降级) + 3 个列表模型
+            list(APPEND _test_extra_srcs
+                src/utils/WsMessageRouter.cpp
+                src/controllers/FaceController.cpp
+                src/controllers/AuditController.cpp
+                src/controllers/AlarmController.cpp
+                src/controllers/MediaController.cpp
+                src/controllers/StatusController.cpp
+                src/controllers/ConfigController.cpp
+                src/controllers/AlgorithmController.cpp
+                src/controllers/LinkageController.cpp
+                src/controllers/FederationController.cpp
+                src/controllers/PipelineController.cpp
+                src/controllers/AIController.cpp
+                src/controllers/DeviceController.cpp
+                src/models/AlarmListModel.cpp
+                src/models/DeviceListModel.cpp
+                src/models/AlgorithmListModel.cpp)
+        endif()
         add_executable(${test_name} ${test_src} ${TEST_MOCS}
             # [M2-4 2026-09-22] test_ota_bootid 依赖: API 客户端信封解包 + OTA 控制器
             src/utils/ApiClient.cpp
@@ -202,7 +224,8 @@ if(Qt6Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
             src/streaming/StreamingDegradationChain.cpp
             src/streaming/WebRtcFrameSink.cpp
             src/streaming/WebRtcRenderer.cpp
-            ${TEST_WEBRTC_SOURCES})
+            ${TEST_WEBRTC_SOURCES}
+            ${_test_extra_srcs})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/src
             ${CMAKE_CURRENT_SOURCE_DIR}/tests

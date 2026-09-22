@@ -44,9 +44,14 @@ void AuditController::searchLogs(const QVariantMap& filters) {
 }
 
 void AuditController::exportLogs(const QString& format) {
-    m_api->get(QString("/api/v1/audit/export?format=%1").arg(format),
+    // [FIX api-contract 2026-09-22] 契约纠正: 后端 export 为 POST + body{format},
+    // 响应信封 data.{url,format,count,filename}(无 "path" 字段)。
+    // 旧实现 GET ?format= → 404(方法不匹配)。
+    QJsonObject body;
+    body["format"] = format;
+    m_api->post("/api/v1/audit/export", body,
         [this](QJsonObject obj) {
-            emit exportCompleted(obj["path"].toString());
+            emit exportCompleted(ApiClient::unwrapData(obj).value("url").toString());
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

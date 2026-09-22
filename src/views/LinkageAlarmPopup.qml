@@ -759,7 +759,10 @@ Window {
                         contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#909399"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter }
                         onClicked: {
                             if (currentAlarm && currentAlarm.id) {
-                                alarmController.handleAlarm(currentAlarm.id, "mute")
+                                // [FIX api-contract 2026-09-22] "mute" 不在后端 handle 状态机词表内,
+                                // 会以未知 action 写库污染 status; 改用 canonical "ignored"
+                                // (后端映射 resolve)。
+                                alarmController.handleAlarm(currentAlarm.id, "ignored")
                             }
                             linkagePopup.silenced()
                             linkagePopup.dismiss()

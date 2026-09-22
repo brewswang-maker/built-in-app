@@ -374,7 +374,9 @@ void LinkageController::createRule(const QVariantMap& rule) {
     QJsonObject body = QJsonObject::fromVariantMap(rule);
     m_api->post("/api/v1/linkage/rules", body,
         [this](QJsonObject obj) {
-            emit ruleCreated(obj.toVariantMap());
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData;
+            // 旧实现读信封顶层 → ruleCreated 载荷全空。
+            emit ruleCreated(ApiClient::unwrapData(obj).toVariantMap());
             refreshRules();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -475,7 +477,16 @@ void LinkageController::refreshLogs(int limit) {
 void LinkageController::getRuleStats() {
     m_api->get("/api/v1/linkage/stats",
         [this](QJsonObject obj) {
-            emit statsReceived(obj.toVariantMap());
+            // [FIX api-contract 2026-09-22] 该端点信封 data 为数组
+            // [{activeRules,successRate,totalTriggers,...}], 取首元素;
+            // 旧实现直接 toVariantMap() 读信封顶层 → 字段全空。
+            const QJsonValue dataVal = obj.value("data");
+            QJsonObject data;
+            if (dataVal.isArray() && !dataVal.toArray().isEmpty())
+                data = dataVal.toArray().first().toObject();
+            else
+                data = ApiClient::unwrapData(obj);
+            emit statsReceived(data.toVariantMap());
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

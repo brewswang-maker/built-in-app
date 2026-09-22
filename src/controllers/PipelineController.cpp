@@ -54,6 +54,10 @@ void PipelineController::stopPipeline(const QString& id) {
 
 void PipelineController::getPipelineDetail(const QString& id) {
     m_api->get(QString("/api/v1/pipelines/%1").arg(id),
-        [this](QJsonObject obj) { emit pipelineDetailReceived(obj.toVariantMap()); },
+        [this](QJsonObject obj) {
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData;
+            // 旧实现读信封顶层 → pipelineDetailReceived 载荷全空。
+            emit pipelineDetailReceived(ApiClient::unwrapData(obj).toVariantMap());
+        },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

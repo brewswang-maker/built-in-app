@@ -140,9 +140,12 @@ public:
 
     Q_INVOKABLE void refreshStats();
     Q_INVOKABLE void refreshGroups();
+    // [FIX api-contract 2026-09-22] 签名对齐 QML 表单字段(name/deviceType/location);
+    // 旧签名 port/username/password 均无消费方(调用点恒传 0/空)且后端
+    // POST /devices 必填 device_id(缺→400)。
     Q_INVOKABLE void addDevice(const QString& protocol, const QString& ip,
-                               int port, const QString& username,
-                               const QString& password);
+                               const QString& name, const QString& deviceType,
+                               const QString& location);
     Q_INVOKABLE void updateDevice(const QString& deviceId, const QVariantMap& body);
     Q_INVOKABLE void removeDevice(const QString& deviceId);
     Q_INVOKABLE void discoverDevices(const QString& protocol);

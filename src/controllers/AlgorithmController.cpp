@@ -48,9 +48,12 @@ void AlgorithmController::refreshModels() {
 void AlgorithmController::refreshTpuUsage() {
     m_api->get("/api/v1/models/tpu-usage",
         [this](QJsonObject resp) {
-            m_tpuUsage = resp["utilization"].toDouble();
-            m_activeModels = resp["active_models"].toInt();
-            m_tpuMemoryUsed = resp["memory_used"].toInt();
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData;
+            // 旧实现读裸顶层 → 三项恒为 0。
+            const QJsonObject data = ApiClient::unwrapData(resp);
+            m_tpuUsage = data["utilization"].toDouble();
+            m_activeModels = data["active_models"].toInt();
+            m_tpuMemoryUsed = data["memory_used"].toInt();
             emit tpuUsageUpdated();
         },
         [](int, QString) {});
@@ -65,7 +68,8 @@ void AlgorithmController::refreshAll() {
 void AlgorithmController::getAlgorithmConfig(const QString& algoId) {
     m_api->get(QString("/api/v1/algorithms/%1/config").arg(algoId),
         [this, algoId](QJsonObject resp) {
-            QVariantMap config = resp.toVariantMap();
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData 后再转 map。
+            QVariantMap config = ApiClient::unwrapData(resp).toVariantMap();
             emit algorithmConfigReceived(algoId, config);
         },
         [this](int code, QString msg) {

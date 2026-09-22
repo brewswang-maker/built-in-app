@@ -172,21 +172,33 @@ void AlarmController::refreshAlarms(int limit) {
 }
 
 void AlarmController::confirmAlarm(const QString& alarmId) {
-    m_api->post(QString("/api/v1/alarms/%1/confirm").arg(alarmId), QJsonObject(),
+    // [FIX api-contract 2026-09-22] 契约纠正: 后端无 /alarms/:id/confirm 路由,
+    // canonical = POST /api/v1/alarms/confirm {alarm_id,handler}(含反馈入库)。
+    QJsonObject body;
+    body["alarm_id"] = alarmId;
+    body["handler"] = "gui";
+    m_api->post("/api/v1/alarms/confirm", body,
         [this](QJsonObject) { refreshAlarms(50); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
 void AlarmController::markFalseAlarm(const QString& alarmId) {
-    m_api->post(QString("/api/v1/alarms/%1/false").arg(alarmId), QJsonObject(),
+    // [FIX api-contract 2026-09-22] 同理: POST /api/v1/alarms/false {alarm_id,handler,note}
+    // (含误报热点记录 recordMisreportHotspot)。
+    QJsonObject body;
+    body["alarm_id"] = alarmId;
+    body["handler"] = "gui";
+    m_api->post("/api/v1/alarms/false", body,
         [this](QJsonObject) { refreshAlarms(50); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
 void AlarmController::handleAlarm(const QString& alarmId, const QString& action) {
+    // [FIX api-contract 2026-09-22] 后端 handle 路由为 PUT(非 POST),
+    // body action/status 双兼容。
     QJsonObject body;
     body["action"] = action;
-    m_api->post(QString("/api/v1/alarms/%1/handle").arg(alarmId), body,
+    m_api->put(QString("/api/v1/alarms/%1/handle").arg(alarmId), body,
         [this](QJsonObject) { refreshAlarms(50); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }

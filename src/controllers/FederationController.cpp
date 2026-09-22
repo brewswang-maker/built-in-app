@@ -49,7 +49,11 @@ void FederationController::stopRound() {
 
 void FederationController::getNodeDetail(const QString& nodeId) {
     m_api->get(QString("/api/v1/federation/nodes/%1").arg(nodeId),
-        [this](QJsonObject obj) { emit nodeDetailReceived(obj.toVariantMap()); },
+        [this](QJsonObject obj) {
+            // [FIX api-contract 2026-09-22] 响应为信封, 需 unwrapData;
+            // 旧实现读信封顶层 → nodeDetailReceived 载荷全空。
+            emit nodeDetailReceived(ApiClient::unwrapData(obj).toVariantMap());
+        },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
@@ -60,6 +64,9 @@ void FederationController::approveNode(const QString& nodeId) {
 }
 
 void FederationController::removeNode(const QString& nodeId) {
+    // [api-contract 2026-09-22] 遗留登记(不改逻辑, 无 QML 调用方): 后端无
+    // DELETE /api/v1/federation/nodes/:id 路由(该路径只注册了 GET) → 若未来
+    // 启用, 需先落后端节点移除接口。审计脚本 MISMATCH 剩余项之一。
     m_api->del(QString("/api/v1/federation/nodes/%1").arg(nodeId),
         [this]() { refreshNodes(); },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });

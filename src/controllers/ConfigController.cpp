@@ -1,23 +1,48 @@
 #include "ConfigController.h"
 #include "utils/ApiClient.h"
+#include <QSettings>
+
+// [FIX api-contract 2026-09-22] 本地偏好键(后端无对应存储), 落 QSettings;
+// 其余键走后端 PUT /api/v1/settings/basic(partial-friendly, 仅处理 present keys)。
+static const QStringList kLocalOnlyKeys = {
+    "timezone", "language", "screenBrightness", "alertVolume",
+    "alertPopup", "alertSoundLight", "autoDismiss"
+};
 
 ConfigController::ConfigController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {}
 
 void ConfigController::loadConfig() {
-    m_api->get("/api/v1/config",
+    // [FIX api-contract 2026-09-22] canonical = /api/v1/settings/basic(信封);
+    // 旧实现读 /api/v1/config 裸顶层(无 deviceName/logLevel 等字段) → 字段全空。
+    m_api->get("/api/v1/settings/basic",
         [this](QJsonObject resp) {
-            m_config = resp.toVariantMap();
+            m_config = ApiClient::unwrapData(resp).toVariantMap();
+            // 合并本地偏好(QSettings)
+            QSettings local("ShieldBox", "GUI");
+            for (const QString& key : kLocalOnlyKeys) {
+                if (local.contains(key))
+                    m_config[key] = local.value(key);
+            }
             emit configUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
 void ConfigController::saveConfig(const QString& key, const QVariant& value) {
+    if (kLocalOnlyKeys.contains(key)) {
+        // 本地偏好: 直接落 QSettings, 不打扰后端
+        QSettings local("ShieldBox", "GUI");
+        local.setValue(key, value);
+        m_config[key] = value;
+        emit configUpdated();
+        emit configSaved();
+        return;
+    }
+    // 设备级设置: PUT /api/v1/settings/basic(partial-friendly)
     QJsonObject body;
-    body["key"] = key;
-    body["value"] = QJsonValue::fromVariant(value);
-    m_api->put("/api/v1/config", body,
+    body[key] = QJsonValue::fromVariant(value);
+    m_api->put("/api/v1/settings/basic", body,
         [this](QJsonObject) {
             emit configSaved();
             loadConfig();
@@ -40,16 +65,34 @@ void ConfigController::importConfig(const QString& path) {
 }
 
 void ConfigController::getNetworkConfig() {
+    // [FIX api-contract 2026-09-22] 响应为信封 + 字段映射:
+    // 后端 ipAddress/netmask/dns1 → QML 消费的 ip/subnet/dns。
     m_api->get("/api/v1/config/network",
         [this](QJsonObject resp) {
-            m_networkConfig = resp.toVariantMap();
+            const QJsonObject d = ApiClient::unwrapData(resp);
+            QVariantMap net = d.toVariantMap();
+            if (net.contains("ipAddress") && !net.contains("ip"))
+                net["ip"] = net["ipAddress"];
+            if (net.contains("netmask") && !net.contains("subnet"))
+                net["subnet"] = net["netmask"];
+            if (net.contains("dns1") && !net.contains("dns"))
+                net["dns"] = net["dns1"];
+            m_networkConfig = net;
             emit networkConfigUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
 }
 
 void ConfigController::setNetworkConfig(const QVariantMap& config) {
-    m_api->put("/api/v1/config/network", QJsonObject::fromVariantMap(config),
+    // [FIX api-contract 2026-09-22] 反向映射后 PUT(后端为占位确认实现)
+    QVariantMap body = config;
+    if (config.contains("ip") && !config.contains("ipAddress"))
+        body["ipAddress"] = config["ip"];
+    if (config.contains("subnet") && !config.contains("netmask"))
+        body["netmask"] = config["subnet"];
+    if (config.contains("dns") && !config.contains("dns1"))
+        body["dns1"] = config["dns"];
+    m_api->put("/api/v1/config/network", QJsonObject::fromVariantMap(body),
         [this](QJsonObject) {
             emit networkConfigUpdated();
             getNetworkConfig();

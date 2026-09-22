@@ -204,18 +204,28 @@ void DeviceController::refreshAll() {
 }
 
 void DeviceController::addDevice(const QString& protocol, const QString& ip,
-                                  int port, const QString& username,
-                                  const QString& password) {
+                                  const QString& name, const QString& deviceType,
+                                  const QString& location) {
+    // [FIX api-contract 2026-09-22] 契约纠正(三重证据):
+    //   1) 后端 POST /devices 必填 device_id, 缺→400(badRequest);
+    //   2) 响应 makeOkResponse() 不含 device_id → 旧实现读 resp["device_id"] 恒空;
+    //   3) canonical 生成规则(同 web-admin device.ts L33-37): device_id = "ip:port",
+    //      默认 port=554; 附 device_name/device_type/config{protocol,location}。
+    const QString deviceId = QString("%1:554").arg(ip.trimmed());
+    QJsonObject config;
+    config["protocol"] = protocol;
+    if (!location.isEmpty())
+        config["location"] = location;
     QJsonObject body;
-    body["protocol"] = protocol;
+    body["device_id"] = deviceId;
+    body["device_name"] = name.isEmpty() ? ip : name;
+    body["device_type"] = deviceType.isEmpty() ? protocol : deviceType;
     body["ip_address"] = ip;
-    body["port"] = port;
-    body["username"] = username;
-    body["password"] = password;
+    body["port"] = 554;
+    body["config"] = config;
     m_api->post("/api/v1/devices", body,
-        [this](QJsonObject resp) {
-            QString id = resp["device_id"].toString();
-            emit deviceAdded(id);
+        [this, deviceId](QJsonObject) {
+            emit deviceAdded(deviceId);
             refreshDevices();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });

@@ -200,6 +200,9 @@ void RecordingController::batchDownload(const QVariantList& recordingIds) {
 }
 
 void RecordingController::addTag(const QString& recordingId, const QString& tag) {
+    // [api-contract 2026-09-22] 遗留登记(不改逻辑, 无 QML 调用方): 后端无
+    // PUT /api/v1/recordings/:id 路由(该路径只注册了 DELETE) → 若未来启用,
+    // 需先落后端标签接口。审计脚本 MISMATCH 剩余项之一。
     // 标签与录像的关联通过 metadata 更新实现
     QJsonObject body;
     QJsonObject meta;

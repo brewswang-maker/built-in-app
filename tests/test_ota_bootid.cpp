@@ -23,26 +23,15 @@
 
 #include "controllers/OTAController.h"
 #include "utils/ApiClient.h"
+#include "TestHttpStub.h"  // [api-contract 2026-09-22] 共享 HTTP stub (抽取自本文件)
 
 #include <QDateTime>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSignalSpy>
-#include <QTcpServer>
-#include <QTcpSocket>
 #include <QtTest>
 
-namespace {
-
-/// 标准信封 {code:0, message:"success", data:{...}, timestamp} (与 makeOkResponse 同构)
-QByteArray envelope(const QJsonObject& data) {
-    QJsonObject o;
-    o["code"] = 0;
-    o["data"] = data;
-    o["message"] = "success";
-    o["timestamp"] = double(QDateTime::currentMSecsSinceEpoch());
-    return QJsonDocument(o).toJson(QJsonDocument::Compact);
-}
+using teststub::envelope;
 
 /// /api/v1/ota/status 的 data 载荷 (与 RestApiHandlers.cpp L11209 handler 同构)
 QJsonObject statusData(const QString& bootId, const QString& status,
@@ -57,44 +46,6 @@ QJsonObject statusData(const QString& bootId, const QString& status,
     return d;
 }
 
-/// 最小 HTTP/1.1 stub 服务: responder 返回空 QByteArray 时直接断链 (= 模拟重启期不可达)
-class StubHttpServer : public QTcpServer {
-public:
-    std::function<QByteArray(const QString& method, const QString& path)> responder;
-
-protected:
-    void incomingConnection(qintptr socketDescriptor) override {
-        auto* sock = new QTcpSocket(this);
-        sock->setSocketDescriptor(socketDescriptor);
-        auto* buf = new QByteArray;
-        connect(sock, &QTcpSocket::readyRead, sock, [this, sock, buf]() {
-            buf->append(sock->readAll());
-            const int headEnd = buf->indexOf("\r\n\r\n");
-            if (headEnd < 0) return;  // 头部未收全
-            const QStringList first = QString::fromUtf8(buf->left(headEnd))
-                                          .split("\r\n")
-                                          .value(0)
-                                          .split(' ');
-            const QByteArray body = responder ? responder(first.value(0), first.value(1))
-                                              : QByteArray();
-            if (body.isEmpty()) {  // 空响应 → 直接断开 (QNetworkReply 得 RemoteHostClosedError)
-                sock->disconnectFromHost();
-                return;
-            }
-            QByteArray resp = "HTTP/1.1 200 OK\r\n"
-                              "Content-Type: application/json\r\n"
-                              "Content-Length: " + QByteArray::number(body.size()) + "\r\n"
-                              "Connection: close\r\n\r\n" + body;
-            sock->write(resp);
-            sock->flush();
-            sock->disconnectFromHost();
-        });
-        connect(sock, &QTcpSocket::disconnected, sock, &QObject::deleteLater);
-    }
-};
-
-}  // namespace
-
 class TestOtaBootid : public QObject {
     Q_OBJECT
 
@@ -102,7 +53,8 @@ private:
     StubHttpServer m_server;
 
     /// 起 stub 并返回 baseUrl (127.0.0.1:ephemeral)
-    QString startServer(std::function<QByteArray(const QString&, const QString&)> responder) {
+    QString startServer(std::function<QByteArray(const QString&, const QString&,
+                                                 const QByteArray&)> responder) {
         m_server.responder = std::move(responder);
         const bool ok = m_server.listen(QHostAddress::LocalHost, 0);
         if (!ok) return {};
@@ -118,7 +70,8 @@ private slots:
         d["current_version"] = "6.1.0";
         d["latest_version"] = "6.2.0";
         d["update_available"] = true;
-        const QString base = startServer([d](const QString&, const QString& path) {
+        const QString base = startServer([d](const QString&, const QString& path,
+                                             const QByteArray&) {
             if (path.startsWith("/api/v1/ota/check")) return envelope(d);
             return QByteArray();
         });
@@ -138,7 +91,8 @@ private slots:
     // ② 重启期 HTTP 中断 tolerated + bootId 变化 → 判成功 (不得误报失败)
     void rebootInterruptionThenBootIdChangeSucceeds() {
         int statusGets = 0;
-        const QString base = startServer([&statusGets](const QString&, const QString& path) {
+        const QString base = startServer([&statusGets](const QString&, const QString& path,
+                                                       const QByteArray&) {
             if (path.startsWith("/api/v1/ota/upgrade")) return envelope({});
             if (path.startsWith("/api/v1/ota/status")) {
                 statusGets++;
@@ -169,7 +123,8 @@ private slots:
     // ③ 假成功拦截: status 报 completed 但 bootId 未变 → upgradeCompleted(false) + 提示
     void unchangedBootIdBlocksFakeSuccess() {
         int statusGets = 0;
-        const QString base = startServer([&statusGets](const QString&, const QString& path) {
+        const QString base = startServer([&statusGets](const QString&, const QString& path,
+                                                       const QByteArray&) {
             if (path.startsWith("/api/v1/ota/upgrade")) return envelope({});
             if (path.startsWith("/api/v1/ota/status")) {
                 statusGets++;

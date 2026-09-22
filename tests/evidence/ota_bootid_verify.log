@@ -1,0 +1,9 @@
+********* Start testing of TestOtaBootid *********
+Config: Using QtTest library 6.2.4, Qt 6.2.4 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 11.3.0), ubuntu 22.04
+PASS   : TestOtaBootid::initTestCase()
+PASS   : TestOtaBootid::checkUpdateUnwrapsEnvelope()
+PASS   : TestOtaBootid::rebootInterruptionThenBootIdChangeSucceeds()
+PASS   : TestOtaBootid::unchangedBootIdBlocksFakeSuccess()
+PASS   : TestOtaBootid::cleanupTestCase()
+Totals: 5 passed, 0 failed, 0 skipped, 0 blacklisted, 4091ms
+********* Finished testing of TestOtaBootid *********

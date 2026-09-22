@@ -8,9 +8,13 @@ OTAController::OTAController(ApiClient* api, QObject* parent)
 void OTAController::checkUpdate() {
     m_api->get("/api/v1/ota/check",
         [this](QJsonObject obj) {
-            m_currentVersion = obj["current_version"].toString();
-            m_latestVersion = obj["latest_version"].toString();
-            m_updateAvailable = obj["update_available"].toBool();
+            // [FIX m24-envelope 2026-09-22] 后端走标准信封 {code,data,message}, ApiClient 不解包,
+            //   读取前必须 unwrapData (仓库惯例 Streaming/Rbac/Audit 等 controller);
+            //   初版直读顶层导致版本字段恒空 (对照单测 test_ota_bootid 已固化契约)
+            QJsonObject d = ApiClient::unwrapData(obj);
+            m_currentVersion = d["current_version"].toString();
+            m_latestVersion = d["latest_version"].toString();
+            m_updateAvailable = d["update_available"].toBool();
             emit versionUpdated();
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
@@ -27,7 +31,8 @@ void OTAController::startUpgrade() {
     //   固件升级必然重启, 重启后 Linux boot_id 必变; 仅看进度/HTTP 200 = 假成功窗口)
     m_api->get("/api/v1/ota/status",
         [this](QJsonObject obj) {
-            m_preUpgradeBootId = obj["boot_id"].toString();
+            // [FIX m24-envelope 2026-09-22] boot_id 位于信封 data 内层, 需先解包
+            m_preUpgradeBootId = ApiClient::unwrapData(obj)["boot_id"].toString();
             doUpgrade();
         },
         [this](int code, QString msg) {
@@ -63,9 +68,12 @@ void OTAController::pollProgress() {
     //   不再单看进度值 — bootId 变化本身即最强信号 (设备已重启 = 升级生效)
     m_api->get("/api/v1/ota/status",
         [this](QJsonObject obj) {
-            double pct = obj["progress_pct"].toDouble();
-            QString status = obj["status"].toString();
-            QString bootId = obj["boot_id"].toString();
+            // [FIX m24-envelope 2026-09-22] 同上: 进度/状态/boot_id 均在信封 data 内层;
+            //   未解包时 bootChanged 恒 false → 真实升级也误判假成功 (对照单测已覆盖)
+            QJsonObject d = ApiClient::unwrapData(obj);
+            double pct = d["progress_pct"].toDouble();
+            QString status = d["status"].toString();
+            QString bootId = d["boot_id"].toString();
             m_progress = pct;
             if (m_progress < 5) m_progress = 5;
             emit progressChanged();
@@ -84,7 +92,7 @@ void OTAController::pollProgress() {
                     return;
                 }
                 m_progress = 100;
-                m_currentVersion = obj["current_version"].toString();
+                m_currentVersion = d["current_version"].toString();
                 if (m_currentVersion.isEmpty()) m_currentVersion = m_latestVersion;
                 m_updateAvailable = false;
                 emit versionUpdated();

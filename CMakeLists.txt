@@ -193,6 +193,11 @@ if(Qt6Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
     foreach(test_src ${TEST_SOURCES})
         get_filename_component(test_name ${test_src} NAME_WE)
         add_executable(${test_name} ${test_src} ${TEST_MOCS}
+            # [M2-4 2026-09-22] test_ota_bootid 依赖: API 客户端信封解包 + OTA 控制器
+            src/utils/ApiClient.cpp
+            src/utils/ApiClient.h
+            src/controllers/OTAController.cpp
+            src/controllers/OTAController.h
             src/streaming/WebRTCStreamProvider.cpp
             src/streaming/StreamingDegradationChain.cpp
             src/streaming/WebRtcFrameSink.cpp

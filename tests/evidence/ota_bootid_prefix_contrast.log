@@ -1,0 +1,14 @@
+********* Start testing of TestOtaBootid *********
+Config: Using QtTest library 6.2.4, Qt 6.2.4 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 11.3.0), ubuntu 22.04
+PASS   : TestOtaBootid::initTestCase()
+FAIL!  : TestOtaBootid::checkUpdateUnwrapsEnvelope() Compared values are not the same
+   Actual   ((ctrl.currentVersion())): ""
+   Expected (QString("6.1.0"))       : "6.1.0"
+   Loc: [/home/brewswang/workshop/SmartGateWay/clients/built-in-app/tests/test_ota_bootid.cpp(133)]
+FAIL!  : TestOtaBootid::rebootInterruptionThenBootIdChangeSucceeds() 'doneSpy.count() >= 1' returned FALSE. ()
+   Loc: [/home/brewswang/workshop/SmartGateWay/clients/built-in-app/tests/test_ota_bootid.cpp(160)]
+FAIL!  : TestOtaBootid::unchangedBootIdBlocksFakeSuccess() 'doneSpy.count() >= 1' returned FALSE. ()
+   Loc: [/home/brewswang/workshop/SmartGateWay/clients/built-in-app/tests/test_ota_bootid.cpp(192)]
+PASS   : TestOtaBootid::cleanupTestCase()
+Totals: 2 passed, 3 failed, 0 skipped, 0 blacklisted, 136327ms
+********* Finished testing of TestOtaBootid *********

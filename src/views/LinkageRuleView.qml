@@ -75,6 +75,8 @@ Item {
             var it = eventTypeCheckboxes[k]
             if (it) it.checked = pendingEventTypeKeys.indexOf(k) >= 0
         }
+        // [M3-2 2026-09-27] 选中集变化 → 档位卡跟随刷新 (debounce 合并多次 toggled)
+        scheduleTierRefresh()
     }
     // 当前选中 keys (唯一收集入口: collectRuleData / buildTreeFromFlat)
     function eventTypeCheckedKeys() {
@@ -120,6 +122,34 @@ Item {
         if (lv === 2) return "#67C23A"
         if (lv === 1) return "#909399"
         return "#909399"
+    }
+
+    // ── [M3-2 内置端对齐 2026-09-27] 算法档位 (tier) ──
+    //   数据源: linkageController.algoTiers (勾选事件经 GET :id/param-meta 拉取,
+    //   仅含档位设计的算法出卡 — SSOT=算法 YAML tier_presets, 无硬编码清单);
+    //   切换经 linkageController.setAlgoTier → PUT /api/v1/algo/:algo/tier 整组
+    //   覆盖写入 box_config, 重启服务后对推理生效 (与 web 算法参数卡同契约)。
+    //   为什么 debounce: applyEventTypeSelection 逐个设置 checked 会触发 N 次
+    //   toggled (编程式赋值同样发信号), 60ms 窗口合并为一轮拉取。
+    function scheduleTierRefresh() {
+        tierRefreshTimer.restart()
+    }
+    // 档位键 → 中文 (与 web ParameterFormRenderer TIER_LABEL/STYLE_TIER_LABEL 同口径)
+    function tierLabel(key) {
+        if (key === "high") return "高灵敏"
+        if (key === "balanced") return "平衡"
+        if (key === "low") return "低误报"
+        if (key === "strict") return "严格"
+        if (key === "standard") return "标准"
+        if (key === "creative") return "创意"
+        return key
+    }
+    // 档位取舍说明 (与 web TIER_TRADEOFF 同口径; 生成风格三档不带取舍文案)
+    function tierTradeoff(key) {
+        if (key === "high") return "检出优先：置信度/帧数闸放宽，更小更远目标可检出；误报风险升高"
+        if (key === "balanced") return "两侧均衡：中等尺寸目标即可稳定检出（部署默认档）"
+        if (key === "low") return "误报优先：帧数/时长/置信度闸收紧，过滤小目标与瞬时干扰；远距小目标可能漏检"
+        return ""
     }
 
     // ── 数据收集函数 ──
@@ -574,6 +604,12 @@ Item {
             dryRunDialog.result = null
             dryRunDialog.errorText = message || "模拟测试失败"
         }
+        // [M3-2 2026-09-27] 档位切换成功 → 底部提示条 (重启生效语义)
+        function onTierApplied(eventType, tier) {
+            configHintText.text = "档位已切换为 " + linkagePage.tierLabel(tier) + " — 重启服务后生效"
+            configHint.visible = true
+            configHintTimer.restart()
+        }
     }
 
     // ── 工具栏 ──
@@ -1010,6 +1046,7 @@ Item {
                                                         }
                                                         Text { text: modelData.name || modelData.key; font.pixelSize: 12; color: "#303133"; anchors.verticalCenter: parent.verticalCenter }
                                                     }
+                                                    onToggled: linkagePage.scheduleTierRefresh()
                                                     Component.onCompleted: {
                                                         registerEventTypeCheckbox(etKey, etCheck)
                                                         // 数据晚于 applyEventTypeSelection 到达时按 pending 恢复选中
@@ -1037,7 +1074,80 @@ Item {
                     }
                 }
 
-                // 4. 指定事件源
+                // 4. 算法档位 (M3-2 2026-09-27: 灵敏度/生成风格三档整组覆盖)
+                //   数据源: linkageController.algoTiers (勾选事件的 param-meta 拉取,
+                //   仅含档位设计的算法出卡 — SSOT=算法 YAML tier_presets, 无硬编码);
+                //   切换写 box_config, 重启服务后对推理生效 (与 web 算法参数卡同契约)
+                GroupBox {
+                    width: parent.width; title: "算法档位"
+                    visible: linkageController.algoTiers.length > 0
+                    label: Text { text: parent.title; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
+                    background: Rectangle { color: "#F5F7FA"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
+
+                    Column { spacing: 8; width: parent.width
+                        Repeater {
+                            model: linkageController.algoTiers
+                            delegate: Rectangle {
+                                width: parent.width; height: tierCardCol.height + 16
+                                color: "#FFFFFF"; radius: 4; border.color: "#EBEEF5"; border.width: 1
+                                property string etKey: modelData.eventType || ""
+                                property string algoKey: modelData.algoKey || ""
+                                property string curTier: modelData.current || ""
+                                property bool styleTier: modelData.isStyle === true
+
+                                Column {
+                                    id: tierCardCol
+                                    anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                                    anchors.margins: 8; spacing: 6
+                                    Row { spacing: 8
+                                        Text {
+                                            text: (styleTier ? "生成风格" : "灵敏度档位") + " · " +
+                                                  (modelData.name && modelData.name !== "" ? modelData.name : linkagePage.eventTypeLabel(etKey))
+                                            font.pixelSize: 12; font.bold: true; color: "#303133"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        Rectangle {
+                                            width: curTagText.implicitWidth + 12; height: 18; radius: 3; color: "#FDF6EC"
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            Text { id: curTagText; anchors.centerIn: parent; text: "当前: " + linkagePage.tierLabel(curTier); font.pixelSize: 11; color: "#E6A23C" }
+                                        }
+                                    }
+                                    Row { spacing: 6
+                                        Repeater {
+                                            model: modelData.presets
+                                            delegate: Button {
+                                                text: linkagePage.tierLabel(modelData)
+                                                width: 76; height: 26
+                                                // 当前生效档高亮 (与 web el-radio-button 选中态同语义)
+                                                property bool isCur: modelData === curTier
+                                                onClicked: linkageController.setAlgoTier(etKey, algoKey, modelData)
+                                                background: Rectangle {
+                                                    radius: 4
+                                                    color: isCur ? "#409EFF" : "#FFFFFF"
+                                                    border.color: isCur ? "#409EFF" : "#DCDFE6"; border.width: 1
+                                                }
+                                                contentItem: Text {
+                                                    text: parent.text; font.pixelSize: 12
+                                                    color: parent.isCur ? "#FFFFFF" : "#606266"
+                                                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                                                }
+                                            }
+                                        }
+                                    }
+                                    // 档位取舍说明 (web TIER_TRADEOFF 同口径; 生成风格卡不显示)
+                                    Text {
+                                        visible: !styleTier
+                                        text: linkagePage.tierTradeoff(curTier)
+                                        font.pixelSize: 11; color: "#909399"; width: parent.width; wrapMode: Text.WordWrap
+                                    }
+                                }
+                            }
+                        }
+                        Text { text: "整组覆盖写入 box_config; 重启服务后对推理生效"; font.pixelSize: 11; color: "#909399" }
+                    }
+                }
+
+                // 5. 指定事件源
                 GroupBox {
                     width: parent.width; title: "事件源"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
@@ -1053,7 +1163,7 @@ Item {
                     }
                 }
 
-                // 5. 自动合并
+                // 6. 自动合并
                 GroupBox {
                     width: parent.width; title: "自动合并 (merge_cond)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
@@ -1079,7 +1189,7 @@ Item {
                     }
                 }
 
-                // 6. 互斥与抑制 (P1 #6)
+                // 7. 互斥与抑制 (P1 #6)
                 GroupBox {
                     width: parent.width; title: "互斥与抑制 (mutex_group / suppress_after / suppress_lower)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
@@ -1116,7 +1226,7 @@ Item {
                     }
                 }
 
-                // 7. 条件树 (P1 #5)
+                // 8. 条件树 (P1 #5)
                 GroupBox {
                     width: parent.width; title: "条件树 (AND / OR / LEAF, 深度≤3)"
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
@@ -1734,6 +1844,14 @@ Item {
         interval: 2000
         repeat: false
         onTriggered: configHint.visible = false
+    }
+
+    // [M3-2 2026-09-27] 档位卡刷新 debounce (勾选连发/回显批量赋值合并为一轮)
+    Timer {
+        id: tierRefreshTimer
+        interval: 60
+        repeat: false
+        onTriggered: linkageController.refreshAlgoTiers(linkagePage.eventTypeCheckedKeys())
     }
 
     // [V4-L5] 页面加载时拉取动作 Schema - 已合并到上面的统一 Component.onCompleted 中

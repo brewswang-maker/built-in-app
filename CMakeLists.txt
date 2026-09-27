@@ -213,6 +213,14 @@ if(Qt6Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
                 src/models/AlarmListModel.cpp
                 src/models/DeviceListModel.cpp
                 src/models/AlgorithmListModel.cpp)
+        elseif(test_name STREQUAL "test_alarm_event_lifecycle")
+            # [P0-4/P0-1 内置端对齐 2026-09-27] 事件生命周期单测依赖:
+            #   AlarmController (end 帧/归一) + WsMessageRouter (构造单例, 无 WebSockets
+            #   降级) + AlarmListModel (role 断言); AlarmVerdictConsumer 为纯头文件。
+            list(APPEND _test_extra_srcs
+                src/utils/WsMessageRouter.cpp
+                src/controllers/AlarmController.cpp
+                src/models/AlarmListModel.cpp)
         endif()
         add_executable(${test_name} ${test_src} ${TEST_MOCS}
             # [M2-4 2026-09-22] test_ota_bootid 依赖: API 客户端信封解包 + OTA 控制器

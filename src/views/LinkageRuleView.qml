@@ -125,6 +125,10 @@ Item {
             name: ruleNameField.text,
             priority: prioritySpinBox.value,
             cooldown_ms: cooldownSpinBox.value,
+            // [P0-1/M2-2 内置端对齐 2026-09-27] 解除延时(0=继承全局, 对标 ONVIF
+            //   AlarmOffDelay) + 次数上限(0=不限) — 与 web LinkageRuleView 同键
+            off_delay_ms: offDelaySpinBox.value,
+            max_triggers: maxTriggersSpinBox.value,
             enabled: true,
             time_cond: timeCond,
             spatial_cond: spatialCond,
@@ -232,6 +236,9 @@ Item {
         ruleNameField.text = ruleData.name || ""
         prioritySpinBox.value = ruleData.priority || 50
         cooldownSpinBox.value = ruleData.cooldown_ms || ruleData.cooldown || 5000
+        // [P0-1/M2-2 内置端对齐 2026-09-27] 解除延时/次数上限回显 (0=继承全局/不限)
+        offDelaySpinBox.value = ruleData.off_delay_ms || 0
+        maxTriggersSpinBox.value = ruleData.max_triggers || 0
 
         // time_cond (P1 #8 顶层)
         var tc = ruleData.time_cond || {}
@@ -402,6 +409,9 @@ Item {
         ruleNameField.text = ""
         prioritySpinBox.value = 50
         cooldownSpinBox.value = 5000
+        // [P0-1/M2-2 内置端对齐 2026-09-27]
+        offDelaySpinBox.value = 0
+        maxTriggersSpinBox.value = 0
         timeFromField.text = "08:00"
         timeToField.text = "20:00"
         for (var d = 0; d < dayRepeater.count; d++) {
@@ -705,6 +715,19 @@ Item {
                     Column { spacing: 2
                         Text { text: "冷却时间(ms)"; font.pixelSize: 12; color: "#909399" }
                         SpinBox { id: cooldownSpinBox; from: 1000; to: 60000; value: editingRule ? editingRule.cooldown || 5000 : 5000; stepSize: 1000; width: 120 }
+                    }
+                    // [P0-1/M2-2 内置端对齐 2026-09-27] 解除延时(ms): 事件最后一次活动
+                    //   后再无活动达该时长即自动解除(resolved); 0=继承全局(默认 30s)。
+                    //   与 web LinkageRuleView「解除延时」同口径 (0-600000, 步长 1000)。
+                    Column { spacing: 2
+                        Text { text: "解除延时(ms, 0=继承全局)"; font.pixelSize: 12; color: "#909399" }
+                        SpinBox { id: offDelaySpinBox; from: 0; to: 600000; value: editingRule ? editingRule.off_delay_ms || 0 : 0; stepSize: 1000; width: 150 }
+                    }
+                    // [M2-2 内置端对齐 2026-09-27] 次数上限: 达上限当日停报次日恢复;
+                    //   与冷却正交(冷却不消耗额度); 0=不限。
+                    Column { spacing: 2
+                        Text { text: "次数上限 (0=不限)"; font.pixelSize: 12; color: "#909399" }
+                        SpinBox { id: maxTriggersSpinBox; from: 0; to: 100; value: editingRule ? editingRule.max_triggers || 0 : 0; width: 110 }
                     }
                 }
 

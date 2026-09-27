@@ -22,6 +22,10 @@ QVariant AlarmListModel::data(const QModelIndex& index, int role) const {
         case ConfidenceRole:  return a["confidence"];
         case SnapshotUrlRole: return a["snapshot_url"];
         case StatusRole:      return a["status"];
+        // [P0-4/P0-1 内置端对齐 2026-09-27] 事件生命周期 (camel 归一键)
+        case TrackIdRole:     return a["trackId"];
+        case EventEndedRole:  return a["eventEnded"];
+        case EventEndMsRole:  return a["eventEndMs"];
         default: return QVariant();
     }
 }
@@ -36,7 +40,11 @@ QHash<int, QByteArray> AlarmListModel::roleNames() const {
         {ChannelIdRole, "channelId"},
         {ConfidenceRole, "confidence"},
         {SnapshotUrlRole, "snapshotUrl"},
-        {StatusRole, "status"}
+        {StatusRole, "status"},
+        // [P0-4/P0-1 内置端对齐 2026-09-27]
+        {TrackIdRole, "trackId"},
+        {EventEndedRole, "eventEnded"},
+        {EventEndMsRole, "eventEndMs"}
     };
 }
 

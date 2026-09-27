@@ -142,19 +142,13 @@ void AlarmController::refreshAlarms(int limit) {
         [this](QJsonArray arr) {
             m_alarms.clear();
             for (const auto& item : arr) {
-                QVariantMap m = item.toVariant().toMap();
                 // [FIX v7.4] snake_case → camelCase 兼容 (对齐 Web SituationAlarmStream)
                 //   后端 /api/v1/alarms 返回字段是 snapshot_url/stream_url/channel_id/device_name
                 //   不转换会导致 DashboardView.qml _snapshot 读不到缩略图, 拼接 'continuous://' 等
-                if (m.contains("snapshot_url") && !m.contains("snapshotUrl"))
-                    m["snapshotUrl"] = m["snapshot_url"];
-                if (m.contains("channel_id") && !m.contains("channelId"))
-                    m["channelId"] = m["channel_id"];
-                if (m.contains("device_name") && !m.contains("deviceName"))
-                    m["deviceName"] = m["device_name"];
-                if (m.contains("alarm_type") && !m.contains("type"))
-                    m["type"] = m["alarm_type"];
-                m_alarms.append(m);
+                // [P0-4/P0-1 内置端对齐 2026-09-27] 归一上收至 normalizeAlarmFields:
+                //   原 4 个映射逐字保留 + 事件生命周期字段 (track_id/event_*_ms/
+                //   eventEnded) 与 WS 帧同口径 — 列表/弹窗结束时间展示的数据源。
+                m_alarms.append(normalizeAlarmFields(item.toVariant().toMap()));
             }
             m_hasUnread = false;
             for (const auto& a : m_alarms) {
@@ -169,6 +163,89 @@ void AlarmController::refreshAlarms(int limit) {
                 m_alarmModel->setAlarms(m_alarms);
         },
         [this](int code, QString msg) { emit errorOccurred(code, msg); });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  [P0-4/P0-1 内置端对齐 2026-09-27] 事件生命周期字段归一 / end 帧处置
+//  对齐 web-admin: types/alarm.ts normalizeAlarmCore (字段归一 + eventEnded
+//  双源) + stores/alarm.ts pushRealtimeAlarm end 帧分支 (ch+track+type 匹配,
+//  不改写已结束行, status 仅从初始态翻 resolved, 未命中静默丢弃)。
+// ─────────────────────────────────────────────────────────────────────
+
+QVariantMap AlarmController::normalizeAlarmFields(const QVariantMap& in) {
+    QVariantMap m = in;
+    // ① snake→camel 双写 (保留原键 — 弹窗/表格/导出另有消费方直读 snake 名)
+    if (m.contains("snapshot_url") && !m.contains("snapshotUrl"))
+        m["snapshotUrl"] = m["snapshot_url"];
+    if (m.contains("channel_id") && !m.contains("channelId"))
+        m["channelId"] = m["channel_id"];
+    if (m.contains("device_name") && !m.contains("deviceName"))
+        m["deviceName"] = m["device_name"];
+    if (m.contains("alarm_type") && !m.contains("type"))
+        m["type"] = m["alarm_type"];
+    // ② 事件生命周期数值字段 (track -1=无 track; *_ms 非法/缺失归 0, 模板零判空)
+    bool ok = false;
+    const qint64 track = m.value("track_id", -1).toLongLong(&ok);
+    m["trackId"] = ok ? track : -1;
+    const auto normMs = [&m](const char* key, const char* camel) {
+        bool o = false;
+        const qint64 v = m.value(QLatin1String(key), 0).toLongLong(&o);
+        m[camel] = (o && v > 0) ? v : 0;
+    };
+    normMs("event_start_ms", "eventStartMs");
+    normMs("last_seen_ms", "lastSeenMs");
+    normMs("event_end_ms", "eventEndMs");
+    // ③ eventEnded 双源: WS end 帧标记 (event_ended=true) 或 event_end_ms>0
+    m["eventEnded"] = m.value("event_ended").toBool()
+                      || m.value("eventEnded").toBool()
+                      || m.value("eventEndMs").toLongLong() > 0;
+    return m;
+}
+
+bool AlarmController::applyEventEndToAlarms(const QVariantMap& endFrame) {
+    const auto chanOf = [](const QVariantMap& a) {
+        const QString s = a.value("channel_id_str").toString();
+        return s.isEmpty() ? a.value("channel_id").toString() : s;
+    };
+    const auto typeOf = [](const QVariantMap& a) {
+        const QString t = a.value("alarm_type").toString();
+        return t.isEmpty() ? a.value("type").toString() : t;
+    };
+    const QString eChan = chanOf(endFrame);
+    const qint64 eTrack = endFrame.value("trackId").toLongLong();
+    const QString eType = typeOf(endFrame);
+    const QString eStatus = endFrame.value("status").toString();
+
+    bool hit = false;
+    for (int i = 0; i < m_alarms.size(); ++i) {
+        QVariantMap cur = m_alarms[i].toMap();
+        // 匹配键与 web pushRealtimeAlarm 逐字对齐: channelId + trackId + type
+        if (chanOf(cur) != eChan
+            || cur.value("trackId").toLongLong() != eTrack
+            || typeOf(cur) != eType)
+            continue;
+        if (cur.value("eventEnded").toBool())
+            continue;  // 已结束行不改写 (与 web 同闸)
+        const auto lift = [&cur, &endFrame](const char* camel) {
+            const qint64 v = endFrame.value(QLatin1String(camel)).toLongLong();
+            if (v > 0) cur[camel] = v;
+        };
+        lift("eventStartMs");
+        lift("lastSeenMs");
+        lift("eventEndMs");
+        cur["eventEnded"] = true;
+        // [P0-1] 自动解除态同步: 后端收尾把初始态行置 status='resolved',
+        //   end 帧携带同值 → 本地行翻转 (待处理→已解决), 不覆盖人工终态
+        //   (false_alarm/confirmed 等) 的展示语义 (与 web stores/alarm.ts 同闸)。
+        const QString cStatus = cur.value("status").toString();
+        if (eStatus == QLatin1String("resolved")
+            && (cStatus == QLatin1String("unhandled") || cStatus == QLatin1String("new")
+                || cStatus == QLatin1String("pending")))
+            cur["status"] = QLatin1String("resolved");
+        m_alarms[i] = cur;
+        hit = true;
+    }
+    return hit;
 }
 
 void AlarmController::confirmAlarm(const QString& alarmId) {
@@ -228,7 +305,22 @@ void AlarmController::connectWebSocket() {
 
 void AlarmController::onWsTextMessage(const QString& message) {
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
-    QVariantMap alarm = doc.object().toVariantMap();
+    QVariantMap alarm = normalizeAlarmFields(doc.object().toVariantMap());
+
+    // [P0-4/P0-1 内置端对齐 2026-09-27] 事件结束帧分支 (对齐 web stores/alarm.ts
+    //   pushRealtimeAlarm eventEnded 分支; 后端 P0-4 事件生命周期):
+    //   end 帧 alarm_id = 'event_end_<track>_<ts>' 是新 id (同 id 合并链不命中),
+    //   若按普通帧入队/弹窗 → 列表条目被 end 帧替换 + 幽灵弹窗 (无对应活动)。
+    //   正确处置 = 按 ch+track+type 匹配已有未结束行更新结束态 (eventEndMs/
+    //   status=已解决), 不新增条目、不弹窗; 未命中静默丢弃 (与 web 同语义)。
+    if (alarm.value("eventEnded").toBool()) {
+        if (applyEventEndToAlarms(alarm)) {
+            emit alarmsUpdated();
+            if (m_alarmModel)
+                m_alarmModel->setAlarms(m_alarms);
+        }
+        return;
+    }
 
     // 提取通道标识用于防抖
     QString chId = alarm["channel_id_str"].toString();

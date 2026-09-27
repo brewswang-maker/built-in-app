@@ -18,6 +18,17 @@ Popup {
     property int autoCloseSeconds: 15
     property bool isPaused: false
 
+    // [P0-1 内置端对齐 2026-09-27] 事件结束时间文案 (对齐 web AlarmPopup「结束时间/
+    //   进行中」口径): eventEndMs>0 (WS end 帧 / REST event_end_ms 双源归一,
+    //   AlarmController::normalizeAlarmFields) → 格式化; 已结束但值空 → '-';
+    //   未结束 → 「进行中」。
+    function fmtEventEnd(alarm) {
+        if (!alarm) return "进行中"
+        var ms = Number(alarm.eventEndMs || 0)
+        if (ms > 0) return Qt.formatDateTime(new Date(ms), "yyyy-MM-dd HH:mm:ss")
+        return alarm.eventEnded === true ? "-" : "进行中"
+    }
+
     // ═══ P2.2: 优先级色编码 ═══
     readonly property color priorityColor: {
         var lv = (currentAlarm.level || "").toLowerCase()
@@ -299,6 +310,8 @@ Popup {
                         Column { spacing: 3; width: parent.width
                             Row { Text { text: "通道: "; font.pixelSize: 12; color: "#909399" } Text { text: currentAlarm.channel || "CAM-01"; font.pixelSize: 12; color: "#3B82F6" } }
                             Row { Text { text: "时间: "; font.pixelSize: 12; color: "#909399" } Text { text: currentAlarm.time || "-"; font.pixelSize: 12; color: "#303133" } }
+                            // [P0-1 内置端对齐 2026-09-27] 事件结束时间 (end 帧 / REST 双源归一)
+                            Row { Text { text: "结束时间: "; font.pixelSize: 12; color: "#909399" } Text { text: fmtEventEnd(currentAlarm); font.pixelSize: 12; color: "#303133" } }
                             Row { Text { text: "区域: "; font.pixelSize: 12; color: "#909399" } Text { text: currentAlarm.zone || "A区围栏"; font.pixelSize: 12; color: "#303133" } }
                             Row { Text { text: "置信度: "; font.pixelSize: 12; color: "#909399" } Text { text: currentAlarm.confidence || "87%"; font.pixelSize: 12; color: "#67C23A" } }
                         }

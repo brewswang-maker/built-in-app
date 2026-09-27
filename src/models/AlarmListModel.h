@@ -15,7 +15,12 @@ public:
         ChannelIdRole,
         ConfidenceRole,
         SnapshotUrlRole,
-        StatusRole
+        StatusRole,
+        // [P0-4/P0-1 内置端对齐 2026-09-27] 事件生命周期 (AlarmController::
+        //   normalizeAlarmFields 归一后的 camel 键; QML 列表可显示结束态徽标)
+        TrackIdRole,
+        EventEndedRole,
+        EventEndMsRole
     };
 
     explicit AlarmListModel(QObject* parent = nullptr);

@@ -86,6 +86,23 @@ Window {
         var lv = alarmLevel(a)
         return {critical:"严重", high:"高", medium:"中", low:"低", info:"信息"}[lv] || lv
     }
+    // [P0-1 内置端对齐 2026-09-27] 事件结束时间文案 (对齐 web AlarmPopup「结束时间/
+    //   进行中」口径): eventEndMs>0 (WS end 帧 / REST event_end_ms 双源归一,
+    //   AlarmController::normalizeAlarmFields) → 格式化; 已结束但值空 → '-';
+    //   未结束 → 「进行中」。
+    function fmtEventEnd(a) {
+        if (!a) return "进行中"
+        var ms = Number(a.eventEndMs || 0)
+        if (ms > 0) {
+            var d = new Date(ms)
+            if (!isNaN(d.getTime())) {
+                var pad = function (n) { return n < 10 ? "0" + n : "" + n }
+                return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " +
+                       pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds())
+            }
+        }
+        return a.eventEnded === true ? "-" : "进行中"
+    }
     function levelColor(lv) {
         return {critical:"#F56C6C", high:"#E6A23C", medium:"#409EFF", low:"#67C23A", info:"#909399"}[lv] || "#909399"
     }
@@ -650,6 +667,9 @@ Window {
                                 Text { text: currentAlarm ? ((currentAlarm.confidence * 100 || 0).toFixed(1) + "%") : "-"; font.pixelSize: 12; color: "#67C23A" }
                                 Text { text: "目标:"; font.pixelSize: 12; color: "#4A4D58" }
                                 Text { text: currentAlarm ? (currentAlarm.target_label || "-") : "-"; font.pixelSize: 12; color: "#303133" }
+                                // [P0-1 内置端对齐 2026-09-27] 事件结束时间 (end 帧 / REST 双源归一)
+                                Text { text: "结束时间:"; font.pixelSize: 12; color: "#4A4D58" }
+                                Text { text: fmtEventEnd(currentAlarm); font.pixelSize: 12; color: "#303133" }
                             }
 
                             // [FIX level-ssot 2026-09-14] 3 档残表 → 5 档 (warning 为旧压缩表

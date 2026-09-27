@@ -160,6 +160,15 @@ private:
     // 内部处理告警(两个路径共用)
     void ingestAlarm(const QJsonObject& alarmJson);
 
+    // [P0-4/P0-1 内置端对齐 2026-09-27] 事件生命周期 (对齐 web types/alarm.ts
+    //   normalizeAlarmCore + stores/alarm.ts pushRealtimeAlarm):
+    //   ① 字段归一: snake→camel(快照/通道/设备名/类型双写) + track_id/
+    //      event_start_ms/last_seen_ms/event_end_ms + eventEnded 双源标记;
+    //   ② end 帧处置: 按 ch+track+type 匹配已有未结束行更新结束态,
+    //      不新增条目/不弹窗 (未命中静默丢弃)。
+    static QVariantMap normalizeAlarmFields(const QVariantMap& in);
+    bool applyEventEndToAlarms(const QVariantMap& endFrame);
+
     // 导出内部状态
     void exportLocalCsv(const QString& filePath);
     void resetExportState();

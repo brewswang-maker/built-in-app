@@ -221,6 +221,11 @@ if(Qt6Test_FOUND AND NOT CMAKE_CROSSCOMPILING)
                 src/utils/WsMessageRouter.cpp
                 src/controllers/AlarmController.cpp
                 src/models/AlarmListModel.cpp)
+        elseif(test_name STREQUAL "test_linkage_event_types")
+            # [P0-EVTTYPE 内置端对齐 2026-09-27] 事件类型 SSOT 单测依赖:
+            #   LinkageController (refreshEventTypes 拉取/解析/分组 + name/keyOf 映射)。
+            list(APPEND _test_extra_srcs
+                src/controllers/LinkageController.cpp)
         endif()
         add_executable(${test_name} ${test_src} ${TEST_MOCS}
             # [M2-4 2026-09-22] test_ota_bootid 依赖: API 客户端信封解包 + OTA 控制器

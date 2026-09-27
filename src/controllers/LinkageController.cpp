@@ -39,6 +39,40 @@ static constexpr int kKnownActionCount = sizeof(kKnownActions) / sizeof(kKnownAc
 static_assert(sizeof(kKnownActions) / sizeof(kKnownActions[0]) == 58,
               "LinkageController: known action count must be 58 to match LinkageEngine.h");
 
+// ─── 静态常量: 事件类型 ui_group → 中文分组标签映射 ───
+// [P0-EVTTYPE 内置端对齐 2026-09-27] 与 web useLinkageOptions.ts GROUP_LABEL_MAP 同源:
+//   后端 /event-types/metadata 的 ui_group 是英文 key (face/perimeter/...), 直接
+//   英文直显对盒端用户不友好; 未识别的组 key 回退英文原文 (与 web 行为一致)。
+static const QHash<QString, QString> kEventGroupLabels = {
+    {"face", "人脸识别"},        {"perimeter", "周界安全"},   {"behavior", "行为分析"},
+    {"fire", "消防安全"},        {"safety", "安全合规"},      {"traffic", "交通管理"},
+    {"device", "设备状态"},      {"retail", "零售经营"},      {"facility", "设施建筑"},
+    {"environment", "环境异常"}, {"other", "其他"},           {"person", "人员检测"},
+    {"object", "物体检测"},      {"agent_sub", "智能订阅"},
+    // event category 兜底 (ui_group 缺失时按 groups key 分组; 后端返回大写枚举,
+    //   web 映射表为小写 → 查找时一律 toLower 归一)
+    {"alarm", "报警事件"},       {"notification", "通行通知"}, {"business", "业务事件"},
+    {"state", "设备状态"},       {"perception", "感知事件"},
+};
+
+// 分组显示顺序 (与 web GROUP_ORDER 同源): 业务域固定序排列, other 兜底置末;
+//   未识别组排业务组之后、other 之前 (居中兜底, 不与 other 混杂)
+static int eventGroupRank(const QString& g) {
+    static const QHash<QString, int> kRank = {
+        {"face", 0}, {"perimeter", 1}, {"behavior", 2}, {"fire", 3}, {"safety", 4},
+        {"traffic", 5}, {"device", 6}, {"retail", 7}, {"facility", 8}, {"environment", 9},
+    };
+    auto it = kRank.constFind(g);
+    if (it != kRank.constEnd()) return it.value();
+    return g == "other" ? 10000 : 500;
+}
+
+// 不产生告警事件的算法分类 (与 web EXCLUDED_CATEGORIES 同源): 追踪/属性/图像增强
+//   类不产生告警事件, 其事件类型不进入联动规则事件选择器
+static const QSet<QString> kExcludedEventUiGroups = {
+    "tracking", "attribute", "image_enhance", "enhance"
+};
+
 LinkageController::LinkageController(ApiClient* api, QObject* parent)
     : QObject(parent), m_api(api) {
     buildKnownActionSet();
@@ -96,6 +130,110 @@ void LinkageController::refreshActionTypes() {
         [this](int code, QString msg) {
             emit errorOccurred(code, QStringLiteral("refreshActionTypes failed: ") + msg);
         });
+}
+
+void LinkageController::refreshEventTypes() {
+    // [P0-EVTTYPE 内置端对齐 2026-09-27] 事件类型 SSOT 拉取 (web useLinkageOptions
+    //   首选端点): 响应 {data:{groups:{<CAT>:{label,items:[{alarm_type,display_name,
+    //   ui_group,severity_level,aliases,...}]}}}}。口径对齐 web:
+    //   ① 过滤 EXCLUDED_CATEGORIES (tracking/attribute/image_enhance/enhance)
+    //   ② 分组 key = ui_group (缺失回退 groups key), label 查中文映射表
+    //   ③ 组序按 GROUP_ORDER rank, 组内按 severity_level 降序
+    //   拉取失败不清空旧值 — QML 复选区退化为上次成功快照 (防空白区)
+    if (!m_api) return;
+    m_api->get("/api/v1/event-types/metadata",
+        [this](QJsonObject obj) {
+            QJsonObject data = ApiClient::unwrapData(obj);
+            QJsonObject groups = data.value("groups").toObject();
+            QVariantList flat;
+            QHash<QString, QVariantList> byGroup;
+            for (auto git = groups.constBegin(); git != groups.constEnd(); ++git) {
+                const QJsonArray items = git.value().toObject().value("items").toArray();
+                for (const auto& v : items) {
+                    QJsonObject m = v.toObject();
+                    const QString key = m.value("alarm_type").toString();
+                    if (key.isEmpty()) continue;
+                    QString rawCat = m.value("ui_group").toString();
+                    if (rawCat.isEmpty()) rawCat = git.key();
+                    if (kExcludedEventUiGroups.contains(rawCat)) continue;
+                    QVariantMap e;
+                    e["key"] = key;
+                    // 中文名缺失回退裸 key (展示层 eventTypeName 同口径)
+                    e["name"] = m.value("display_name").toString(key);
+                    e["category"] = rawCat;
+                    e["level"] = m.value("severity_level").toInt(3);
+                    QStringList aliases;
+                    for (const auto& a : m.value("aliases").toArray())
+                        aliases.append(a.toString());
+                    e["aliases"] = aliases;
+                    flat.append(e);
+                    byGroup[rawCat].append(e);
+                }
+            }
+            if (flat.isEmpty()) {
+                // 空响应不覆盖上次成功快照 (防复选区空白), 仅报错
+                emit errorOccurred(-1, QStringLiteral("refreshEventTypes: empty metadata"));
+                return;
+            }
+            m_eventTypes = flat;
+            // 组序: rank 升序, 同 rank 按 key 字典序 (web eventTypeGrouped 同口径)
+            QStringList groupKeys = byGroup.keys();
+            std::stable_sort(groupKeys.begin(), groupKeys.end(),
+                [](const QString& a, const QString& b) {
+                    const int ra = eventGroupRank(a);
+                    const int rb = eventGroupRank(b);
+                    if (ra != rb) return ra < rb;
+                    return a < b;
+                });
+            m_eventTypeGroups.clear();
+            for (const QString& g : groupKeys) {
+                QVariantList items = byGroup.value(g);
+                // 组内按严重等级降序 (web eventTypeGrouped 同口径)
+                std::stable_sort(items.begin(), items.end(),
+                    [](const QVariant& a, const QVariant& b) {
+                        return a.toMap().value("level").toInt()
+                             > b.toMap().value("level").toInt();
+                    });
+                QString label = kEventGroupLabels.value(g);
+                if (label.isEmpty()) label = kEventGroupLabels.value(g.toLower());
+                QVariantMap grp;
+                grp["label"] = label.isEmpty() ? g : label;
+                grp["items"] = items;
+                m_eventTypeGroups.append(grp);
+            }
+            emit eventTypesUpdated();
+        },
+        [this](int code, QString msg) {
+            emit errorOccurred(code, QStringLiteral("refreshEventTypes failed: ") + msg);
+        });
+}
+
+QString LinkageController::eventTypeName(const QString& key) const {
+    // [P0-EVTTYPE 2026-09-27] canonical key → 中文显示名; 未知回退裸 key
+    //   (QML 展示层唯一入口: 列表/条件树/复选区显示口径一致)
+    for (const auto& v : m_eventTypes) {
+        QVariantMap e = v.toMap();
+        if (e.value("key").toString() == key)
+            return e.value("name").toString();
+    }
+    return key;
+}
+
+QString LinkageController::eventTypeKeyOf(const QString& raw) const {
+    // [P0-EVTTYPE 内置端对齐 2026-09-27] 任意存量值 → canonical key:
+    //   ① canonical 直通 (绝大多数情形) ② 中文显示名反查 (修复前内置端存量规则的
+    //   8 项中文硬编码值 — 否则回显全空) ③ 别名反查 (历史别名/他端写入值)。
+    //   未知返回空串 — QML 端跳过不勾选, 不产生脏值
+    if (raw.isEmpty()) return QString();
+    for (const auto& v : m_eventTypes) {
+        if (v.toMap().value("key").toString() == raw) return raw;
+    }
+    for (const auto& v : m_eventTypes) {
+        QVariantMap e = v.toMap();
+        if (e.value("name").toString() == raw) return e.value("key").toString();
+        if (e.value("aliases").toStringList().contains(raw)) return e.value("key").toString();
+    }
+    return QString();
 }
 
 QVariantMap LinkageController::actionTypesByPrefix() const {

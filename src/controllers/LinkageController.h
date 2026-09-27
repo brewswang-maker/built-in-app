@@ -79,6 +79,23 @@ public:
     QVariantMap actionParamSchemas() const { return m_actionSchemas; }
     Q_INVOKABLE void refreshActionTypes();  // GET /api/v1/linkage/action-types
 
+    // [P0-EVTTYPE 内置端对齐 2026-09-27] 事件类型 SSOT (对齐 web useLinkageOptions):
+    //   原 LinkageRuleView 事件类型为 8 项中文硬编码 ("周界入侵" 等) 直存 event_types,
+    //   后端 normalizeEventTypes 映射表全英文 canonical/别名 → 中文值 kept-as-is →
+    //   规则 canonical 匹配永不命中: ①内置端建的规则永不触发 ②web 建规则内置端回显全空。
+    //   现统一从 GET /api/v1/event-types/metadata 拉取 (web 首选端点): key=canonical
+    //   alarm_type + name=中文显示名; 保存/回显/条件树一律 canonical; 中文存量值
+    //   回显经 eventTypeKeyOf 反查兑底。
+    Q_PROPERTY(QVariantList eventTypes READ eventTypes NOTIFY eventTypesUpdated)
+    Q_PROPERTY(QVariantList eventTypeGroups READ eventTypeGroups NOTIFY eventTypesUpdated)
+    QVariantList eventTypes() const { return m_eventTypes; }
+    QVariantList eventTypeGroups() const { return m_eventTypeGroups; }
+    Q_INVOKABLE void refreshEventTypes();  // GET /api/v1/event-types/metadata
+    /// key(canonical) → 中文显示名 (未知回退裸 key, QML 展示映射)
+    Q_INVOKABLE QString eventTypeName(const QString& key) const;
+    /// 任意存量值 → canonical key (canonical 直通 / 中文名反查 / 未知返回空串)
+    Q_INVOKABLE QString eventTypeKeyOf(const QString& raw) const;
+
     // P1 #5 条件树相关
     Q_INVOKABLE QStringList allRuleIds(const QString& excludeId = QString()) const;
     Q_INVOKABLE QVariantMap validateConditionTree(const QVariantMap& tree) const;
@@ -95,6 +112,7 @@ public:
 signals:
     void rulesUpdated();
     void actionTypesUpdated();
+    void eventTypesUpdated();  // [P0-EVTTYPE 2026-09-27] 事件类型 SSOT 拉取/变更
     void logsUpdated();
     void ruleCreated(const QVariantMap& rule);
     void ruleDeleted(const QString& ruleId);
@@ -116,4 +134,8 @@ private:
     QHash<QString, QStringList> m_actionByPrefix;
     QVariantList m_actionTypes;
     QVariantMap m_actionSchemas;
+    // [P0-EVTTYPE 2026-09-27] 事件类型 SSOT: 平铺 [{key,name,category,level}] +
+    //   分组 [{label, items:[...]}] (QML 复选区渲染用; 组序与 web GROUP_ORDER 同源)
+    QVariantList m_eventTypes;
+    QVariantList m_eventTypeGroups;
 };

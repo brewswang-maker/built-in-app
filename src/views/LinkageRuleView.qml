@@ -46,6 +46,82 @@ Item {
     property int    axisLookbackS: 300      // 时序条件: 回看窗口秒 (默认 5min)
     property bool   axisExclusionPause: false  // 排除区暂停计时 (仅时序路径生效)
 
+    // ── [P0-EVTTYPE 内置端对齐 2026-09-27] 事件类型注册表 (canonical 直存) ──
+    //   背景: 原事件类型为 8 项中文硬编码直存 event_types, 后端 normalizeEventTypes
+    //   映射表全英文 → 中文值 kept-as-is → 规则 canonical 匹配永不触发; 现统一从
+    //   SSOT metadata 拉取 (linkageController.eventTypeGroups, key=canonical)。
+    //   为什么用注册表: 分组为双层 Repeater, itemAt(index) 无法再遍历; user-
+    //   interaction 的 checked 也不能靠 binding (会被用户勾选打断) → 每个
+    //   CheckBox 自注册 (key→item), applyEventTypeSelection 命令式刷新选中态。
+    property var eventTypeCheckboxes: ({})
+    property var pendingEventTypeKeys: []
+
+    function registerEventTypeCheckbox(key, item) {
+        if (!key) return
+        var m = eventTypeCheckboxes
+        m[key] = item
+        eventTypeCheckboxes = m
+    }
+    function unregisterEventTypeCheckbox(key) {
+        if (!key) return
+        var m = eventTypeCheckboxes
+        delete m[key]
+        eventTypeCheckboxes = m
+    }
+    // 命令式应用选中集合 (keys=canonical 数组; pending 供后创建的 delegate 恢复)
+    function applyEventTypeSelection(keysArr) {
+        pendingEventTypeKeys = (keysArr || []).slice()
+        for (var k in eventTypeCheckboxes) {
+            var it = eventTypeCheckboxes[k]
+            if (it) it.checked = pendingEventTypeKeys.indexOf(k) >= 0
+        }
+    }
+    // 当前选中 keys (唯一收集入口: collectRuleData / buildTreeFromFlat)
+    function eventTypeCheckedKeys() {
+        var out = []
+        for (var k in eventTypeCheckboxes) {
+            var it = eventTypeCheckboxes[k]
+            if (it && it.checked) out.push(k)
+        }
+        out.sort()
+        return out
+    }
+    // 全部 canonical keys (模板 "*" 全选)
+    function allEventTypeKeys() {
+        var out = []
+        var evts = linkageController.eventTypes
+        for (var i = 0; i < evts.length; i++) out.push(evts[i].key)
+        return out
+    }
+    // canonical key → 中文显示名 (未知回退裸 key)
+    function eventTypeLabel(key) {
+        return linkageController.eventTypeName(key)
+    }
+    // 规则列表摘要: keys → "名1/名2/..." (最多 5 项, 超出 "+N"; 兼容中文/别名存量值)
+    function eventTypeNamesLabel(keys) {
+        if (!keys || keys.length === 0) return "-"
+        var names = []
+        var n = Math.min(keys.length, 5)
+        for (var i = 0; i < n; i++) {
+            var raw = "" + keys[i]
+            var k = linkageController.eventTypeKeyOf(raw)
+            names.push(k !== "" ? linkageController.eventTypeName(k) : raw)
+        }
+        var s = names.join("/")
+        if (keys.length > 5) s += " +" + (keys.length - 5)
+        return s
+    }
+    // 严重度色点 (对标 web alarmLevel: 5=深红 4=红 3=黄 2=绿 1=灰)
+    function severityColor(level) {
+        var lv = parseInt(level)
+        if (lv === 5) return "#B71C1C"
+        if (lv === 4) return "#F56C6C"
+        if (lv === 3) return "#E6A23C"
+        if (lv === 2) return "#67C23A"
+        if (lv === 1) return "#909399"
+        return "#909399"
+    }
+
     // ── 数据收集函数 ──
     function collectRuleData() {
         // 时间条件 (P1 #8: 顶层 time_cond)
@@ -55,12 +131,9 @@ Item {
             if (dayItem && dayItem.checked) days.push(d + 1)  // 1=周一 .. 7=周日
         }
 
-        // 事件类型
-        var eventTypes = []
-        for (var e = 0; e < eventTypeRepeater.count; e++) {
-            var evtItem = eventTypeRepeater.itemAt(e)
-            if (evtItem && evtItem.checked) eventTypes.push(eventTypeRepeater.model[e])
-        }
+        // 事件类型 (P0-EVTTYPE 2026-09-27: canonical keys — 中文硬编码值后端
+        //   normalizeEventTypes 不识别 (kept-as-is) → 规则 canonical 匹配永不命中的根因)
+        var eventTypes = eventTypeCheckedKeys()
 
         // 通道
         var channels = []
@@ -288,17 +361,22 @@ Item {
         axisModeCombo.currentIndex = axisMode === "sequence" ? 1
             : axisMode === "conditional" ? 2 : 0
 
-        // eventTypes
+        // eventTypes (P0-EVTTYPE 2026-09-27: canonical 化回显 — web 建规则存 canonical
+        //   直通命中; 修复前内置端存量规则的中文值经 eventTypeKeyOf 反查归一, 否则全空)
         var evtArr = []
         if (ruleData.source_cond && ruleData.source_cond.event_types) {
             evtArr = ruleData.source_cond.event_types
         } else if (ruleData.conditions && ruleData.conditions.eventTypes) {
             evtArr = ruleData.conditions.eventTypes
         }
-        for (var e = 0; e < eventTypeRepeater.count; e++) {
-            var ei = eventTypeRepeater.itemAt(e)
-            if (ei) ei.checked = evtArr.indexOf(eventTypeRepeater.model[e]) >= 0
+        var evtKeys = []
+        for (var e = 0; e < evtArr.length; e++) {
+            var rawEvt = "" + evtArr[e]
+            if (rawEvt === "*") { evtKeys = allEventTypeKeys(); break }  // 通配=全选
+            var evtKey = linkageController.eventTypeKeyOf(rawEvt)
+            if (evtKey !== "" && evtKeys.indexOf(evtKey) < 0) evtKeys.push(evtKey)
         }
+        applyEventTypeSelection(evtKeys)
 
         var minSev = 1, minConf = 0.5
         if (ruleData.source_cond) {
@@ -365,18 +443,16 @@ Item {
     // ── 从扁平表单生成一个 AND 根 + 所有 LEAF 的快照 (供条件树初始值) ──
     function buildTreeFromFlat() {
         var children = []
-        // 事件类型 LEAF
-        for (var e = 0; e < eventTypeRepeater.count; e++) {
-            var ei = eventTypeRepeater.itemAt(e)
-            if (ei && ei.checked) {
-                children.push({
-                    node_type: "LEAF",
-                    leaf_type: "SOURCE",
-                    field: "event_type",
-                    op: "==",
-                    value: eventTypeRepeater.model[e]
-                })
-            }
+        // 事件类型 LEAF (P0-EVTTYPE 2026-09-27: canonical keys)
+        var evtKeys = eventTypeCheckedKeys()
+        for (var e = 0; e < evtKeys.length; e++) {
+            children.push({
+                node_type: "LEAF",
+                leaf_type: "SOURCE",
+                field: "event_type",
+                op: "==",
+                value: evtKeys[e]
+            })
         }
         // 通道 LEAF
         for (var c = 0; c < channelRepeater.count; c++) {
@@ -421,10 +497,8 @@ Item {
         locationCombo.currentIndex = 0
         roiCombo.currentIndex = 0
         groupCombo.currentIndex = 0
-        for (var e = 0; e < eventTypeRepeater.count; e++) {
-            var ei = eventTypeRepeater.itemAt(e)
-            if (ei) ei.checked = false
-        }
+        // 事件类型 (P0-EVTTYPE 2026-09-27: 注册表命令式清空)
+        applyEventTypeSelection([])
         severityCombo.currentIndex = 0
         confidenceSlider.value = 0.5
         for (var c = 0; c < channelRepeater.count; c++) {
@@ -467,6 +541,7 @@ Item {
         linkageController.refreshRules()
         linkageController.refreshActionTypes()  // [P1-#1 v3.0 R1] 拉取 param_schema
         loadActionSchemas()                      // [V4-L5] 拉取 43 类动作 Schema
+        linkageController.refreshEventTypes()    // [P0-EVTTYPE 2026-09-27] 事件类型 SSOT
     }
 
     Connections {
@@ -593,7 +668,10 @@ Item {
                                     Text { text: "P" + (modelData.priority || 0); font.pixelSize: 12; color: "#67C23A"; anchors.centerIn: parent } }
                             }
                             Row { spacing: 12
-                                Text { text: (modelData.eventTypes || "-"); font.pixelSize: 12; color: "#6C5CE7" }
+                                // [P0-EVTTYPE 内置端对齐 2026-09-27] 原读 modelData.eventTypes
+                                //   (后端列表响应无该顶层字段 → 恒空 "-") 且裸值直显;
+                                //   改读 source_cond.event_types + 中文映射摘要
+                                Text { text: eventTypeNamesLabel(modelData.source_cond ? modelData.source_cond.event_types : []); font.pixelSize: 12; color: "#6C5CE7" }
                                 Text { text: (modelData.actions || "-"); font.pixelSize: 12; color: "#909399"; elide: Text.ElideRight; width: 200 }
                             }
                         }
@@ -897,9 +975,52 @@ Item {
                     background: Rectangle { color: "#F5F7FA"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 4; width: parent.width
-                        Row { spacing: 4
-                            Repeater { id: eventTypeRepeater; model: ["周界入侵","绊线","烟火","安全帽","人脸","车牌","人群","摔倒"]
-                                delegate: CheckBox { text: modelData; contentItem: Text { text: parent.text; font.pixelSize: 12; color: "#303133" } }
+                        // [P0-EVTTYPE 内置端对齐 2026-09-27] 原 8 项中文硬编码 Repeater 直存
+                        //   event_types (后端 canonical 匹配永不命中) → SSOT metadata 动态
+                        //   分组复选: key=canonical 落库, name=中文显示, 色点=severity_level
+                        Text {
+                            visible: linkageController.eventTypes.length === 0
+                            text: "事件类型加载中..."
+                            font.pixelSize: 12; color: "#909399"
+                        }
+                        ScrollView {
+                            width: parent.width; height: 200; clip: true
+                            contentWidth: availableWidth  // Flow 换行依据 = 可用宽度
+                            visible: linkageController.eventTypes.length > 0
+                            Column {
+                                width: parent.width; spacing: 6
+                                Repeater {
+                                    model: linkageController.eventTypeGroups
+                                    delegate: Column {
+                                        width: parent.width; spacing: 2
+                                        Text { text: modelData.label; font.pixelSize: 12; font.bold: true; color: "#606266" }
+                                        Flow {
+                                            width: parent.width; spacing: 8
+                                            Repeater {
+                                                model: modelData.items
+                                                delegate: CheckBox {
+                                                    id: etCheck
+                                                    property string etKey: modelData.key || ""
+                                                    contentItem: Row {
+                                                        spacing: 4
+                                                        Rectangle {
+                                                            width: 8; height: 8; radius: 4
+                                                            anchors.verticalCenter: parent.verticalCenter
+                                                            color: severityColor(modelData.level || 3)
+                                                        }
+                                                        Text { text: modelData.name || modelData.key; font.pixelSize: 12; color: "#303133"; anchors.verticalCenter: parent.verticalCenter }
+                                                    }
+                                                    Component.onCompleted: {
+                                                        registerEventTypeCheckbox(etKey, etCheck)
+                                                        // 数据晚于 applyEventTypeSelection 到达时按 pending 恢复选中
+                                                        etCheck.checked = pendingEventTypeKeys.indexOf(etKey) >= 0
+                                                    }
+                                                    Component.onDestruction: unregisterEventTypeCheckbox(etKey)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         Row { spacing: 12
@@ -1714,14 +1835,13 @@ Item {
         editingRule = null
         resetForm()
         ruleNameField.text = tpl.name
-        // 预填事件类型
+        // 预填事件类型 (P0-EVTTYPE 2026-09-27: tpl.events 为 canonical 英文 —
+        //   原实现与中文 model 比对恒不命中, 模板事件全部预填失效; "*"=全选)
         if (tpl.events && tpl.events.length > 0) {
-            for (var e = 0; e < eventTypeRepeater.count; e++) {
-                var evtItem = eventTypeRepeater.itemAt(e)
-                if (evtItem) {
-                    var evtName = eventTypeRepeater.model[e]
-                    evtItem.checked = tpl.events.indexOf(evtName) >= 0 || tpl.events.indexOf("*") >= 0
-                }
+            if (tpl.events.indexOf("*") >= 0) {
+                applyEventTypeSelection(allEventTypeKeys())
+            } else {
+                applyEventTypeSelection(tpl.events)
             }
         }
         // 预填时间条件

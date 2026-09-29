@@ -158,17 +158,23 @@ Rectangle {
                     ctx.fillStyle = "#7D817B"; ctx.fillRect(126, height - 20, 8, 8)
                     ctx.fillStyle = "#8FC7FF"; ctx.fillText("其它", 138, height - 12)
                 }
-                onMouseClicked: {
-                    // 命中检测: 选中半径内最近点位
-                    var best = -1, bestDist = 16 * 16
-                    for (var i = 0; i < geoDevices.length; i++) {
-                        var d = geoDevices[i]
-                        var p = project(Number(d.longitude), Number(d.latitude), width, height)
-                        var dx = p.x - mouse.x, dy = p.y - mouse.y
-                        var dist = dx * dx + dy * dy
-                        if (dist < bestDist) { bestDist = dist; best = i }
+                // [FIX map-tap 2026-09-28] Canvas 无 clicked 信号，原 onMouseClicked 致 QML 编译期失败
+                // (真机 CV186AH 首启: Cannot assign to non-existent property → DashboardView 整链不可用)。
+                // Canvas 内嵌 TapHandler 承接点选，坐标取 eventPoint.position。
+                TapHandler {
+                    onTapped: (eventPoint) => {
+                        // 命中检测: 选中半径内最近点位
+                        var mx = eventPoint.position.x, my = eventPoint.position.y
+                        var best = -1, bestDist = 16 * 16
+                        for (var i = 0; i < geoDevices.length; i++) {
+                            var d = geoDevices[i]
+                            var p = project(Number(d.longitude), Number(d.latitude), canvasMap.width, canvasMap.height)
+                            var dx = p.x - mx, dy = p.y - my
+                            var dist = dx * dx + dy * dy
+                            if (dist < bestDist) { bestDist = dist; best = i }
+                        }
+                        selectedDeviceId = best >= 0 ? String(geoDevices[best].device_id) : ""
                     }
-                    selectedDeviceId = best >= 0 ? String(geoDevices[best].device_id) : ""
                 }
                 Connections {
                     target: mapPanel

@@ -125,9 +125,9 @@ Item {
     }
 
     // ── [M3-2 内置端对齐 2026-09-27] 算法档位 (tier) ──
-    //   数据源: linkageController.algoTiers (勾选事件经 GET :id/param-meta 拉取,
+    //   数据源: algorithmController.algoTiers (勾选事件经 GET :id/param-meta 拉取,
     //   仅含档位设计的算法出卡 — SSOT=算法 YAML tier_presets, 无硬编码清单);
-    //   切换经 linkageController.setAlgoTier → PUT /api/v1/algo/:algo/tier 整组
+    //   切换经 algorithmController.setAlgoTier → PUT /api/v1/algo/:algo/tier 整组
     //   覆盖写入 box_config, 重启服务后对推理生效 (与 web 算法参数卡同契约)。
     //   为什么 debounce: applyEventTypeSelection 逐个设置 checked 会触发 N 次
     //   toggled (编程式赋值同样发信号), 60ms 窗口合并为一轮拉取。
@@ -1080,13 +1080,15 @@ Item {
                 //   切换写 box_config, 重启服务后对推理生效 (与 web 算法参数卡同契约)
                 GroupBox {
                     width: parent.width; title: "算法档位"
-                    visible: linkageController.algoTiers.length > 0
+                    // [FIX tier-ctx 2026-09-28] algoTiers/setAlgoTier 属 AlgorithmController，
+                    // 原 linkageController.* 引笔误对象 → undefined → TypeError + 档位卡永不渲染
+                    visible: algorithmController.algoTiers.length > 0
                     label: Text { text: parent.title; font.pixelSize: 12; color: "#E6A23C"; font.bold: true }
                     background: Rectangle { color: "#F5F7FA"; radius: 6; y: parent.topInset; width: parent.availableWidth; height: parent.availableHeight + parent.topInset + parent.bottomInset }
 
                     Column { spacing: 8; width: parent.width
                         Repeater {
-                            model: linkageController.algoTiers
+                            model: algorithmController.algoTiers
                             delegate: Rectangle {
                                 width: parent.width; height: tierCardCol.height + 16
                                 color: "#FFFFFF"; radius: 4; border.color: "#EBEEF5"; border.width: 1
@@ -1120,7 +1122,7 @@ Item {
                                                 width: 76; height: 26
                                                 // 当前生效档高亮 (与 web el-radio-button 选中态同语义)
                                                 property bool isCur: modelData === curTier
-                                                onClicked: linkageController.setAlgoTier(etKey, algoKey, modelData)
+                                                onClicked: algorithmController.setAlgoTier(etKey, algoKey, modelData)
                                                 background: Rectangle {
                                                     radius: 4
                                                     color: isCur ? "#409EFF" : "#FFFFFF"

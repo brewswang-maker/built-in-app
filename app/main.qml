@@ -142,6 +142,8 @@ ApplicationWindow {
                 { idx: 25, icon: "map",      label: "网络拓扑",   tip: "Network Topology" },
                 { idx: 18, icon: "linkage",  label: "联动规则",   tip: "Event Linkage" },
                 { idx: 16, icon: "audit",    label: "审计中心",   tip: "Audit Center" },
+                // [diag-align 2026-09-27] 系统诊断 (1:1 对齐 Web /diagnostics, 只读自检)
+                { idx: 26, icon: "tool",     label: "系统诊断",   tip: "Diagnostics" },
                 { idx: 19, icon: "refresh",  label: "OTA 升级",   tip: "OTA Upgrade" },
                 { idx: 22, icon: "settings", label: "系统设置",   tip: "Settings" }
             ]
@@ -205,8 +207,15 @@ ApplicationWindow {
     // (index 即选中, 选中即激活, 同点击语义); Esc/Back: 关闭全局弹层
     // (userMenuPopup 为手动 Rectangle 弹层无自动 Esc; notifPopup 自带
     // CloseOnEscape, 此处兜底)。输入控件获焦时按键被控件优先消费, 不影响打字。
-    focus: true
-    Keys.onPressed: (event) => {
+    // [FIX shell-keys 2026-09-28] ApplicationWindow (Window 系) 无 focus 属性、Keys 仅可附加
+    // 于 Item——原 focus:true + Keys.onPressed 直挂窗口致 QML 编译期失败 (真机 CV186AH 首启:
+    // Cannot assign to non-existent property "focus")。改为首个子 Item 作焦点代理承接按键;
+    // 位于内容区最底层, 后声明的可视兄弟覆盖其上, 鼠标事件不受影响。
+    Item {
+        id: shellKeyProxy
+        anchors.fill: parent
+        focus: true
+        Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
             var n = primaryMenus.length, cur = 0
             for (var i = 0; i < n; i++) {
@@ -234,6 +243,7 @@ ApplicationWindow {
                 notifPopup.close()
                 event.accepted = true
             }
+        }
         }
     }
 
@@ -1035,6 +1045,7 @@ ApplicationWindow {
         Locate3DPanel {}          // idx 23: 室内定位一级菜单 (支持拖拽旋转/滚轮缩放)
         DashboardEnhancedView {}  // idx 24: AI智能→仪表盘 (Web /dashboard 对齐)
         NetworkTopologyView {}    // idx 25: 平台管理→网络拓扑 (Web /topology 对齐)
+        SystemDiagnosticsView {}  // idx 26: 平台管理→系统诊断 (Web /diagnostics 对齐)
     }
 
     // ═══ 告警 Popup (保留原有) ═══

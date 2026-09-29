@@ -24,7 +24,7 @@
         <file alias="RecordingView.qml">../src/views/RecordingView.qml</file>
         <file alias="ONVIFDiscoveryView.qml">../src/views/ONVIFDiscoveryView.qml</file>
         <file alias="OTAUpgradeView.qml">../src/views/OTAUpgradeView.qml</file>
-        <file alias="DeviceDetailView.qml">../src/views/DeviceDetailView.qml</file>
+        <!-- [DEADCODE 2026-09-27] DeviceDetailView.qml 已移除: qrc 注册但全仓 0 引用 (含 3 个无 onClicked 死按钮 + startStream 传参错误); 设备信息由 DevicesView 详情抽屉覆盖, PTZ 由 VideoGridView 覆盖 -->
         <file alias="DevicesView.qml">../src/views/DevicesView.qml</file>
         <file alias="ChannelView.qml">../src/views/ChannelView.qml</file>
         <file alias="StreamManagementView.qml">../src/views/StreamManagementView.qml</file>
@@ -33,6 +33,8 @@
         <file alias="AuditCenterView.qml">../src/views/AuditCenterView.qml</file>
         <!-- [v7.6 1:1 对齐 Web /topology 截图] 网络拓扑 -->
         <file alias="NetworkTopologyView.qml">../src/views/NetworkTopologyView.qml</file>
+        <!-- [diag-align 2026-09-27] 系统诊断 (idx 26, 1:1 对齐 Web /diagnostics) -->
+        <file alias="SystemDiagnosticsView.qml">../src/views/SystemDiagnosticsView.qml</file>
         <file alias="SceneManageView.qml">../src/views/SceneManageView.qml</file>
         <file alias="LinkageRuleView.qml">../src/views/LinkageRuleView.qml</file>
         <file alias="LinkageConditionNode.qml">../src/views/LinkageConditionNode.qml</file>

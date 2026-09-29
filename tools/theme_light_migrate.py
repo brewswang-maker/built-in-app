@@ -16,7 +16,7 @@ TARGETS = [
     "FederationDashboard.qml", "GB28181View.qml", "ONVIFDiscoveryView.qml",
     "SceneManageView.qml", "PipelineEditorView.qml", "LinkageRuleView.qml",
     "OTAUpgradeView.qml", "AuditCenterView.qml", "SettingsView.qml",
-    "AlgorithmView.qml", "DeviceDetailView.qml", "DashboardEnhancedView.qml",
+    "AlgorithmView.qml", "DashboardEnhancedView.qml",
     "AlarmPopup.qml", "LinkageAlarmPopup.qml",
     "components/CardPanel.qml", "components/FaceRecordDialog.qml",
     "components/BatchImportDialog.qml", "components/ClearGroupDialog.qml",

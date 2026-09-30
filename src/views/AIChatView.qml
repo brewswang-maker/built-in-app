@@ -381,7 +381,7 @@ Item {
                             anchors.left: parent.left; anchors.leftMargin: 20; anchors.verticalCenter: parent.verticalCenter
                             spacing: 8
                             AppIcon { name: "ai"; size: 16; iconColor: "#303133"; anchors.verticalCenter: parent.verticalCenter }
-                            Text { text: "华盾AI安全助手 · 灵犀Agent"; font.pixelSize: 14; font.bold: true; color: "#303133" }
+                            Text { text: "华盾AI安全助手 · 灵麒Agent"; font.pixelSize: 14; font.bold: true; color: "#303133" }
                         }
                         // 更多菜单
                         AppIcon {

@@ -107,6 +107,25 @@ Window {
         return {critical:"#F56C6C", high:"#E6A23C", medium:"#409EFF", low:"#67C23A", info:"#909399"}[lv] || "#909399"
     }
 
+    // [FIX roi-ssot-converge 2026-10-08] ROI/检测框回显值域防御 —— 与后端
+    //   roi_schema::isPixelScale + normalizeRegionPoint、web-admin
+    //   roiSchema.ts 同口径。告警负载里的 roi / bbox 历史上双形态:
+    //   上报契约要求归一 [0,1], 但存量固件 / 直报链可能给出像素域数值。
+    //   原两个 Canvas 无条件 × width/height, 像素顶点会被放大到画布外
+    //   (与本轮修掉的「绘制后保存图形位置偏移」同族观感, 只是方向相反)。
+    //   判域 = 任一分量 |v| > 1.5 → 按写入侧画布基准 1920×1080 回退归一;
+    //   已归一值直通 → 存量正常路径零行为变化。幂等可重入。
+    readonly property real roiPixelHeuristic: 1.5   // = 后端 kPixelHeuristicThreshold
+    readonly property real roiFallbackW: 1920       // = 后端 kFallbackFrameWidth
+    readonly property real roiFallbackH: 1080       // = 后端 kFallbackFrameHeight
+
+    function roiNormX(v) {
+        return (typeof v === "number" && Math.abs(v) > roiPixelHeuristic) ? v / roiFallbackW : v
+    }
+    function roiNormY(v) {
+        return (typeof v === "number" && Math.abs(v) > roiPixelHeuristic) ? v / roiFallbackH : v
+    }
+
     signal confirmed()
     signal falseAlarm()
     signal silenced()
@@ -525,8 +544,12 @@ Window {
                                     ctx.setLineDash([6, 4])
                                     ctx.beginPath()
                                     for (var i = 0; i < roi.length; i++) {
-                                        if (i === 0) ctx.moveTo(roi[i][0] * width, roi[i][1] * height)
-                                        else ctx.lineTo(roi[i][0] * width, roi[i][1] * height)
+                                        // [FIX roi-ssot-converge 2026-10-08] 顶点先过值域
+                                        //   探测再乘画布尺寸, 像素域顶点不再出画
+                                        var rx = linkagePopup.roiNormX(roi[i][0]) * width
+                                        var ry = linkagePopup.roiNormY(roi[i][1]) * height
+                                        if (i === 0) ctx.moveTo(rx, ry)
+                                        else ctx.lineTo(rx, ry)
                                     }
                                     ctx.closePath()
                                     ctx.stroke()
@@ -562,12 +585,27 @@ Window {
                                     var ctx = getContext("2d")
                                     ctx.clearRect(0, 0, width, height)
                                     var b = currentAlarm.bbox
+                                    // [FIX roi-ssot-converge 2026-10-08] 四角整体判域 (同后端
+                                    //   normalizeDetectionBox): 任一像素分量 → 整框按画布基准归一,
+                                    //   不得逐角判 (贴左边框的 x1 可能落在 [0,1.5], 逐角会让
+                                    //   同一个框内出现两种量纲)
+                                    var pix = false
+                                    for (var k = 0; k < 4 && k < b.length; k++) {
+                                        if (Math.abs(b[k]) > linkagePopup.roiPixelHeuristic) { pix = true; break }
+                                    }
+                                    var bx1 = b[0], by1 = b[1], bx2 = b[2], by2 = b[3]
+                                    if (pix) {
+                                        bx1 = b[0] / linkagePopup.roiFallbackW
+                                        by1 = b[1] / linkagePopup.roiFallbackH
+                                        bx2 = b[2] / linkagePopup.roiFallbackW
+                                        by2 = b[3] / linkagePopup.roiFallbackH
+                                    }
                                     ctx.strokeStyle = "#F56C6C"; ctx.lineWidth = 2
-                                    ctx.strokeRect(b[0]*width, b[1]*height, (b[2]-b[0])*width, (b[3]-b[1])*height)
+                                    ctx.strokeRect(bx1*width, by1*height, (bx2-bx1)*width, (by2-by1)*height)
                                     ctx.fillStyle = "#F56C6C"
-                                    ctx.fillRect(b[0]*width, b[1]*height-18, 120, 18)
+                                    ctx.fillRect(bx1*width, by1*height-18, 120, 18)
                                     ctx.fillStyle = "#FFF"; ctx.font = "11px sans-serif"
-                                    ctx.fillText(currentAlarm.target_label || "Target", b[0]*width+4, b[1]*height-4)
+                                    ctx.fillText(currentAlarm.target_label || "Target", bx1*width+4, by1*height-4)
                                 }
                                 Component.onCompleted: requestPaint()
                             }
